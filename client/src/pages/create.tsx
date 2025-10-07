@@ -189,7 +189,7 @@ export default function Create() {
 
                   <Button 
                     type="submit" 
-                    className="w-full py-4 rounded-2xl font-bold text-lg gradient-bg hover:opacity-90 transition-opacity shadow-lg"
+                    className="w-full py-4 rounded-2xl font-bold text-lg bg-primary text-primary-foreground hover:bg-primary/90 transition-colors shadow-lg"
                     disabled={createStoryMutation.isPending}
                     data-testid="button-generate-story"
                   >
