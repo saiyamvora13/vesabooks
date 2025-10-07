@@ -13,6 +13,7 @@ import { ProgressTracker } from "@/components/ui/progress-tracker";
 import Navigation from "@/components/navigation";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
+import { isUnauthorizedError } from "@/lib/authUtils";
 
 const createStorySchema = z.object({
   prompt: z.string().min(10, "Story prompt must be at least 10 characters"),
@@ -50,6 +51,7 @@ export default function Create() {
       const response = await fetch("/api/storybooks", {
         method: "POST",
         body: formData,
+        credentials: "include", // Include session cookie for authentication
       });
 
       if (!response.ok) {
@@ -68,6 +70,19 @@ export default function Create() {
       });
     },
     onError: (error) => {
+      // Replit Auth: Handle unauthorized error - redirect to login
+      if (isUnauthorizedError(error as Error)) {
+        toast({
+          title: "Unauthorized",
+          description: "Please log in to create a storybook.",
+          variant: "destructive",
+        });
+        setTimeout(() => {
+          window.location.href = "/api/login";
+        }, 500);
+        return;
+      }
+      
       toast({
         title: "Generation failed",
         description: error.message,

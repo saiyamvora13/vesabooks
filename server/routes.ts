@@ -42,11 +42,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Create storybook
-  app.post("/api/storybooks", upload.array("images", 5), async (req, res) => {
+  // Create storybook (requires authentication)
+  app.post("/api/storybooks", isAuthenticated, upload.array("images", 5), async (req: any, res) => {
     try {
       const { prompt } = req.body;
       const files = req.files as Express.Multer.File[] | undefined;
+      const userId = req.user.claims.sub;
 
       if (!files || files.length === 0) {
         return res.status(400).json({ message: "At least one inspiration image is required" });
@@ -64,8 +65,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const sessionId = randomUUID();
 
-      // Start generation in background
-      generateStorybookAsync(sessionId, prompt, files.map(f => f.path))
+      // Start generation in background with userId
+      generateStorybookAsync(sessionId, userId, prompt, files.map(f => f.path))
         .catch((error: unknown) => {
           console.error("Story generation failed:", error);
           const errorMessage = error instanceof Error ? error.message : 'Unknown error';
@@ -96,6 +97,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(progress);
     } catch (error) {
       console.error("Get progress error:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Get user's storybooks (requires authentication)
+  app.get("/api/storybooks", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const storybooks = await storage.getUserStorybooks(userId);
+      res.json(storybooks);
+    } catch (error) {
+      console.error("Get user storybooks error:", error);
       res.status(500).json({ message: "Internal server error" });
     }
   });
@@ -163,6 +176,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
 async function generateStorybookAsync(
   sessionId: string,
+  userId: string,
   prompt: string,
   imagePaths: string[]
 ): Promise<void> {
@@ -226,8 +240,9 @@ async function generateStorybookAsync(
       message: 'Finalizing your storybook...',
     });
 
-    // Save to storage
+    // Save to storage with userId
     const storybook = await storage.createStorybook({
+      userId,
       title: generatedStory.title,
       prompt,
       pages,

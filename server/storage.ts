@@ -1,6 +1,6 @@
 import { type Storybook, type InsertStorybook, type StoryGenerationProgress, storybooks, users, type User, type UpsertUser } from "@shared/schema";
 import { db } from "./db";
-import { eq } from "drizzle-orm";
+import { eq, desc } from "drizzle-orm";
 
 export interface IStorage {
   // Replit Auth: User operations (mandatory)
@@ -11,6 +11,7 @@ export interface IStorage {
   createStorybook(storybook: InsertStorybook): Promise<Storybook>;
   getStorybook(id: string): Promise<Storybook | undefined>;
   getStorybookByShareUrl(shareUrl: string): Promise<Storybook | undefined>;
+  getUserStorybooks(userId: string): Promise<Storybook[]>;
   updateStorybookShareUrl(id: string, shareUrl: string): Promise<void>;
   
   // Progress tracking (kept in-memory for real-time updates)
@@ -71,6 +72,15 @@ export class DatabaseStorage implements IStorage {
       .from(storybooks)
       .where(eq(storybooks.shareUrl, shareUrl));
     return storybook || undefined;
+  }
+
+  async getUserStorybooks(userId: string): Promise<Storybook[]> {
+    const userStorybooks = await db
+      .select()
+      .from(storybooks)
+      .where(eq(storybooks.userId, userId))
+      .orderBy(desc(storybooks.createdAt));
+    return userStorybooks;
   }
 
   async updateStorybookShareUrl(id: string, shareUrl: string): Promise<void> {
