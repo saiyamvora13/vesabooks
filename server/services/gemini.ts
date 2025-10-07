@@ -14,20 +14,32 @@ export interface GeneratedStory {
   pages: StoryPage[];
 }
 
+function getMimeType(filePath: string): string {
+  const ext = filePath.toLowerCase().split('.').pop();
+  if (ext === 'png') return 'image/png';
+  if (ext === 'jpg' || ext === 'jpeg') return 'image/jpeg';
+  return 'image/jpeg'; // default fallback
+}
+
 export async function generateStoryFromPrompt(
   prompt: string,
   inspirationImagePaths: string[]
 ): Promise<GeneratedStory> {
   try {
-    // First, analyze the inspiration images to understand the style
+    // Try to analyze the inspiration images to understand the style (optional)
     let styleDescription = "";
     if (inspirationImagePaths.length > 0) {
-      styleDescription = await analyzeImageStyle(inspirationImagePaths[0]);
+      try {
+        styleDescription = await analyzeImageStyle(inspirationImagePaths[0]);
+      } catch (error) {
+        console.warn("Image style analysis failed, continuing without style context:", error);
+        // Continue without style description - not critical
+      }
     }
 
     const systemPrompt = `You are a creative children's storybook writer. Create an engaging 6-page story based on the user's prompt.
 
-Style inspiration: ${styleDescription}
+${styleDescription ? `Style inspiration: ${styleDescription}` : ''}
 
 Return your response as JSON in this exact format:
 {
@@ -45,17 +57,8 @@ Make sure the story is age-appropriate, engaging, and has a clear beginning, mid
 
     const contents = [];
     
-    // Add inspiration images if available
-    for (const imagePath of inspirationImagePaths) {
-      const imageBytes = fs.readFileSync(imagePath);
-      contents.push({
-        inlineData: {
-          data: imageBytes.toString("base64"),
-          mimeType: "image/jpeg",
-        },
-      });
-    }
-    
+    // Only send the text prompt to avoid image processing issues
+    // The uploaded images are for user reference, story generation works from text
     contents.push(prompt);
 
     const response = await ai.models.generateContent({

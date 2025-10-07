@@ -1,5 +1,6 @@
-import { type Storybook, type InsertStorybook, type StoryGenerationProgress } from "@shared/schema";
-import { randomUUID } from "crypto";
+import { type Storybook, type InsertStorybook, type StoryGenerationProgress, storybooks } from "@shared/schema";
+import { db } from "./db";
+import { eq } from "drizzle-orm";
 
 export interface IStorage {
   createStorybook(storybook: InsertStorybook): Promise<Storybook>;
@@ -7,54 +8,52 @@ export interface IStorage {
   getStorybookByShareUrl(shareUrl: string): Promise<Storybook | undefined>;
   updateStorybookShareUrl(id: string, shareUrl: string): Promise<void>;
   
-  // Progress tracking
+  // Progress tracking (kept in-memory for real-time updates)
   setGenerationProgress(sessionId: string, progress: StoryGenerationProgress): Promise<void>;
   getGenerationProgress(sessionId: string): Promise<StoryGenerationProgress | undefined>;
   clearGenerationProgress(sessionId: string): Promise<void>;
 }
 
-export class MemStorage implements IStorage {
-  private storybooks: Map<string, Storybook>;
+// Database storage for persistent data
+export class DatabaseStorage implements IStorage {
   private generationProgress: Map<string, StoryGenerationProgress>;
 
   constructor() {
-    this.storybooks = new Map();
     this.generationProgress = new Map();
   }
 
   async createStorybook(insertStorybook: InsertStorybook): Promise<Storybook> {
-    const id = randomUUID();
-    const storybook: Storybook = {
-      title: insertStorybook.title,
-      prompt: insertStorybook.prompt,
-      pages: insertStorybook.pages as Array<{pageNumber: number; text: string; imageUrl: string}>,
-      inspirationImages: (insertStorybook.inspirationImages || []) as string[],
-      id,
-      createdAt: new Date(),
-      shareUrl: null,
-    };
-    this.storybooks.set(id, storybook);
+    const [storybook] = await db
+      .insert(storybooks)
+      .values(insertStorybook)
+      .returning();
     return storybook;
   }
 
   async getStorybook(id: string): Promise<Storybook | undefined> {
-    return this.storybooks.get(id);
+    const [storybook] = await db
+      .select()
+      .from(storybooks)
+      .where(eq(storybooks.id, id));
+    return storybook || undefined;
   }
 
   async getStorybookByShareUrl(shareUrl: string): Promise<Storybook | undefined> {
-    return Array.from(this.storybooks.values()).find(
-      (storybook) => storybook.shareUrl === shareUrl
-    );
+    const [storybook] = await db
+      .select()
+      .from(storybooks)
+      .where(eq(storybooks.shareUrl, shareUrl));
+    return storybook || undefined;
   }
 
   async updateStorybookShareUrl(id: string, shareUrl: string): Promise<void> {
-    const storybook = this.storybooks.get(id);
-    if (storybook) {
-      storybook.shareUrl = shareUrl;
-      this.storybooks.set(id, storybook);
-    }
+    await db
+      .update(storybooks)
+      .set({ shareUrl })
+      .where(eq(storybooks.id, id));
   }
 
+  // Progress tracking remains in-memory for real-time updates
   async setGenerationProgress(sessionId: string, progress: StoryGenerationProgress): Promise<void> {
     this.generationProgress.set(sessionId, progress);
   }
@@ -68,4 +67,4 @@ export class MemStorage implements IStorage {
   }
 }
 
-export const storage = new MemStorage();
+export const storage = new DatabaseStorage();
