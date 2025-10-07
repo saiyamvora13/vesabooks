@@ -12,7 +12,7 @@ export const storybooks = pgTable("storybooks", {
     text: string;
     imageUrl: string;
   }>>().notNull(),
-  inspirationImages: json("inspiration_images").$type<string[]>().default([]),
+  inspirationImages: json("inspiration_images").$type<string[]>().notNull().default([]),
   createdAt: timestamp("created_at").defaultNow(),
   shareUrl: text("share_url"),
 });

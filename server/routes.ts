@@ -1,4 +1,5 @@
-import type { Express } from "express";
+import type { Express, Request } from "express";
+import express from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { generateStoryFromPrompt, generateIllustration } from "./services/gemini";
@@ -15,7 +16,7 @@ const upload = multer({
     fileSize: 10 * 1024 * 1024, // 10MB
     files: 5,
   },
-  fileFilter: (req, file, cb) => {
+  fileFilter: (req: Request, file: Express.Multer.File, cb: multer.FileFilterCallback) => {
     if (file.mimetype === "image/jpeg" || file.mimetype === "image/png") {
       cb(null, true);
     } else {
@@ -29,7 +30,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/storybooks", upload.array("images", 5), async (req, res) => {
     try {
       const { prompt } = req.body;
-      const files = req.files as Express.Multer.File[];
+      const files = req.files as Express.Multer.File[] | undefined;
 
       if (!files || files.length === 0) {
         return res.status(400).json({ message: "At least one inspiration image is required" });
@@ -49,12 +50,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Start generation in background
       generateStorybookAsync(sessionId, prompt, files.map(f => f.path))
-        .catch(error => {
+        .catch((error: unknown) => {
           console.error("Story generation failed:", error);
+          const errorMessage = error instanceof Error ? error.message : 'Unknown error';
           storage.setGenerationProgress(sessionId, {
             step: 'processing_images',
             progress: 0,
-            message: `Generation failed: ${error.message}`,
+            message: `Generation failed: ${errorMessage}`,
           });
         });
 
@@ -238,10 +240,11 @@ async function generateStorybookAsync(
     });
 
   } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     await storage.setGenerationProgress(sessionId, {
       step: 'processing_images',
       progress: 0,
-      message: `Generation failed: ${error.message}`,
+      message: `Generation failed: ${errorMessage}`,
     });
     throw error;
   }

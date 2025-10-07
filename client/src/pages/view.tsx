@@ -102,7 +102,7 @@ export default function View() {
             <div>
               <h2 className="text-3xl font-bold mb-2" data-testid="text-story-title">{storybook.title}</h2>
               <p className="text-muted-foreground">
-                Created {new Date(storybook.createdAt).toLocaleDateString()}
+                Created {storybook.createdAt ? new Date(storybook.createdAt).toLocaleDateString() : 'Unknown'}
               </p>
             </div>
             <div className="flex flex-wrap gap-3">

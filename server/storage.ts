@@ -25,7 +25,10 @@ export class MemStorage implements IStorage {
   async createStorybook(insertStorybook: InsertStorybook): Promise<Storybook> {
     const id = randomUUID();
     const storybook: Storybook = {
-      ...insertStorybook,
+      title: insertStorybook.title,
+      prompt: insertStorybook.prompt,
+      pages: insertStorybook.pages as Array<{pageNumber: number; text: string; imageUrl: string}>,
+      inspirationImages: (insertStorybook.inspirationImages || []) as string[],
       id,
       createdAt: new Date(),
       shareUrl: null,
