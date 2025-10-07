@@ -29,7 +29,8 @@ Preferred communication style: Simple, everyday language.
 
 **Routing Structure:**
 - `/` - Home page with hero, features, and examples sections
-- `/create` - Story creation form with image upload and prompt input
+- `/create` - Story creation form with image upload and prompt input (requires authentication)
+- `/library` - Personal library showing all user's storybooks (requires authentication)
 - `/view/:id` - View storybook by ID
 - `/shared/:shareUrl` - View storybook via share URL
 
@@ -49,23 +50,39 @@ Preferred communication style: Simple, everyday language.
 - **Session-based generation**: Uses UUID sessions to track multi-step story generation
 
 **API Endpoints:**
-- `POST /api/storybooks` - Create new storybook (multipart/form-data for image uploads)
+- `POST /api/storybooks` - Create new storybook (multipart/form-data for image uploads, requires authentication)
+- `GET /api/storybooks` - Retrieve all storybooks for authenticated user
 - `GET /api/storybooks/:id` - Retrieve storybook by ID
 - `GET /api/shared/:shareUrl` - Retrieve storybook by share URL
 - `POST /api/storybooks/:id/share` - Generate shareable URL
 - `GET /api/generation/:sessionId/progress` - Poll generation progress
+- `GET /api/auth/user` - Get current authenticated user
+- `GET /api/login` - Initiate OAuth login flow
+- `GET /api/logout` - Logout and clear session
 
 ### Data Storage Solutions
 
 **Database Schema (PostgreSQL via Drizzle):**
+- **users table**: Stores authenticated user data
+  - `id` (varchar, primary key) - OAuth subject claim
+  - `email` (varchar, unique)
+  - `first_name` (varchar, nullable)
+  - `last_name` (varchar, nullable)
+  - `profile_image_url` (varchar, nullable)
+  - `created_at` (timestamp)
+  
 - **storybooks table**: Stores complete storybook data
   - `id` (UUID, primary key)
+  - `user_id` (varchar, foreign key to users.id, ON DELETE CASCADE)
   - `title` (text)
   - `prompt` (text)
   - `pages` (JSON array of page objects with pageNumber, text, imageUrl)
   - `inspiration_images` (JSON array of image filenames)
   - `created_at` (timestamp)
   - `share_url` (text, nullable)
+  
+- **sessions table**: Stores user sessions for authentication
+  - PostgreSQL session store via connect-pg-simple
 
 **Storage Strategy:**
 - Primary: PostgreSQL via Neon serverless driver
@@ -114,5 +131,34 @@ Preferred communication style: Simple, everyday language.
 **Key Integration Points:**
 - Environment variable `GEMINI_API_KEY` required for AI functionality
 - Environment variable `DATABASE_URL` required for PostgreSQL connection
+- Environment variable `SESSION_SECRET` required for session encryption
 - File system access for temporary upload storage
 - Client-side polling mechanism for progress updates (2-second intervals)
+
+## Recent Changes (October 2025)
+
+### User Authentication & Authorization
+- Implemented Replit Auth (OAuth) for user authentication
+- Supports multiple OAuth providers: Google, GitHub, X, Apple, email/password
+- Session-based authentication using express-session with PostgreSQL store
+- Users table stores OAuth profile data
+- Protected endpoints require authentication via isAuthenticated middleware
+- Fixed multipart form authentication by adding credentials: "include" to fetch requests
+
+### User-Storybook Association
+- Added userId foreign key to storybooks table
+- Storybooks are now linked to authenticated users
+- Cascade delete: deleting a user removes their storybooks
+- POST /api/storybooks requires authentication
+- Story generation includes userId in database records
+- Unauthorized requests properly return 401 status
+
+### Personal Library Feature
+- New /library route displays user's storybooks
+- Responsive grid layout (1/2/3 columns)
+- Each card shows: cover image, title, prompt, creation date
+- Empty state with "Create Your First Storybook" CTA
+- Loading skeleton states during data fetch
+- Error handling with retry button
+- "My Library" link in navigation (visible only when authenticated)
+- Integration with TanStack Query for data fetching and caching
