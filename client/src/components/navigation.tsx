@@ -42,6 +42,13 @@ export default function Navigation() {
                 Create
               </span>
             </Link>
+            {isAuthenticated && (
+              <Link href="/library">
+                <span className={`text-muted-foreground hover:text-foreground transition-colors cursor-pointer ${location === '/library' ? 'text-foreground' : ''}`} data-testid="link-library">
+                  My Library
+                </span>
+              </Link>
+            )}
           </div>
 
           {/* CTA Buttons */}
