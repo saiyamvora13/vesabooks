@@ -32,7 +32,7 @@ export default function HeroSection() {
               <Link href="/create">
                 <Button 
                   size="lg" 
-                  className="px-8 py-4 rounded-full font-semibold text-lg gradient-bg hover:opacity-90 transition-opacity shadow-lg hover:shadow-xl"
+                  className="px-8 py-4 rounded-full font-semibold text-lg bg-primary text-primary-foreground hover:bg-primary/90 transition-colors shadow-lg hover:shadow-xl"
                   data-testid="button-create-story-hero"
                 >
                   <i className="fas fa-magic mr-2"></i>
