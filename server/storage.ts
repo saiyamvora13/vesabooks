@@ -1,8 +1,13 @@
-import { type Storybook, type InsertStorybook, type StoryGenerationProgress, storybooks } from "@shared/schema";
+import { type Storybook, type InsertStorybook, type StoryGenerationProgress, storybooks, users, type User, type UpsertUser } from "@shared/schema";
 import { db } from "./db";
 import { eq } from "drizzle-orm";
 
 export interface IStorage {
+  // Replit Auth: User operations (mandatory)
+  getUser(id: string): Promise<User | undefined>;
+  upsertUser(user: UpsertUser): Promise<User>;
+  
+  // Storybook operations
   createStorybook(storybook: InsertStorybook): Promise<Storybook>;
   getStorybook(id: string): Promise<Storybook | undefined>;
   getStorybookByShareUrl(shareUrl: string): Promise<Storybook | undefined>;
@@ -22,6 +27,28 @@ export class DatabaseStorage implements IStorage {
     this.generationProgress = new Map();
   }
 
+  // Replit Auth: User operations (mandatory)
+  async getUser(id: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.id, id));
+    return user || undefined;
+  }
+
+  async upsertUser(userData: UpsertUser): Promise<User> {
+    const [user] = await db
+      .insert(users)
+      .values(userData)
+      .onConflictDoUpdate({
+        target: users.id,
+        set: {
+          ...userData,
+          updatedAt: new Date(),
+        },
+      })
+      .returning();
+    return user;
+  }
+
+  // Storybook operations
   async createStorybook(insertStorybook: InsertStorybook): Promise<Storybook> {
     const [storybook] = await db
       .insert(storybooks)

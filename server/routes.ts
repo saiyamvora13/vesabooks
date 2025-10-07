@@ -8,6 +8,7 @@ import { randomUUID } from "crypto";
 import * as fs from "fs";
 import * as path from "path";
 import multer from "multer";
+import { setupAuth, isAuthenticated } from "./replitAuth";
 
 // Configure multer for image uploads
 const upload = multer({
@@ -26,6 +27,21 @@ const upload = multer({
 });
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Replit Auth: Setup authentication middleware
+  await setupAuth(app);
+
+  // Replit Auth: Get authenticated user
+  app.get('/api/auth/user', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      res.json(user);
+    } catch (error) {
+      console.error("Error fetching user:", error);
+      res.status(500).json({ message: "Failed to fetch user" });
+    }
+  });
+
   // Create storybook
   app.post("/api/storybooks", upload.array("images", 5), async (req, res) => {
     try {
