@@ -1,0 +1,212 @@
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { StoryBook, StoryPage } from '../types';
+import { ChevronLeftIcon, ChevronRightIcon } from './Icons';
+
+interface FlipbookViewerProps {
+  storyBook: StoryBook;
+  isReadOnly?: boolean;
+}
+
+// A component for the front or back of a page.
+// It uses `backface-visibility: hidden` so that only one side is visible at a time during the 3D rotation.
+const PageFace: React.FC<{
+  className?: string;
+  isBack?: boolean;
+  children: React.ReactNode;
+}> = ({ className = '', isBack = false, children }) => (
+  <div
+    className={`absolute top-0 left-0 w-full h-full book-page-background overflow-hidden [backface-visibility:hidden] ${className}`}
+    style={{
+      // The back face needs to be pre-rotated 180 degrees so its content is not mirrored.
+      transform: isBack ? 'rotateY(180deg)' : 'rotateY(0deg)',
+    }}
+  >
+    {children}
+  </div>
+);
+
+// Renders the book cover
+const Cover: React.FC<{ storyBook: StoryBook }> = ({ storyBook }) => (
+  <div className="w-full h-full bg-slate-700 rounded-r-lg shadow-2xl flex flex-col text-center relative overflow-hidden group">
+    {storyBook.coverImageUrl && <img src={storyBook.coverImageUrl} alt="Story cover" className="absolute inset-0 w-full h-full object-cover" />}
+    <div className="absolute inset-0 w-full h-full bg-black/10"></div>
+    <div className="absolute bottom-0 left-0 right-0 p-4 bg-white/90 backdrop-blur-sm">
+        <h1 className="text-3xl md:text-4xl font-bold font-serif-display text-slate-800">{storyBook.title}</h1>
+        <p className="text-md md:text-lg text-slate-600 mt-2">By {storyBook.author}</p>
+    </div>
+    {/* Spine effect */}
+    <div className="absolute left-[-24px] top-0 bottom-0 w-6 bg-gradient-to-r from-slate-800 to-slate-600 shadow-md"></div>
+  </div>
+);
+
+// Renders the left-hand page (image)
+const ImagePage: React.FC<{ page: StoryPage, pageNum: number }> = ({ page, pageNum }) => (
+    <div className="w-full h-full relative">
+        {page.imageUrl ? (
+            <img src={page.imageUrl} alt={`Illustration for the page`} className="w-full h-full object-cover" />
+        ) : (
+            <div className="w-full h-full flex items-center justify-center p-4"><p>Missing image</p></div>
+        )}
+        {/* Page Number on Image Page */}
+        <span className="absolute bottom-4 left-8 text-base font-semibold text-slate-800 bg-white/60 backdrop-blur-sm rounded-full px-3 py-1 shadow-sm">{pageNum}</span>
+    </div>
+);
+
+// Renders the right-hand page (text)
+const TextPage: React.FC<{ page: StoryPage, author: string, pageNum: number, onTurn: () => void }> = ({ page, author, pageNum, onTurn }) => (
+    <div className="w-full h-full flex flex-col justify-center p-8 md:p-12 relative cursor-pointer group" onClick={onTurn}>
+      <div className="absolute top-4 right-8 text-xs text-slate-400 tracking-widest uppercase">{author}</div>
+      <div className="overflow-y-auto">
+          <p className="text-slate-700 text-base md:text-lg leading-relaxed first-letter:text-7xl first-letter:font-serif-display first-letter:text-slate-900 first-letter:mr-3 first-letter:float-left">
+              {page.pageText}
+          </p>
+      </div>
+      {/* Page Curl Indicator */}
+      <div className="page-curl" />
+      {/* Page Number on Text Page */}
+      <span className="absolute bottom-4 right-8 text-base font-semibold text-slate-700">{pageNum}</span>
+    </div>
+);
+
+// Renders the final page of the book
+const EndPage: React.FC<{ totalPages: number }> = ({ totalPages }) => (
+    <div className="w-full h-full flex flex-col items-center justify-center p-4 relative">
+        <p className="font-serif-display text-2xl md:text-3xl text-slate-800">The End</p>
+        {totalPages > 0 && (
+            <span className="absolute bottom-4 left-8 text-base font-semibold text-slate-700">{totalPages}</span>
+        )}
+    </div>
+);
+
+const FlipbookViewer: React.FC<FlipbookViewerProps> = ({ storyBook, isReadOnly = false }) => {
+  const numPages = storyBook.pages.length;
+  // A sheet for the cover, and one for each text page.
+  const numSheets = numPages + 1;
+  const [currentPage, setCurrentPage] = useState(0); 
+
+  const goToPrevPage = useCallback(() => setCurrentPage((p) => Math.max(0, p - 1)), []);
+  const goToNextPage = useCallback(() => setCurrentPage((p) => Math.min(p + 1, numSheets)), [numSheets]);
+
+  // Allow keyboard navigation
+  const handleKeyDown = useCallback((event: KeyboardEvent) => {
+    if (event.key === 'ArrowLeft') goToPrevPage();
+    if (event.key === 'ArrowRight') goToNextPage();
+  }, [goToPrevPage, goToNextPage]);
+
+  useEffect(() => {
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [handleKeyDown]);
+  
+  // Memoize the book's sheets to avoid re-calculating on every render.
+  const bookSheets = useMemo(() => {
+    const sheets = [];
+    
+    // Sheet 0: Cover. The back is the image for the first story page. It's the left-hand page of the first spread, so it's page 2.
+    sheets.push({
+      front: <Cover storyBook={storyBook} />,
+      back: storyBook.pages.length > 0 ? <ImagePage page={storyBook.pages[0]} pageNum={2} /> : <EndPage totalPages={0} />,
+    });
+    
+    // Create the story sheets.
+    // Each sheet contains the text for one page and the image for the next.
+    for (let i = 0; i < numPages; i++) {
+        const page = storyBook.pages[i];
+        
+        // The front of sheet `i+1` is the TextPage for story `i`. This is the right-hand page.
+        // Page numbers for right-hand pages are odd. For story `i`, the page number is 2*i + 1.
+        const frontContent = <TextPage page={page} author={storyBook.author} pageNum={2 * i + 1} onTurn={goToNextPage} />;
+        
+        // The back of sheet `i+1` is the ImagePage for story `i+1`. This is the left-hand page.
+        // Page numbers for left-hand pages are even. For story `i+1`, the page number is 2*(i+1).
+        const backContent = (i < numPages - 1) 
+            ? <ImagePage page={storyBook.pages[i+1]} pageNum={2 * (i + 1) + 2} /> 
+            : <EndPage totalPages={numPages * 2} />;
+        
+        sheets.push({ front: frontContent, back: backContent });
+    }
+    
+    return sheets;
+  }, [storyBook, goToNextPage, numPages]);
+  
+  const isBookOpen = currentPage > 0;
+  
+  const pageDisplayText = useMemo(() => {
+    if (currentPage === 0) return "Cover";
+    if (currentPage > 0 && currentPage <= numPages) {
+        const firstPage = (currentPage - 1) * 2 + 1;
+        const secondPage = firstPage + 1;
+        return `Pages ${firstPage} - ${secondPage}`;
+    }
+    return "The End";
+  }, [currentPage, numPages]);
+
+  return (
+    <div className="w-full h-full flex flex-col items-center justify-center gap-4">
+        {/* The main container for the book, setting the 3D perspective */}
+        <div 
+            className="w-[90vw] h-[60vh] md:w-[800px] md:h-[500px] lg:w-[1000px] lg:h-[600px] relative"
+            style={{ perspective: '3000px' }}
+        >
+            {/* This inner container handles the book's position (centered when closed vs. open) and scaling */}
+            <div 
+                className="w-full h-full relative transition-transform duration-1000 ease-in-out"
+                style={{
+                    transformStyle: 'preserve-3d',
+                    // When the book is closed (currentPage === 0), it's only the right half (the cover).
+                    // We translate the container left by 25% of its width to center that right half on screen.
+                    // A subtle scale effect is added for polish.
+                    transform: `translateX(${isBookOpen ? '0' : '-25%'}) scale(${isBookOpen ? 1 : 0.95})`,
+                }}
+            >
+                {/* The stage where all the page sheets are rendered */}
+                <div className="absolute top-0 left-0 w-full h-full" style={{ transformStyle: 'preserve-3d' }}>
+                    {bookSheets.map((sheet, index) => {
+                        const isFlipped = currentPage > index;
+                        // Dynamic z-index is crucial for stacking. Flipped pages stack up from the bottom (1, 2, 3...).
+                        // Unflipped pages stack down from the top (numSheets, numSheets-1...).
+                        // This ensures the current page is always on top of its respective stack.
+                        const zIndex = isFlipped ? index + 1 : numSheets - index;
+
+                        return (
+                            // Each "sheet" is positioned on the right half of the book container
+                            // and pivots on its left edge (the "spine").
+                            <div
+                                key={index}
+                                className="absolute top-0 left-1/2 w-1/2 h-full"
+                                style={{
+                                    transformStyle: 'preserve-3d',
+                                    transformOrigin: 'left center',
+                                    transform: isFlipped ? 'rotateY(-180deg)' : 'rotateY(0deg)',
+                                    transition: 'transform 0.7s ease-in-out',
+                                    zIndex: zIndex,
+                                }}
+                            >
+                                {/* Front face of the page */}
+                                <PageFace className="rounded-r-lg shadow-[-8px_0_15px_-10px_rgba(0,0,0,0.2)]">
+                                    {sheet.front}
+                                </PageFace>
+                                {/* Back face of the page */}
+                                <PageFace isBack className="rounded-l-lg shadow-[inset_8px_0_15px_-10px_rgba(0,0,0,0.3)]">
+                                    {sheet.back}
+                                </PageFace>
+                            </div>
+                        );
+                    })}
+                </div>
+            </div>
+        </div>
+
+      {/* Navigation controls */}
+      <div className="flex items-center justify-center gap-2 md:gap-4 bg-white/80 backdrop-blur-sm p-3 rounded-full shadow-lg">
+        <button onClick={goToPrevPage} disabled={currentPage === 0} className="p-2 rounded-full hover:bg-slate-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors" aria-label="Previous Page"><ChevronLeftIcon className="w-8 h-8 text-slate-700"/></button>
+        <span className="text-slate-700 font-bold w-28 text-center" aria-live="polite">
+            {pageDisplayText}
+        </span>
+        <button onClick={goToNextPage} disabled={currentPage >= numSheets} className="p-2 rounded-full hover:bg-slate-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors" aria-label="Next Page"><ChevronRightIcon className="w-8 h-8 text-slate-700"/></button>
+      </div>
+    </div>
+  );
+};
+
+export default FlipbookViewer;

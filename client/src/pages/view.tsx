@@ -2,7 +2,7 @@ import { useParams, useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import Navigation from "@/components/navigation";
-import { Flipbook } from "@/components/ui/flipbook";
+import { FlipbookViewer } from "@/components/ui/flipbook-3d";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
@@ -147,22 +147,21 @@ export default function View() {
           </div>
 
           {/* Flipbook Container */}
-          <Card className="rounded-3xl shadow-2xl">
-            <CardContent className="p-8">
-              <Flipbook 
-                pages={storybook.pages} 
-                title={storybook.title}
-                data-testid="flipbook-viewer"
-              />
-            </CardContent>
-          </Card>
+          <div className="bg-gradient-to-br from-slate-100 to-slate-200 dark:from-slate-800 dark:to-slate-900 rounded-3xl shadow-2xl p-8 min-h-[80vh] flex items-center justify-center">
+            <FlipbookViewer 
+              pages={storybook.pages} 
+              title={storybook.title}
+              author="AI Author"
+              coverImageUrl={storybook.pages[0]?.imageUrl}
+            />
+          </div>
 
           {/* Back to Create */}
           <div className="text-center mt-12">
             <Button 
               onClick={() => setLocation("/create")} 
               size="lg" 
-              className="rounded-full gradient-bg"
+              className="rounded-full bg-primary text-primary-foreground hover:bg-primary/90"
               data-testid="button-create-another"
             >
               <i className="fas fa-plus mr-2"></i>
