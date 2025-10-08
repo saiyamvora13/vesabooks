@@ -69,10 +69,10 @@ export default function Navigation() {
             {!isLoading && isAuthenticated && user && (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" className="relative h-9 w-9 rounded-full" data-testid="button-user-menu">
+                  <Button variant="ghost" className="relative h-9 w-9 rounded-full hover:bg-muted" data-testid="button-user-menu">
                     <Avatar className="h-9 w-9">
                       <AvatarImage src={user.profileImageUrl || undefined} alt={user.firstName || user.email || "User"} style={{ objectFit: 'cover' }} />
-                      <AvatarFallback className="gradient-bg text-white">
+                      <AvatarFallback className="gradient-bg !text-white">
                         {user.firstName?.[0] || user.email?.[0] || 'U'}
                       </AvatarFallback>
                     </Avatar>
@@ -81,13 +81,13 @@ export default function Navigation() {
                 <DropdownMenuContent className="w-56" align="end" forceMount>
                   <DropdownMenuLabel className="font-normal">
                     <div className="flex flex-col space-y-1">
-                      <p className="text-sm font-medium leading-none" data-testid="text-user-name">
+                      <p className="text-sm font-medium leading-none !text-foreground" data-testid="text-user-name">
                         {user.firstName && user.lastName 
                           ? `${user.firstName} ${user.lastName}` 
                           : user.firstName || user.email || 'User'}
                       </p>
                       {user.email && (
-                        <p className="text-xs leading-none text-muted-foreground" data-testid="text-user-email">
+                        <p className="text-xs leading-none !text-foreground/60" data-testid="text-user-email">
                           {user.email}
                         </p>
                       )}
@@ -117,7 +117,7 @@ export default function Navigation() {
             {!isLoading && isAuthenticated && user && (
               <Avatar className="h-8 w-8">
                 <AvatarImage src={user.profileImageUrl || undefined} alt={user.firstName || user.email || "User"} style={{ objectFit: 'cover' }} />
-                <AvatarFallback className="gradient-bg text-white text-xs">
+                <AvatarFallback className="gradient-bg !text-white text-xs">
                   {user.firstName?.[0] || user.email?.[0] || 'U'}
                 </AvatarFallback>
               </Avatar>
