@@ -14,6 +14,15 @@ import Navigation from "@/components/navigation";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { isUnauthorizedError } from "@/lib/authUtils";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Info } from "lucide-react";
 
 const createStorySchema = z.object({
   prompt: z.string().min(10, "Story prompt must be at least 10 characters"),
@@ -154,11 +163,180 @@ export default function Create() {
                     name="prompt"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="text-sm font-semibold flex items-center">
-                          <i className="fas fa-lightbulb text-primary mr-2"></i>
-                          Story Idea
-                          <span className="ml-auto text-muted-foreground font-normal">Required</span>
-                        </FormLabel>
+                        <div className="flex items-center justify-between mb-2">
+                          <FormLabel className="text-sm font-semibold flex items-center">
+                            <i className="fas fa-lightbulb text-primary mr-2"></i>
+                            Story Idea
+                          </FormLabel>
+                          <Dialog>
+                            <DialogTrigger asChild>
+                              <Button 
+                                type="button" 
+                                variant="outline" 
+                                size="sm"
+                                className="gap-2"
+                                data-testid="button-style-guide"
+                              >
+                                <Info className="w-4 h-4" />
+                                Style Guide
+                              </Button>
+                            </DialogTrigger>
+                            <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
+                              <DialogHeader>
+                                <DialogTitle className="flex items-center gap-2 text-2xl">
+                                  <i className="fas fa-palette text-primary"></i>
+                                  Image Style Guide
+                                </DialogTitle>
+                                <DialogDescription>
+                                  Use these keywords in your story prompt to control the visual style of your storybook images.
+                                  If you don't specify a style, we'll default to a colorful children's book illustration.
+                                </DialogDescription>
+                              </DialogHeader>
+                              
+                              <div className="space-y-6 mt-4">
+                                {/* Realistic Styles */}
+                                <div>
+                                  <h3 className="font-semibold text-lg mb-3 flex items-center gap-2">
+                                    <span className="text-2xl">📸</span>
+                                    Realistic & Photographic
+                                  </h3>
+                                  <div className="flex flex-wrap gap-2">
+                                    {['realistic', 'photorealistic', 'photo-realistic', 'photograph'].map(style => (
+                                      <span key={style} className="px-3 py-1 bg-primary/10 text-primary rounded-full text-sm">
+                                        {style}
+                                      </span>
+                                    ))}
+                                  </div>
+                                  <p className="text-sm text-muted-foreground mt-2">
+                                    Example: "Create a <strong>realistic photographic</strong> story about space exploration"
+                                  </p>
+                                </div>
+
+                                {/* Cartoon & Animation */}
+                                <div>
+                                  <h3 className="font-semibold text-lg mb-3 flex items-center gap-2">
+                                    <span className="text-2xl">🎨</span>
+                                    Cartoon & Animation
+                                  </h3>
+                                  <div className="flex flex-wrap gap-2">
+                                    {['cartoon', 'animated', 'anime', 'manga'].map(style => (
+                                      <span key={style} className="px-3 py-1 bg-secondary/10 text-secondary rounded-full text-sm">
+                                        {style}
+                                      </span>
+                                    ))}
+                                  </div>
+                                  <p className="text-sm text-muted-foreground mt-2">
+                                    Example: "Create an <strong>anime-style</strong> adventure with samurai warriors"
+                                  </p>
+                                </div>
+
+                                {/* Traditional Art */}
+                                <div>
+                                  <h3 className="font-semibold text-lg mb-3 flex items-center gap-2">
+                                    <span className="text-2xl">🖌️</span>
+                                    Traditional Art Styles
+                                  </h3>
+                                  <div className="flex flex-wrap gap-2">
+                                    {['oil painting', 'watercolor', 'sketch', 'drawing', 'pencil', 'impressionist'].map(style => (
+                                      <span key={style} className="px-3 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-full text-sm">
+                                        {style}
+                                      </span>
+                                    ))}
+                                  </div>
+                                  <p className="text-sm text-muted-foreground mt-2">
+                                    Example: "Create a <strong>watercolor</strong> fairy tale about a magical garden"
+                                  </p>
+                                </div>
+
+                                {/* Digital & 3D */}
+                                <div>
+                                  <h3 className="font-semibold text-lg mb-3 flex items-center gap-2">
+                                    <span className="text-2xl">💻</span>
+                                    Digital & 3D
+                                  </h3>
+                                  <div className="flex flex-wrap gap-2">
+                                    {['3D', 'CGI', 'rendered', 'render'].map(style => (
+                                      <span key={style} className="px-3 py-1 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 rounded-full text-sm">
+                                        {style}
+                                      </span>
+                                    ))}
+                                  </div>
+                                  <p className="text-sm text-muted-foreground mt-2">
+                                    Example: "Create a <strong>3D rendered</strong> story about toy robots"
+                                  </p>
+                                </div>
+
+                                {/* Time Period Styles */}
+                                <div>
+                                  <h3 className="font-semibold text-lg mb-3 flex items-center gap-2">
+                                    <span className="text-2xl">⏰</span>
+                                    Time Period & Era
+                                  </h3>
+                                  <div className="flex flex-wrap gap-2">
+                                    {['vintage', 'retro', 'modern', 'contemporary'].map(style => (
+                                      <span key={style} className="px-3 py-1 bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 rounded-full text-sm">
+                                        {style}
+                                      </span>
+                                    ))}
+                                  </div>
+                                  <p className="text-sm text-muted-foreground mt-2">
+                                    Example: "Create a <strong>vintage</strong> 1950s detective story"
+                                  </p>
+                                </div>
+
+                                {/* Artistic & Abstract */}
+                                <div>
+                                  <h3 className="font-semibold text-lg mb-3 flex items-center gap-2">
+                                    <span className="text-2xl">🎭</span>
+                                    Artistic & Abstract
+                                  </h3>
+                                  <div className="flex flex-wrap gap-2">
+                                    {['abstract', 'surreal', 'minimalist', 'detailed', 'hyper-realistic'].map(style => (
+                                      <span key={style} className="px-3 py-1 bg-pink-100 dark:bg-pink-900/30 text-pink-700 dark:text-pink-300 rounded-full text-sm">
+                                        {style}
+                                      </span>
+                                    ))}
+                                  </div>
+                                  <p className="text-sm text-muted-foreground mt-2">
+                                    Example: "Create a <strong>surreal</strong> dreamlike story about floating islands"
+                                  </p>
+                                </div>
+
+                                {/* Mood & Lighting */}
+                                <div>
+                                  <h3 className="font-semibold text-lg mb-3 flex items-center gap-2">
+                                    <span className="text-2xl">🌓</span>
+                                    Mood & Lighting
+                                  </h3>
+                                  <div className="flex flex-wrap gap-2">
+                                    {['noir', 'black and white', 'monochrome', 'cinematic', 'dramatic lighting'].map(style => (
+                                      <span key={style} className="px-3 py-1 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-full text-sm">
+                                        {style}
+                                      </span>
+                                    ))}
+                                  </div>
+                                  <p className="text-sm text-muted-foreground mt-2">
+                                    Example: "Create a <strong>noir black and white</strong> mystery story"
+                                  </p>
+                                </div>
+
+                                {/* Tips */}
+                                <div className="bg-muted/50 p-4 rounded-lg">
+                                  <h3 className="font-semibold text-lg mb-2 flex items-center gap-2">
+                                    <i className="fas fa-lightbulb text-primary"></i>
+                                    Pro Tips
+                                  </h3>
+                                  <ul className="space-y-2 text-sm text-muted-foreground">
+                                    <li>✨ Mix styles for unique results: "3D rendered watercolor style"</li>
+                                    <li>🎯 Be specific: "cinematic dramatic lighting" works better than just "cinematic"</li>
+                                    <li>🎨 No style specified? We'll create vibrant children's book illustrations by default</li>
+                                    <li>💡 The keyword just needs to appear anywhere in your prompt to work</li>
+                                  </ul>
+                                </div>
+                              </div>
+                            </DialogContent>
+                          </Dialog>
+                        </div>
                         <FormControl>
                           <Textarea
                             {...field}
