@@ -50,7 +50,7 @@ export async function generateEpub(storybook: Storybook): Promise<Buffer> {
   const options = {
     title: storybook.title,
     author: "AI Storyteller",
-    cover: coverImageUrl ? `${baseUrl}${coverImageUrl}` : undefined, // External cover image
+    // No cover option - let readers use first content page (with title/author overlay) as cover
     tocTitle: "", // Empty TOC title to hide Table of Contents
     tocInTOC: false, // Hide TOC from appearing in itself (EPUB2)
     appendChapterTitles: false, // Don't add chapter titles to content
