@@ -12,31 +12,15 @@ export async function generateEpub(storybook: Storybook): Promise<Buffer> {
   // Use localhost HTTP URLs - epub-gen-memory will fetch and package images automatically
   const baseUrl = "http://localhost:5000";
 
-  // Add cover page - matches book viewer with title and author overlay
+  // Set cover image URL (no text overlay, just the image)
   const coverImageUrl = storybook.coverImageUrl || storybook.pages[0]?.imageUrl;
-  if (coverImageUrl) {
-    const coverUrl = `${baseUrl}${coverImageUrl}`;
-    const author = "AI Storyteller";
-    content.push({
-      title: "Cover",
-      content: `<div class="cover-page">
-  <img src="${coverUrl}" alt="Cover" class="cover-image" />
-  <div class="cover-overlay"></div>
-  <div class="cover-text">
-    <h1>${storybook.title}</h1>
-    <p>By ${author}</p>
-  </div>
-</div>`,
-      beforeToc: true,
-    });
-  }
+  const coverUrl = coverImageUrl ? `${baseUrl}${coverImageUrl}` : undefined;
 
   // Add each page - responsive layout: image left, text right (stacks on small screens)
   for (const page of storybook.pages) {
     const pageImageUrl = `${baseUrl}${page.imageUrl}`;
     
     content.push({
-      title: `Page ${page.pageNumber}`,
       content: `<div class="story-page">
   <div class="page-image">
     <img src="${pageImageUrl}" alt="Illustration for page ${page.pageNumber}" />
@@ -45,13 +29,19 @@ export async function generateEpub(storybook: Storybook): Promise<Buffer> {
     <p>${page.text}</p>
   </div>
 </div>`,
+      excludeFromToc: true, // Exclude from Table of Contents
     });
   }
 
   const options = {
     title: storybook.title,
     author: "AI Storyteller",
-    tocTitle: "", // Hide table of contents
+    cover: coverUrl, // Use actual cover image
+    tocTitle: "", // Empty TOC title to hide Table of Contents
+    tocInTOC: false, // Hide TOC from appearing in itself (EPUB2)
+    appendChapterTitles: false, // Don't add chapter titles to content
+    prependChapterTitles: false, // Don't prepend titles before content
+    numberChaptersInTOC: false, // Don't number chapters in TOC
     css: `
       body {
         font-family: Georgia, serif;
@@ -60,57 +50,7 @@ export async function generateEpub(storybook: Storybook): Promise<Buffer> {
         line-height: 1.6;
       }
       
-      /* Cover page styles - matches book viewer */
-      .cover-page {
-        position: relative;
-        margin: 0;
-        padding: 0;
-        page-break-after: always;
-        height: 100vh;
-      }
-      
-      .cover-image {
-        width: 100%;
-        height: 100%;
-        object-fit: cover;
-        display: block;
-      }
-      
-      .cover-overlay {
-        position: absolute;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background: rgba(0, 0, 0, 0.1);
-      }
-      
-      .cover-text {
-        position: absolute;
-        bottom: 0;
-        left: 0;
-        right: 0;
-        padding: 2rem;
-        background: rgba(255, 255, 255, 0.9);
-        backdrop-filter: blur(8px);
-        text-align: center;
-      }
-      
-      .cover-text h1 {
-        font-size: 2.5rem;
-        font-weight: bold;
-        font-family: Georgia, serif;
-        color: #1e293b;
-        margin: 0 0 0.5rem 0;
-      }
-      
-      .cover-text p {
-        font-size: 1.2rem;
-        color: #475569;
-        margin: 0;
-      }
-      
-      /* Story page styles - responsive layout */
+      /* Story page styles - two-page spread: image left, text right */
       .story-page {
         display: flex;
         flex-wrap: wrap;
