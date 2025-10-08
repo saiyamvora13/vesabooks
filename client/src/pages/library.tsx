@@ -113,7 +113,7 @@ export default function Library() {
           </div>
           
           <Link href="/create">
-            <Button className="gradient-bg hover:opacity-90 w-full sm:w-auto" data-testid="button-create-new">
+            <Button className="gradient-bg hover:opacity-90 text-white w-full sm:w-auto" data-testid="button-create-new">
               <Plus className="mr-2 h-4 w-4" />
               Create New
             </Button>
@@ -218,7 +218,7 @@ export default function Library() {
               Start creating magical storybooks with AI. Your imagination is the only limit!
             </p>
             <Link href="/create">
-              <Button className="gradient-bg hover:opacity-90" data-testid="button-create-first">
+              <Button className="gradient-bg hover:opacity-90 text-white" data-testid="button-create-first">
                 <Plus className="mr-2 h-4 w-4" />
                 Create Your First Storybook
               </Button>
