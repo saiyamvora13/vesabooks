@@ -108,7 +108,7 @@ export function ProgressTracker({ sessionId, onComplete, onRetry, shouldAutoRetr
             {onRetry && (
               <Button 
                 onClick={onRetry}
-                className="gradient-bg hover:opacity-90"
+                className="gradient-bg hover:opacity-90 !text-[hsl(258,90%,20%)]"
                 data-testid="button-retry-generation"
               >
                 <i className="fas fa-redo mr-2"></i>
