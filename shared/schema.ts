@@ -39,6 +39,7 @@ export const storybooks = pgTable("storybooks", {
     imageUrl: string;
   }>>().notNull(),
   inspirationImages: json("inspiration_images").$type<string[]>().notNull().default([]),
+  coverImageUrl: text("cover_image_url"),
   createdAt: timestamp("created_at").defaultNow(),
   shareUrl: text("share_url"),
 });

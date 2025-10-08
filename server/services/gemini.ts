@@ -1,5 +1,5 @@
 import * as fs from "fs";
-import { GoogleGenAI, Modality } from "@google/genai";
+import { GoogleGenAI, Modality, Type } from "@google/genai";
 
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || "" });
 
@@ -11,6 +11,8 @@ export interface StoryPage {
 
 export interface GeneratedStory {
   title: string;
+  author: string;
+  coverImagePrompt: string;
   pages: StoryPage[];
 }
 
@@ -26,145 +28,172 @@ export async function generateStoryFromPrompt(
   inspirationImagePaths: string[]
 ): Promise<GeneratedStory> {
   try {
-    // Try to analyze the inspiration images to understand the style (optional)
-    let styleDescription = "";
-    if (inspirationImagePaths.length > 0) {
+    const systemInstruction = `You are a creative and whimsical children's storybook author. Your task is to generate a complete 3-page story based on a user's prompt and inspirational images. The story should be suitable for children aged 5-7. You must respond with a JSON object that strictly follows the provided schema. Ensure you create a compelling 'coverImagePrompt' and that the 'pages' array contains exactly 3 elements.`;
+
+    const imageParts = [];
+    
+    // Add inspiration images to the content
+    for (const imagePath of inspirationImagePaths) {
       try {
-        styleDescription = await analyzeImageStyle(inspirationImagePaths[0]);
+        const imageBytes = fs.readFileSync(imagePath);
+        const mimeType = getMimeType(imagePath);
+        imageParts.push({
+          inlineData: {
+            data: imageBytes.toString("base64"),
+            mimeType: mimeType,
+          },
+        });
       } catch (error) {
-        console.warn("Image style analysis failed, continuing without style context:", error);
-        // Continue without style description - not critical
+        console.warn(`Failed to read image ${imagePath}:`, error);
       }
     }
 
-    const systemPrompt = `You are a creative children's storybook writer. Create an engaging 6-page story based on the user's prompt.
+    const contents = {
+      parts: [
+        ...imageParts,
+        { text: `Here is the story idea: ${prompt}` },
+      ],
+    };
 
-${styleDescription ? `Style inspiration: ${styleDescription}` : ''}
-
-Return your response as JSON in this exact format:
-{
-  "title": "Story Title",
-  "pages": [
-    {
-      "pageNumber": 1,
-      "text": "Page text content (2-3 sentences suitable for children)",
-      "imagePrompt": "Detailed description for AI image generation that matches the style"
-    }
-  ]
-}
-
-Make sure the story is age-appropriate, engaging, and has a clear beginning, middle, and end. Each page should have vivid, descriptive image prompts that would create beautiful illustrations.`;
-
-    const contents = [];
-    
-    // Only send the text prompt to avoid image processing issues
-    // The uploaded images are for user reference, story generation works from text
-    contents.push(prompt);
-
-    const response = await ai.models.generateContent({
-      model: "gemini-2.5-pro",
-      config: {
-        systemInstruction: systemPrompt,
-        responseMimeType: "application/json",
-        responseSchema: {
-          type: "object",
-          properties: {
-            title: { type: "string" },
-            pages: {
-              type: "array",
-              items: {
-                type: "object",
-                properties: {
-                  pageNumber: { type: "number" },
-                  text: { type: "string" },
-                  imagePrompt: { type: "string" }
-                },
-                required: ["pageNumber", "text", "imagePrompt"]
-              }
-            }
+    const storySchema = {
+      type: Type.OBJECT,
+      properties: {
+        title: {
+          type: Type.STRING,
+          description: "A creative and catchy title for the children's story.",
+        },
+        author: {
+          type: Type.STRING,
+          description: "The author's name for the storybook.",
+        },
+        coverImagePrompt: {
+          type: Type.STRING,
+          description: "A detailed, descriptive prompt for an AI image generator to create the cover image for the book. This should be a single, compelling scene that represents the entire story's theme and main character."
+        },
+        pages: {
+          type: Type.ARRAY,
+          description: "An array of 3 pages for the storybook.",
+          items: {
+            type: Type.OBJECT,
+            properties: {
+              pageNumber: {
+                type: Type.NUMBER,
+                description: "The page number (1, 2, or 3).",
+              },
+              text: {
+                type: Type.STRING,
+                description: "The text for one page of the story, between 100 and 150 words. It should be engaging for a child.",
+              },
+              imagePrompt: {
+                type: Type.STRING,
+                description: "A detailed, descriptive prompt for an AI image generator to create an illustration for this page. Describe the scene, characters, actions, style, and colors clearly. The style should be consistent with a whimsical, illustrated children's book.",
+              },
+            },
+            required: ["pageNumber", "text", "imagePrompt"],
           },
-          required: ["title", "pages"]
         },
       },
+      required: ["title", "author", "coverImagePrompt", "pages"],
+    };
+
+    const response = await ai.models.generateContent({
+      model: "gemini-2.5-flash",
       contents: contents,
+      config: {
+        systemInstruction: systemInstruction,
+        responseMimeType: "application/json",
+        responseSchema: storySchema,
+      },
     });
 
-    const rawJson = response.text;
+    const rawJson = response.text?.trim();
     if (!rawJson) {
       throw new Error("Empty response from Gemini");
     }
 
-    const generatedStory: GeneratedStory = JSON.parse(rawJson);
-    return generatedStory;
+    const parsedJson = JSON.parse(rawJson);
+    if (!parsedJson.author) {
+      parsedJson.author = "AI Storyteller";
+    }
+
+    return parsedJson as GeneratedStory;
   } catch (error) {
     throw new Error(`Failed to generate story: ${error}`);
   }
 }
 
-async function analyzeImageStyle(imagePath: string): Promise<string> {
-  try {
-    const imageBytes = fs.readFileSync(imagePath);
-    
-    const contents = [
-      {
-        inlineData: {
-          data: imageBytes.toString("base64"),
-          mimeType: "image/jpeg",
-        },
-      },
-      "Analyze the visual style of this image. Describe the art style, color palette, mood, and any distinctive visual elements that could be replicated in children's storybook illustrations. Be specific about artistic techniques, composition, and visual themes.",
-    ];
-
-    const response = await ai.models.generateContent({
-      model: "gemini-2.5-pro",
-      contents: contents,
-    });
-
-    return response.text || "";
-  } catch (error) {
-    console.error("Failed to analyze image style:", error);
-    return "";
-  }
-}
+const delay = (ms: number) => new Promise(res => setTimeout(res, ms));
 
 export async function generateIllustration(
   imagePrompt: string,
   outputPath: string,
-  styleContext: string = ""
+  baseImagePath: string
 ): Promise<void> {
-  try {
-    const enhancedPrompt = styleContext 
-      ? `${imagePrompt}. Style: ${styleContext}. Children's book illustration style, colorful, whimsical, safe for children.`
-      : `${imagePrompt}. Children's book illustration style, colorful, whimsical, safe for children.`;
+  let retries = 3;
+  let waitTime = 2000; // Start with a 2-second delay
 
-    const response = await ai.models.generateContent({
-      model: "gemini-2.0-flash-preview-image-generation",
-      contents: [{ role: "user", parts: [{ text: enhancedPrompt }] }],
-      config: {
-        responseModalities: [Modality.TEXT, Modality.IMAGE],
-      },
-    });
+  while (retries > 0) {
+    try {
+      const fullPrompt = `${imagePrompt}, in the style of a vibrant and colorful children's book illustration, whimsical and gentle.`;
+      
+      const baseImageBytes = fs.readFileSync(baseImagePath);
+      const baseImageMimeType = getMimeType(baseImagePath);
+      
+      const baseImage = {
+        inlineData: {
+          mimeType: baseImageMimeType,
+          data: baseImageBytes.toString("base64"),
+        },
+      };
 
-    const candidates = response.candidates;
-    if (!candidates || candidates.length === 0) {
-      throw new Error("No image generated");
-    }
+      const contents = {
+        parts: [
+          baseImage,
+          { text: fullPrompt },
+        ],
+      };
 
-    const content = candidates[0].content;
-    if (!content || !content.parts) {
-      throw new Error("No content parts in response");
-    }
+      const response = await ai.models.generateContent({
+        model: "gemini-2.5-flash-image",
+        contents: contents,
+        config: {
+          responseModalities: [Modality.IMAGE, Modality.TEXT],
+        },
+      });
 
-    for (const part of content.parts) {
-      if (part.inlineData && part.inlineData.data) {
-        const imageData = Buffer.from(part.inlineData.data, "base64");
-        fs.writeFileSync(outputPath, imageData);
-        return;
+      if (response.candidates && response.candidates.length > 0) {
+        const content = response.candidates[0].content;
+        if (content?.parts) {
+          for (const part of content.parts) {
+            if (part.inlineData?.data) {
+              const imageData = Buffer.from(part.inlineData.data, "base64");
+              fs.writeFileSync(outputPath, imageData);
+              return;
+            }
+          }
+        }
+      }
+      
+      throw new Error("Image generation failed to return an image part.");
+
+    } catch (error: any) {
+      retries--;
+      const errorMessage = error.toString();
+      
+      if (retries > 0 && (errorMessage.includes("429") || errorMessage.includes("RESOURCE_EXHAUSTED"))) {
+        console.warn(`Rate limit hit. Retrying in ${waitTime / 1000}s... (${retries} retries left)`);
+        await delay(waitTime);
+        waitTime *= 2; 
+      } else {
+        if (errorMessage.includes("429") || errorMessage.includes("RESOURCE_EXHAUSTED") || errorMessage.includes("Quota exceeded")) {
+          console.error("Image generation failed due to quota limit.", error);
+          throw new Error("You have exceeded your API quota for the day. Please check your plan details and try again tomorrow.");
+        }
+        console.error("Image generation failed.", error);
+        throw new Error("Image generation failed. The AI service may be temporarily unavailable or overloaded.");
       }
     }
-
-    throw new Error("No image data found in response");
-  } catch (error) {
-    throw new Error(`Failed to generate illustration: ${error}`);
   }
+  
+  throw new Error("Image generation failed after all retries.");
 }

@@ -209,14 +209,22 @@ async function generateStorybookAsync(
       fs.mkdirSync(generatedDir, { recursive: true });
     }
 
+    // Use the first inspiration image as the base for all generated images
+    const baseImagePath = imagePaths[0] || "";
+    
+    // Generate cover image
+    const coverImageFileName = `${sessionId}_cover.png`;
+    const coverImagePath = path.join(generatedDir, coverImageFileName);
+    await generateIllustration(generatedStory.coverImagePrompt, coverImagePath, baseImagePath);
+
     const pages = [];
     for (let i = 0; i < generatedStory.pages.length; i++) {
       const page = generatedStory.pages[i];
       const imageFileName = `${sessionId}_page_${page.pageNumber}.png`;
       const imagePath = path.join(generatedDir, imageFileName);
 
-      // Generate illustration for this page
-      await generateIllustration(page.imagePrompt, imagePath);
+      // Generate illustration for this page using the base image
+      await generateIllustration(page.imagePrompt, imagePath, baseImagePath);
 
       pages.push({
         pageNumber: page.pageNumber,
@@ -240,13 +248,14 @@ async function generateStorybookAsync(
       message: 'Finalizing your storybook...',
     });
 
-    // Save to storage with userId
+    // Save to storage with userId, including cover image URL
     const storybook = await storage.createStorybook({
       userId,
       title: generatedStory.title,
       prompt,
       pages,
       inspirationImages: [],
+      coverImageUrl: `/api/images/${coverImageFileName}`,
     });
 
     // Complete
