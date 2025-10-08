@@ -134,6 +134,59 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Delete storybook (requires authentication)
+  app.delete("/api/storybooks/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const userId = req.user.id || req.user.claims?.sub;
+
+      // Get the storybook to verify ownership and access image URLs
+      const storybook = await storage.getStorybook(id);
+      
+      if (!storybook) {
+        return res.status(404).json({ message: "Storybook not found" });
+      }
+
+      // Verify ownership
+      if (storybook.userId !== userId) {
+        return res.status(403).json({ message: "Not authorized to delete this storybook" });
+      }
+
+      // Delete all images from Object Storage
+      const { ObjectStorageService } = await import("./objectStorage");
+      const objectStorage = new ObjectStorageService();
+
+      // Helper function to extract filename from URL
+      const extractFilename = (url: string): string => {
+        // URL format: "/api/storage/filename.png"
+        const parts = url.split('/');
+        return parts[parts.length - 1];
+      };
+
+      // Delete cover image if exists
+      if (storybook.coverImageUrl) {
+        const coverFilename = extractFilename(storybook.coverImageUrl);
+        await objectStorage.deleteFile(coverFilename);
+      }
+
+      // Delete all page images
+      for (const page of storybook.pages) {
+        if (page.imageUrl) {
+          const pageFilename = extractFilename(page.imageUrl);
+          await objectStorage.deleteFile(pageFilename);
+        }
+      }
+
+      // Delete the storybook from database
+      await storage.deleteStorybook(id);
+
+      res.json({ message: "Storybook deleted successfully" });
+    } catch (error) {
+      console.error("Delete storybook error:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
   // Get storybook by share URL
   app.get("/api/shared/:shareUrl", async (req, res) => {
     try {

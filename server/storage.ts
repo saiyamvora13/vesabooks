@@ -15,6 +15,7 @@ export interface IStorage {
   getAllStorybooks(): Promise<Storybook[]>;
   updateStorybookShareUrl(id: string, shareUrl: string): Promise<void>;
   updateStorybookImages(id: string, coverImageUrl: string, pages: Storybook['pages']): Promise<void>;
+  deleteStorybook(id: string): Promise<void>;
   
   // Progress tracking (kept in-memory for real-time updates)
   setGenerationProgress(sessionId: string, progress: StoryGenerationProgress): Promise<void>;
@@ -130,6 +131,12 @@ export class DatabaseStorage implements IStorage {
     await db
       .update(storybooks)
       .set({ coverImageUrl, pages })
+      .where(eq(storybooks.id, id));
+  }
+
+  async deleteStorybook(id: string): Promise<void> {
+    await db
+      .delete(storybooks)
       .where(eq(storybooks.id, id));
   }
 

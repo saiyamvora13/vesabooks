@@ -1,12 +1,25 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { Link } from "wouter";
 import { useAuth } from "@/hooks/useAuth";
 import Navigation from "@/components/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { BookOpen, Calendar, Plus } from "lucide-react";
+import { BookOpen, Calendar, Plus, Trash2 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
+import { useState } from "react";
 
 interface Storybook {
   id: string;
@@ -19,10 +32,33 @@ interface Storybook {
 
 export default function Library() {
   const { user, isAuthenticated, isLoading: authLoading } = useAuth();
+  const { toast } = useToast();
+  const [deletingBookId, setDeletingBookId] = useState<string | null>(null);
 
   const { data: storybooks, isLoading, error } = useQuery<Storybook[]>({
     queryKey: ["/api/storybooks"],
     enabled: isAuthenticated,
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => {
+      await apiRequest("DELETE", `/api/storybooks/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/storybooks"] });
+      toast({
+        title: "Storybook deleted",
+        description: "Your storybook has been permanently deleted.",
+      });
+      setDeletingBookId(null);
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Failed to delete",
+        description: error.message || "Something went wrong. Please try again.",
+        variant: "destructive",
+      });
+    },
   });
 
   if (authLoading) {
@@ -150,11 +186,24 @@ export default function Library() {
                       {formatDistanceToNow(new Date(storybook.createdAt), { addSuffix: true })}
                     </span>
                   </div>
-                  <Link href={`/view/${storybook.id}`}>
-                    <Button variant="ghost" size="sm" data-testid={`button-view-${storybook.id}`}>
-                      View
+                  <div className="flex items-center gap-2">
+                    <Link href={`/view/${storybook.id}`}>
+                      <Button variant="ghost" size="sm" data-testid={`button-view-${storybook.id}`}>
+                        View
+                      </Button>
+                    </Link>
+                    <Button
+                      variant="destructive"
+                      size="sm"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        setDeletingBookId(storybook.id);
+                      }}
+                      data-testid={`button-delete-${storybook.id}`}
+                    >
+                      <Trash2 className="h-4 w-4" />
                     </Button>
-                  </Link>
+                  </div>
                 </CardFooter>
               </Card>
             ))}
@@ -177,6 +226,33 @@ export default function Library() {
           </div>
         )}
       </div>
+
+      <AlertDialog open={!!deletingBookId} onOpenChange={(open) => !open && setDeletingBookId(null)}>
+        <AlertDialogContent data-testid="dialog-delete-confirm">
+          <AlertDialogHeader>
+            <AlertDialogTitle data-testid="dialog-title">Delete Storybook?</AlertDialogTitle>
+            <AlertDialogDescription data-testid="dialog-description">
+              This will permanently delete '{storybooks?.find(b => b.id === deletingBookId)?.title}' and all its images. This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel
+              disabled={deleteMutation.isPending}
+              data-testid="button-cancel-delete"
+            >
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => deletingBookId && deleteMutation.mutate(deletingBookId)}
+              disabled={deleteMutation.isPending}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              data-testid="button-confirm-delete"
+            >
+              {deleteMutation.isPending ? "Deleting..." : "Delete"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

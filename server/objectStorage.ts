@@ -142,6 +142,24 @@ export class ObjectStorageService {
     const [buffer] = await file.download();
     return buffer;
   }
+
+  // Delete a file from object storage
+  async deleteFile(filePath: string): Promise<void> {
+    try {
+      const file = await this.searchPublicObject(filePath);
+      if (!file) {
+        // File doesn't exist - handle gracefully
+        console.log(`File not found in object storage: ${filePath}`);
+        return;
+      }
+
+      await file.delete();
+      console.log(`Deleted file from object storage: ${filePath}`);
+    } catch (error) {
+      console.error(`Error deleting file ${filePath}:`, error);
+      // Don't throw - handle gracefully to allow cleanup to continue
+    }
+  }
 }
 
 function parseObjectPath(path: string): {
