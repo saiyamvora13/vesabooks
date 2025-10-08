@@ -43,6 +43,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get metrics (public - no auth required)
+  app.get('/api/metrics', async (req, res) => {
+    try {
+      const metrics = await storage.getMetrics();
+      res.json(metrics);
+    } catch (error) {
+      console.error("Error fetching metrics:", error);
+      res.status(500).json({ message: "Failed to fetch metrics" });
+    }
+  });
+
   // Create storybook (requires authentication)
   app.post("/api/storybooks", isAuthenticated, upload.array("images", 5), async (req: any, res) => {
     try {

@@ -1,7 +1,51 @@
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
+import { useQuery } from "@tanstack/react-query";
+import { useState, useEffect } from "react";
+import { Skeleton } from "@/components/ui/skeleton";
+
+interface Metrics {
+  storiesCreated: number;
+  activeUsers: number;
+}
+
+function AnimatedCounter({ value, duration = 1000 }: { value: number; duration?: number }) {
+  const [count, setCount] = useState(0);
+
+  useEffect(() => {
+    if (value === 0) {
+      setCount(0);
+      return;
+    }
+
+    const startTime = Date.now();
+    const endTime = startTime + duration;
+    
+    const timer = setInterval(() => {
+      const now = Date.now();
+      const progress = Math.min((now - startTime) / duration, 1);
+      const currentCount = Math.floor(progress * value);
+      
+      setCount(currentCount);
+      
+      if (now >= endTime) {
+        setCount(value);
+        clearInterval(timer);
+      }
+    }, 16);
+
+    return () => clearInterval(timer);
+  }, [value, duration]);
+
+  return <span>{count}</span>;
+}
 
 export default function HeroSection() {
+  const { data: metrics, isLoading } = useQuery<Metrics>({
+    queryKey: ['/api/metrics'],
+    staleTime: 60000, // 60 seconds cache
+  });
+
   return (
     <section className="relative overflow-hidden py-12 sm:py-20 lg:py-32">
       {/* Background decoration */}
@@ -53,16 +97,30 @@ export default function HeroSection() {
             {/* Stats */}
             <div className="mt-8 sm:mt-12 grid grid-cols-3 gap-3 sm:gap-6">
               <div>
-                <div className="text-2xl sm:text-3xl font-bold gradient-text">50K+</div>
+                <div className="text-2xl sm:text-3xl font-bold gradient-text" data-testid="metric-stories">
+                  {isLoading ? (
+                    <Skeleton className="h-8 w-16 inline-block" />
+                  ) : (
+                    <AnimatedCounter value={metrics?.storiesCreated || 0} />
+                  )}
+                </div>
                 <div className="text-xs sm:text-sm text-muted-foreground">Stories Created</div>
               </div>
               <div>
-                <div className="text-2xl sm:text-3xl font-bold gradient-text">10K+</div>
-                <div className="text-xs sm:text-sm text-muted-foreground">Happy Users</div>
+                <div className="text-2xl sm:text-3xl font-bold gradient-text" data-testid="metric-users">
+                  {isLoading ? (
+                    <Skeleton className="h-8 w-16 inline-block" />
+                  ) : (
+                    <AnimatedCounter value={metrics?.activeUsers || 0} />
+                  )}
+                </div>
+                <div className="text-xs sm:text-sm text-muted-foreground">Active Users</div>
               </div>
               <div>
-                <div className="text-2xl sm:text-3xl font-bold gradient-text">4.9★</div>
-                <div className="text-xs sm:text-sm text-muted-foreground">User Rating</div>
+                <div className="text-2xl sm:text-3xl font-bold gradient-text" data-testid="metric-rating">
+                  New ⭐
+                </div>
+                <div className="text-xs sm:text-sm text-muted-foreground">Be our first reviewer!</div>
               </div>
             </div>
           </div>

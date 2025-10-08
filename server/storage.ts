@@ -1,6 +1,6 @@
 import { type Storybook, type InsertStorybook, type StoryGenerationProgress, storybooks, users, type User, type UpsertUser } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc } from "drizzle-orm";
+import { eq, desc, count, countDistinct } from "drizzle-orm";
 
 export interface IStorage {
   // Replit Auth: User operations (mandatory)
@@ -21,6 +21,9 @@ export interface IStorage {
   setGenerationProgress(sessionId: string, progress: StoryGenerationProgress): Promise<void>;
   getGenerationProgress(sessionId: string): Promise<StoryGenerationProgress | undefined>;
   clearGenerationProgress(sessionId: string): Promise<void>;
+  
+  // Metrics
+  getMetrics(): Promise<{ storiesCreated: number; activeUsers: number }>;
 }
 
 // Database storage for persistent data
@@ -151,6 +154,24 @@ export class DatabaseStorage implements IStorage {
 
   async clearGenerationProgress(sessionId: string): Promise<void> {
     this.generationProgress.delete(sessionId);
+  }
+
+  // Metrics
+  async getMetrics(): Promise<{ storiesCreated: number; activeUsers: number }> {
+    // Get total count of storybooks
+    const [storiesResult] = await db
+      .select({ count: count() })
+      .from(storybooks);
+    
+    // Get count of distinct users who have created at least 1 storybook
+    const [usersResult] = await db
+      .select({ count: countDistinct(storybooks.userId) })
+      .from(storybooks);
+    
+    return {
+      storiesCreated: storiesResult?.count || 0,
+      activeUsers: usersResult?.count || 0,
+    };
   }
 }
 
