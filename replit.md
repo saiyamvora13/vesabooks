@@ -56,6 +56,7 @@ Preferred communication style: Simple, everyday language.
 - `GET /api/shared/:shareUrl` - Retrieve storybook by share URL
 - `POST /api/storybooks/:id/share` - Generate shareable URL
 - `GET /api/storybooks/:id/epub` - Download storybook as EPUB e-book file
+- `GET /api/storage/:filename` - Serve images from Replit Object Storage
 - `GET /api/generation/:sessionId/progress` - Poll generation progress
 - `GET /api/auth/user` - Get current authenticated user
 - `GET /api/login` - Initiate OAuth login flow
@@ -88,7 +89,8 @@ Preferred communication style: Simple, everyday language.
 **Storage Strategy:**
 - Primary: PostgreSQL via Neon serverless driver
 - Fallback: In-memory Map-based storage for development (MemStorage class)
-- File uploads: Local filesystem storage in `uploads/` directory via Multer
+- File uploads: Multer receives multipart uploads → images saved to Replit Object Storage
+- Image storage: Replit Object Storage (Google Cloud Storage backend) for persistence across server restarts
 - Progress tracking: Separate in-memory Map for generation progress states
 
 **Data Validation:**
@@ -107,10 +109,12 @@ Preferred communication style: Simple, everyday language.
 **Database & Infrastructure:**
 - **Neon Serverless Postgres (@neondatabase/serverless)**: Serverless PostgreSQL database with connection pooling
 - **Drizzle ORM**: Type-safe database toolkit with schema migrations support
+- **Google Cloud Storage (@google-cloud/storage)**: Cloud object storage backend via Replit Object Storage integration
 
 **File Handling:**
 - **Multer**: Multipart form data handling for image uploads
 - **Pako**: Data compression for shareable URLs
+- **epub-gen-memory**: EPUB e-book generation library
 
 **UI Component Libraries:**
 - **Radix UI**: Headless accessible components (@radix-ui/react-*)
@@ -133,12 +137,26 @@ Preferred communication style: Simple, everyday language.
 - Environment variable `GEMINI_API_KEY` required for AI functionality
 - Environment variable `DATABASE_URL` required for PostgreSQL connection
 - Environment variable `SESSION_SECRET` required for session encryption
-- File system access for temporary upload storage
+- Environment variable `PUBLIC_OBJECT_SEARCH_PATHS` required for Object Storage bucket access
 - Client-side polling mechanism for progress updates (2-second intervals)
 
 ## Recent Changes (October 2025)
 
-### EPUB E-book Download (LATEST - October 8, 2025)
+### Replit Object Storage Migration (LATEST - October 8, 2025)
+- **Persistent Image Storage**: Migrated all storybook images from local filesystem to Replit Object Storage (Google Cloud Storage backend)
+- **Server Restart Resilience**: Images now persist across server restarts and deployments
+- **Migration Completed**: Successfully migrated all 7 existing storybooks to Object Storage
+- **Object Storage Service**: Created `ObjectStorageService` class for cloud storage management
+- **Image Serving**: Images served via `/api/storage/{filename}` endpoint with public read access
+- **EPUB Compatibility**: Updated EPUB generation to use localhost HTTP URLs (`http://localhost:5000/api/storage/...`) for image fetching
+  - epub-gen-memory library requires HTTP(S) protocols, cannot use file paths
+  - Images are fetched from Object Storage during EPUB generation
+- **Direct Upload Pipeline**: New storybook generation uploads cover and page images directly to Object Storage
+- **Legacy Support**: Maintained `/api/images` endpoint for backwards compatibility
+- **Automatic Cleanup**: Temporary local files are deleted after upload to Object Storage
+- **Database Updates**: Image URLs in database updated from local paths to `/api/storage/` URLs
+
+### EPUB E-book Download (October 8, 2025)
 - **Cross-Platform E-books**: Users can download their storybooks as EPUB files compatible with Kindle, iOS Books, Android, and other standard e-readers
 - **Download Button**: "Download E-book" button added to view page next to Share button
 - **Complete Package**: EPUB includes cover image, all pages with illustrations, and formatted text
