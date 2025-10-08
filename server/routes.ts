@@ -194,7 +194,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Serve generated images
+  // Serve images from Object Storage
+  app.get("/api/storage/:filename", async (req, res) => {
+    try {
+      const { ObjectStorageService } = await import("./objectStorage");
+      const objectStorage = new ObjectStorageService();
+      
+      const file = await objectStorage.searchPublicObject(req.params.filename);
+      if (!file) {
+        return res.status(404).json({ message: "Image not found" });
+      }
+      
+      await objectStorage.downloadObject(file, res);
+    } catch (error) {
+      console.error("Object storage error:", error);
+      res.status(500).json({ message: "Failed to retrieve image" });
+    }
+  });
+
+  // Legacy: Serve generated images from filesystem (for backward compatibility)
   app.use("/api/images", express.static(path.join(process.cwd(), "generated")));
 
   const httpServer = createServer(app);
