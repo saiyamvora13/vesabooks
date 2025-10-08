@@ -88,13 +88,13 @@ export function FileUpload({
         onDrop={handleDrop}
         onClick={openFilePicker}
         className={cn(
-          "upload-zone border-2 border-dashed rounded-2xl p-12 text-center bg-muted/20 cursor-pointer transition-all",
+          "upload-zone border-2 border-dashed rounded-2xl p-8 text-center bg-muted/20 cursor-pointer transition-all",
           isDragOver ? "drag-over border-primary bg-primary/5" : "border-border"
         )}
       >
-        <i className="fas fa-cloud-upload-alt text-5xl text-primary mb-4"></i>
-        <p className="text-lg font-medium mb-2">Drop your images here</p>
-        <p className="text-sm text-muted-foreground mb-4">or click to browse</p>
+        <i className="fas fa-cloud-upload-alt text-4xl text-primary mb-3"></i>
+        <p className="text-base font-medium mb-1">Drop your images here</p>
+        <p className="text-sm text-muted-foreground mb-2">or click to browse</p>
         <p className="text-xs text-muted-foreground">
           PNG or JPEG • Max {formatFileSize(maxSize)} per image • {maxFiles} images max
         </p>
