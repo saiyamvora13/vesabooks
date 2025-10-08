@@ -97,7 +97,7 @@ export default function HeroSection() {
             {/* Stats */}
             <div className="mt-8 sm:mt-12 grid grid-cols-3 gap-3 sm:gap-6">
               <div>
-                <div className="text-2xl sm:text-3xl font-bold gradient-text" data-testid="metric-stories">
+                <div className="text-2xl sm:text-3xl font-bold text-primary" data-testid="metric-stories">
                   {isLoading ? (
                     <Skeleton className="h-8 w-16 inline-block" />
                   ) : (
@@ -107,7 +107,7 @@ export default function HeroSection() {
                 <div className="text-xs sm:text-sm text-muted-foreground">Stories Created</div>
               </div>
               <div>
-                <div className="text-2xl sm:text-3xl font-bold gradient-text" data-testid="metric-users">
+                <div className="text-2xl sm:text-3xl font-bold text-primary" data-testid="metric-users">
                   {isLoading ? (
                     <Skeleton className="h-8 w-16 inline-block" />
                   ) : (
@@ -117,7 +117,7 @@ export default function HeroSection() {
                 <div className="text-xs sm:text-sm text-muted-foreground">Active Users</div>
               </div>
               <div>
-                <div className="text-2xl sm:text-3xl font-bold gradient-text" data-testid="metric-rating">
+                <div className="text-2xl sm:text-3xl font-bold text-primary" data-testid="metric-rating">
                   New ⭐
                 </div>
                 <div className="text-xs sm:text-sm text-muted-foreground">Be our first reviewer!</div>
