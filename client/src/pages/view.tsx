@@ -55,6 +55,39 @@ export default function View() {
     }
   };
 
+  const downloadEpub = async () => {
+    if (!storybook) return;
+    
+    try {
+      const response = await fetch(`/api/storybooks/${storybook.id}/epub`);
+      
+      if (!response.ok) {
+        throw new Error('Failed to download EPUB');
+      }
+      
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${storybook.title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.epub`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+      
+      toast({
+        title: "E-book downloaded!",
+        description: "Your storybook has been downloaded as an EPUB file",
+      });
+    } catch (error) {
+      toast({
+        title: "Failed to download e-book",
+        description: "Please try again later",
+        variant: "destructive",
+      });
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-background">
@@ -140,8 +173,8 @@ export default function View() {
                 </DialogContent>
               </Dialog>
               
-              <Button variant="outline" className="rounded-xl" data-testid="button-download">
-                <i className="fas fa-download mr-2"></i>Download PDF
+              <Button variant="outline" className="rounded-xl" onClick={downloadEpub} data-testid="button-download-epub">
+                <i className="fas fa-book mr-2"></i>Download E-book
               </Button>
             </div>
           </div>
