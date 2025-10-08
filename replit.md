@@ -162,3 +162,23 @@ Preferred communication style: Simple, everyday language.
 - Error handling with retry button
 - "My Library" link in navigation (visible only when authenticated)
 - Integration with TanStack Query for data fetching and caching
+
+### Mobile-Centric Design (NEW)
+- **Responsive Flipbook Viewer**: Automatically adapts to screen size
+  - Desktop (≥768px): 3D flipbook with dual-page layout and perspective effects
+  - Mobile (<768px): Single-page carousel view optimized for small screens
+- **Touch Gestures**: Swipe left/right to navigate pages on mobile devices
+- **Optimized Layouts**: 
+  - Mobile view shows full-height pages (70vh) with better visibility
+  - Reduced padding and spacing on mobile for more screen real estate
+  - Responsive navigation controls sized appropriately for touch
+- **File Upload UI**: 
+  - Taller preview images (160px) for better visibility
+  - Responsive grid (2/3/5 columns based on screen size)
+  - Gradient filename overlay that doesn't obscure images
+  - Compact upload zone with optimized padding
+- **View Page Optimization**:
+  - Mobile-first padding and spacing
+  - Responsive typography (smaller on mobile, larger on desktop)
+  - 85vh book container on mobile vs 80vh on desktop
+  - Minimal padding (8px) on mobile containers

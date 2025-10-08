@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 interface StoryPage {
@@ -114,6 +114,16 @@ export function FlipbookViewer({ pages, title, author = "AI Author", coverImageU
   const numPages = pages.length;
   const numSheets = numPages + 1;
   const [currentPage, setCurrentPage] = useState(0);
+  const [isMobile, setIsMobile] = useState(false);
+  const touchStartX = useRef<number>(0);
+  const touchEndX = useRef<number>(0);
+
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 768);
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   const goToPrevPage = useCallback(() => setCurrentPage((p) => Math.max(0, p - 1)), []);
   const goToNextPage = useCallback(() => setCurrentPage((p) => Math.min(p + 1, numSheets)), [numSheets]);
@@ -122,6 +132,27 @@ export function FlipbookViewer({ pages, title, author = "AI Author", coverImageU
     if (event.key === 'ArrowLeft') goToPrevPage();
     if (event.key === 'ArrowRight') goToNextPage();
   }, [goToPrevPage, goToNextPage]);
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    touchStartX.current = e.touches[0].clientX;
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    touchEndX.current = e.touches[0].clientX;
+  };
+
+  const handleTouchEnd = () => {
+    const swipeDistance = touchStartX.current - touchEndX.current;
+    const minSwipeDistance = 50;
+
+    if (Math.abs(swipeDistance) > minSwipeDistance) {
+      if (swipeDistance > 0) {
+        goToNextPage();
+      } else {
+        goToPrevPage();
+      }
+    }
+  };
 
   useEffect(() => {
     window.addEventListener('keydown', handleKeyDown);
@@ -160,6 +191,80 @@ export function FlipbookViewer({ pages, title, author = "AI Author", coverImageU
     }
     return "The End";
   }, [currentPage, numPages]);
+
+  const mobilePages = useMemo(() => {
+    const allPages = [];
+    
+    allPages.push({
+      type: 'cover',
+      content: <Cover title={title} author={author} coverImageUrl={coverImageUrl} />,
+      label: 'Cover',
+    });
+
+    pages.forEach((page, idx) => {
+      allPages.push({
+        type: 'image',
+        content: <ImagePage page={page} pageNum={idx + 1} />,
+        label: `Page ${idx + 1}`,
+      });
+      allPages.push({
+        type: 'text',
+        content: <TextPage page={page} author={author} pageNum={idx + 1} onTurn={goToNextPage} />,
+        label: `Page ${idx + 1}`,
+      });
+    });
+
+    allPages.push({
+      type: 'end',
+      content: <EndPage totalPages={pages.length} />,
+      label: 'The End',
+    });
+
+    return allPages;
+  }, [pages, title, author, coverImageUrl, goToNextPage]);
+
+  if (isMobile) {
+    const mobilePage = mobilePages[currentPage] || mobilePages[0];
+    
+    return (
+      <div className="w-full h-full flex flex-col items-center justify-center gap-4">
+        <div 
+          className="w-full max-w-md h-[70vh] relative bg-white dark:bg-slate-900 rounded-2xl shadow-2xl overflow-hidden"
+          onTouchStart={handleTouchStart}
+          onTouchMove={handleTouchMove}
+          onTouchEnd={handleTouchEnd}
+        >
+          {mobilePage.content}
+        </div>
+
+        <div className="flex items-center justify-center gap-4 bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm p-3 rounded-full shadow-lg">
+          <button
+            onClick={goToPrevPage}
+            disabled={currentPage === 0}
+            className="p-2 rounded-full hover:bg-slate-200 dark:hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            aria-label="Previous Page"
+            data-testid="button-previous-page"
+          >
+            <ChevronLeft className="w-6 h-6 text-slate-700 dark:text-slate-200" />
+          </button>
+          <span className="text-slate-700 dark:text-slate-200 font-medium w-24 text-center text-sm" aria-live="polite" data-testid="text-page-indicator">
+            {mobilePage.label}
+          </span>
+          <button
+            onClick={goToNextPage}
+            disabled={currentPage >= mobilePages.length - 1}
+            className="p-2 rounded-full hover:bg-slate-200 dark:hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            aria-label="Next Page"
+            data-testid="button-next-page"
+          >
+            <ChevronRight className="w-6 h-6 text-slate-700 dark:text-slate-200" />
+          </button>
+        </div>
+
+        <p className="text-xs text-muted-foreground">Swipe to navigate</p>
+      </div>
+    );
+  }
 
   return (
     <div className="w-full h-full flex flex-col items-center justify-center gap-4">

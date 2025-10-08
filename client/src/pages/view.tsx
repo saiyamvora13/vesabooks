@@ -95,13 +95,13 @@ export default function View() {
     <div className="min-h-screen bg-muted/30">
       <Navigation />
       
-      <section className="py-20">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <section className="py-8 md:py-20">
+        <div className="max-w-7xl mx-auto px-2 sm:px-4 lg:px-8">
           {/* Header with Actions */}
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 md:mb-8 px-2">
             <div>
-              <h2 className="text-3xl font-bold mb-2" data-testid="text-story-title">{storybook.title}</h2>
-              <p className="text-muted-foreground">
+              <h2 className="text-2xl md:text-3xl font-bold mb-2" data-testid="text-story-title">{storybook.title}</h2>
+              <p className="text-sm md:text-base text-muted-foreground">
                 Created {storybook.createdAt ? new Date(storybook.createdAt).toLocaleDateString() : 'Unknown'}
               </p>
             </div>
@@ -147,7 +147,7 @@ export default function View() {
           </div>
 
           {/* Flipbook Container */}
-          <div className="bg-gradient-to-br from-slate-100 to-slate-200 dark:from-slate-800 dark:to-slate-900 rounded-3xl shadow-2xl p-8 min-h-[80vh] flex items-center justify-center">
+          <div className="bg-gradient-to-br from-slate-100 to-slate-200 dark:from-slate-800 dark:to-slate-900 rounded-2xl md:rounded-3xl shadow-2xl p-2 md:p-8 min-h-[85vh] md:min-h-[80vh] flex items-center justify-center">
             <FlipbookViewer 
               pages={storybook.pages} 
               title={storybook.title}
@@ -157,7 +157,7 @@ export default function View() {
           </div>
 
           {/* Back to Create */}
-          <div className="text-center mt-12">
+          <div className="text-center mt-8 md:mt-12">
             <Button 
               onClick={() => setLocation("/create")} 
               size="lg" 
