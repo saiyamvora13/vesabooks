@@ -72,7 +72,7 @@ export default function Navigation() {
                   <Button variant="ghost" className="relative h-9 w-9 rounded-full hover:bg-muted" data-testid="button-user-menu">
                     <Avatar className="h-9 w-9">
                       <AvatarImage src={user.profileImageUrl || undefined} alt={user.firstName || user.email || "User"} style={{ objectFit: 'cover' }} />
-                      <AvatarFallback className="gradient-bg !text-white">
+                      <AvatarFallback className="gradient-bg !text-black">
                         {user.firstName?.[0] || user.email?.[0] || 'U'}
                       </AvatarFallback>
                     </Avatar>
@@ -104,7 +104,7 @@ export default function Navigation() {
             
             <Link href="/create">
               <Button 
-                className="px-4 py-2 text-sm font-medium rounded-full gradient-bg !text-black dark:!text-white hover:opacity-90 transition-opacity"
+                className="px-4 py-2 text-sm font-medium rounded-full gradient-bg !text-black hover:opacity-90 transition-opacity"
                 data-testid="button-get-started"
               >
                 Get Started
@@ -117,7 +117,7 @@ export default function Navigation() {
             {!isLoading && isAuthenticated && user && (
               <Avatar className="h-8 w-8">
                 <AvatarImage src={user.profileImageUrl || undefined} alt={user.firstName || user.email || "User"} style={{ objectFit: 'cover' }} />
-                <AvatarFallback className="gradient-bg !text-white text-xs">
+                <AvatarFallback className="gradient-bg !text-black text-xs">
                   {user.firstName?.[0] || user.email?.[0] || 'U'}
                 </AvatarFallback>
               </Avatar>
@@ -179,7 +179,7 @@ export default function Navigation() {
                 )}
                 
                 <Link href="/create" onClick={() => setMobileMenuOpen(false)}>
-                  <Button className="w-full rounded-full gradient-bg !text-black dark:!text-white">
+                  <Button className="w-full rounded-full gradient-bg !text-black">
                     Get Started
                   </Button>
                 </Link>
