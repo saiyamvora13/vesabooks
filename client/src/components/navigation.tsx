@@ -104,7 +104,7 @@ export default function Navigation() {
             
             <Link href="/create">
               <Button 
-                className="px-4 py-2 text-sm font-medium rounded-full gradient-bg hover:opacity-90 transition-opacity"
+                className="px-4 py-2 text-sm font-medium rounded-full gradient-bg text-white hover:opacity-90 transition-opacity"
                 data-testid="button-get-started"
               >
                 Get Started
@@ -125,7 +125,7 @@ export default function Navigation() {
             <Button
               variant="ghost"
               size="sm"
-              className="p-2"
+              className="p-2 text-foreground"
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
               data-testid="button-mobile-menu"
             >
@@ -179,7 +179,7 @@ export default function Navigation() {
                 )}
                 
                 <Link href="/create" onClick={() => setMobileMenuOpen(false)}>
-                  <Button className="w-full rounded-full gradient-bg">
+                  <Button className="w-full rounded-full gradient-bg text-white">
                     Get Started
                   </Button>
                 </Link>
