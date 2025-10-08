@@ -12,11 +12,25 @@ export async function generateEpub(storybook: Storybook): Promise<Buffer> {
   // Use localhost HTTP URLs - epub-gen-memory will fetch and package images automatically
   const baseUrl = "http://localhost:5000";
 
-  // Set cover image URL (no text overlay, just the image)
+  // Add custom cover page with title and author overlay
   const coverImageUrl = storybook.coverImageUrl || storybook.pages[0]?.imageUrl;
-  const coverUrl = coverImageUrl ? `${baseUrl}${coverImageUrl}` : undefined;
+  if (coverImageUrl) {
+    const coverUrl = `${baseUrl}${coverImageUrl}`;
+    content.push({
+      content: `<div class="cover-page">
+  <img src="${coverUrl}" alt="Cover" class="cover-image" />
+  <div class="cover-overlay"></div>
+  <div class="cover-text">
+    <h1>${storybook.title}</h1>
+    <p>By AI Storyteller</p>
+  </div>
+</div>`,
+      beforeToc: true,
+      excludeFromToc: true,
+    });
+  }
 
-  // Add each page - responsive layout: image left, text right (stacks on small screens)
+  // Add each story page - responsive layout: image left, text right (stacks on small screens)
   for (const page of storybook.pages) {
     const pageImageUrl = `${baseUrl}${page.imageUrl}`;
     
@@ -36,7 +50,6 @@ export async function generateEpub(storybook: Storybook): Promise<Buffer> {
   const options = {
     title: storybook.title,
     author: "AI Storyteller",
-    cover: coverUrl, // Use actual cover image
     tocTitle: "", // Empty TOC title to hide Table of Contents
     tocInTOC: false, // Hide TOC from appearing in itself (EPUB2)
     appendChapterTitles: false, // Don't add chapter titles to content
@@ -48,6 +61,56 @@ export async function generateEpub(storybook: Storybook): Promise<Buffer> {
         margin: 0;
         padding: 0;
         line-height: 1.6;
+      }
+      
+      /* Cover page with title and author overlay */
+      .cover-page {
+        position: relative;
+        margin: 0;
+        padding: 0;
+        page-break-after: always;
+        height: 100vh;
+      }
+      
+      .cover-image {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        display: block;
+      }
+      
+      .cover-overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.1);
+      }
+      
+      .cover-text {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        padding: 2rem;
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(8px);
+        text-align: center;
+      }
+      
+      .cover-text h1 {
+        font-size: 2.5rem;
+        font-weight: bold;
+        font-family: Georgia, serif;
+        color: #1e293b;
+        margin: 0 0 0.5rem 0;
+      }
+      
+      .cover-text p {
+        font-size: 1.2rem;
+        color: #475569;
+        margin: 0;
       }
       
       /* Story page styles - two-page spread: image left, text right */
