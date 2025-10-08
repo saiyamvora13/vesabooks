@@ -24,7 +24,7 @@ The application features a playful color palette, supports light/dark modes, and
 
 ### Technical Implementations
 - **Image Style Control**: The system detects style keywords in user prompts (e.g., "realistic," "watercolor") to guide AI image generation, defaulting to "vibrant and colorful children's book illustration" if no style is specified.
-- **EPUB E-book Download**: Users can download storybooks as EPUB files, which are automatically generated with a custom cover and responsive page layouts suitable for various e-readers. Images are embedded within the EPUB.
+- **EPUB E-book Download**: Users can download storybooks as EPUB files with the actual cover image (no text overlay), no Table of Contents for immediate reading, and a two-page spread layout (image left, text right). All images are embedded for offline reading on any e-reader.
 - **Error Handling & Retry Logic**: The application includes automatic retry mechanisms for failed generation processes and provides a manual "Try Again" option, preserving form data for a seamless user experience.
 - **Persistent Image Storage**: All images are stored in Replit Object Storage, ensuring data persistence across server restarts and deployments.
 
