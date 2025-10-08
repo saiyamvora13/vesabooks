@@ -2,7 +2,7 @@
 
 ## Overview
 
-AI Storybook Builder is a web application that enables users to create personalized, illustrated children's storybooks using AI technology. Users provide a story prompt and 1-5 inspiration images, and the system generates a complete 6-page storybook with custom illustrations matching the style of the provided images. The platform is powered by Google Gemini AI for both story generation and image creation. The project aims to provide a platform for creating engaging and customizable children's literature with AI assistance.
+AI Storybook Builder is a web application that enables users to create personalized, illustrated children's storybooks using AI technology. Users provide a story prompt and optionally 0-5 inspiration images, and the system generates a complete 3-page storybook with custom illustrations. When inspiration images are provided, illustrations match their style; when not provided, Gemini AI generates all images from the text prompt alone. The platform is powered by Google Gemini AI for both story generation and image creation. The project aims to provide a platform for creating engaging and customizable children's literature with AI assistance.
 
 ## User Preferences
 
