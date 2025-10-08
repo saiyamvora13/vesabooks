@@ -24,10 +24,11 @@ const PageFace = ({
   children: React.ReactNode;
 }) => (
   <div
-    className={`absolute top-0 left-0 w-full h-full bg-white dark:bg-slate-900 overflow-hidden ${className}`}
+    className={`absolute top-0 left-0 w-full h-full overflow-hidden ${className}`}
     style={{
       backfaceVisibility: 'hidden',
       transform: isBack ? 'rotateY(180deg)' : 'rotateY(0deg)',
+      background: 'linear-gradient(135deg, #f9f7f3 0%, #faf8f5 50%, #f7f5f1 100%)',
     }}
   >
     {children}
@@ -83,27 +84,47 @@ const TextPage = ({
   onTurn: () => void;
 }) => (
   <div 
-    className="w-full h-full flex flex-col justify-center p-8 md:p-12 relative cursor-pointer group bg-white dark:bg-slate-900" 
+    className="w-full h-full flex flex-col justify-center p-8 md:p-12 relative cursor-pointer group" 
     onClick={onTurn}
+    style={{
+      background: 'linear-gradient(135deg, #f9f7f3 0%, #faf8f5 50%, #f7f5f1 100%)',
+    }}
   >
-    <div className="absolute top-4 right-8 text-xs text-slate-400 tracking-widest uppercase">{author}</div>
-    <div className="overflow-y-auto">
-      <p className="text-slate-700 dark:text-slate-200 text-base md:text-lg leading-relaxed first-letter:text-7xl first-letter:font-serif first-letter:text-slate-900 dark:first-letter:text-white first-letter:mr-3 first-letter:float-left">
+    <div className="absolute top-4 right-8 text-xs text-slate-500 tracking-widest uppercase font-serif">{author}</div>
+    <div className="overflow-y-auto max-w-2xl mx-auto">
+      <p 
+        className="text-slate-800 text-lg md:text-xl leading-loose tracking-wide first-letter:text-6xl md:first-letter:text-7xl first-letter:font-serif first-letter:text-slate-900 first-letter:mr-2 first-letter:float-left first-letter:leading-[0.9]"
+        style={{ 
+          fontFamily: '"EB Garamond", "Merriweather", Georgia, serif',
+          textAlign: 'justify',
+          hyphens: 'auto'
+        }}
+      >
         {page.text}
       </p>
     </div>
-    <div className="absolute bottom-6 right-6 w-16 h-16 bg-gradient-to-tl from-slate-200/50 to-transparent rounded-full pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity" />
-    <span className="absolute bottom-4 right-8 text-base font-semibold text-slate-700 dark:text-slate-300">
+    <div className="absolute bottom-6 right-6 w-16 h-16 bg-gradient-to-tl from-amber-100/30 to-transparent rounded-full pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity" />
+    <span className="absolute bottom-4 right-8 text-sm font-serif text-slate-600">
       {pageNum}
     </span>
   </div>
 );
 
 const EndPage = ({ totalPages }: { totalPages: number }) => (
-  <div className="w-full h-full flex flex-col items-center justify-center p-4 relative bg-white dark:bg-slate-900">
-    <p className="font-serif text-2xl md:text-3xl text-slate-800 dark:text-white">The End</p>
+  <div 
+    className="w-full h-full flex flex-col items-center justify-center p-4 relative"
+    style={{
+      background: 'linear-gradient(135deg, #f9f7f3 0%, #faf8f5 50%, #f7f5f1 100%)',
+    }}
+  >
+    <p 
+      className="text-3xl md:text-4xl text-slate-800"
+      style={{ fontFamily: '"EB Garamond", "Merriweather", Georgia, serif' }}
+    >
+      The End
+    </p>
     {totalPages > 0 && (
-      <span className="absolute bottom-4 left-8 text-base font-semibold text-slate-700 dark:text-slate-300">
+      <span className="absolute bottom-4 left-8 text-sm font-serif text-slate-600">
         {totalPages}
       </span>
     )}
