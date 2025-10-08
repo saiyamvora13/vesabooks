@@ -14,6 +14,7 @@ export default function View() {
   const params = useParams();
   const [, setLocation] = useLocation();
   const [shareUrl, setShareUrl] = useState<string>("");
+  const [isDownloading, setIsDownloading] = useState(false);
   const { toast } = useToast();
 
   // Determine if viewing by ID or share URL
@@ -56,7 +57,15 @@ export default function View() {
   };
 
   const downloadEpub = async () => {
-    if (!storybook) return;
+    if (!storybook || isDownloading) return;
+    
+    setIsDownloading(true);
+    
+    // Show preparing toast
+    toast({
+      title: "Preparing your e-book...",
+      description: "This may take a few seconds for large files",
+    });
     
     try {
       const response = await fetch(`/api/storybooks/${storybook.id}/epub`);
@@ -85,6 +94,8 @@ export default function View() {
         description: "Please try again later",
         variant: "destructive",
       });
+    } finally {
+      setIsDownloading(false);
     }
   };
 
@@ -173,8 +184,15 @@ export default function View() {
                 </DialogContent>
               </Dialog>
               
-              <Button variant="outline" className="rounded-xl" onClick={downloadEpub} data-testid="button-download-epub">
-                <i className="fas fa-book mr-2"></i>Download E-book
+              <Button 
+                variant="outline" 
+                className="rounded-xl" 
+                onClick={downloadEpub} 
+                disabled={isDownloading}
+                data-testid="button-download-epub"
+              >
+                <i className={`fas ${isDownloading ? 'fa-spinner fa-spin' : 'fa-book'} mr-2`}></i>
+                {isDownloading ? 'Preparing...' : 'Download E-book'}
               </Button>
             </div>
           </div>
