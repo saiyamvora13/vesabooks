@@ -50,6 +50,7 @@ export async function generateEpub(storybook: Storybook): Promise<Buffer> {
   const options = {
     title: storybook.title,
     author: "AI Storyteller",
+    cover: coverImageUrl ? `${baseUrl}${coverImageUrl}` : undefined, // External cover image
     tocTitle: "", // Empty TOC title to hide Table of Contents
     tocInTOC: false, // Hide TOC from appearing in itself (EPUB2)
     appendChapterTitles: false, // Don't add chapter titles to content
@@ -147,6 +148,7 @@ export async function generateEpub(storybook: Storybook): Promise<Buffer> {
         padding: 2rem;
         display: flex;
         align-items: center;
+        justify-content: center;
       }
       
       @media (max-width: 600px) {
@@ -160,8 +162,12 @@ export async function generateEpub(storybook: Storybook): Promise<Buffer> {
         font-size: 1.1rem;
         line-height: 1.8;
         margin: 0;
-        text-align: justify;
+        padding: 2rem;
+        background: #f5f1e8;
+        border-radius: 12px;
         color: #334155;
+        text-align: left;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
       }
     `,
   };
