@@ -125,8 +125,11 @@ export function FlipbookViewer({ pages, title, author = "AI Author", coverImageU
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
+  const totalMobilePages = (pages.length * 2) + 1; // cover + (text + image) per story page
+  const maxPage = isMobile ? totalMobilePages : numSheets;
+  
   const goToPrevPage = useCallback(() => setCurrentPage((p) => Math.max(0, p - 1)), []);
-  const goToNextPage = useCallback(() => setCurrentPage((p) => Math.min(p + 1, numSheets)), [numSheets]);
+  const goToNextPage = useCallback(() => setCurrentPage((p) => Math.min(p + 1, maxPage)), [maxPage]);
 
   const handleKeyDown = useCallback((event: KeyboardEvent) => {
     if (event.key === 'ArrowLeft') goToPrevPage();
@@ -184,58 +187,65 @@ export function FlipbookViewer({ pages, title, author = "AI Author", coverImageU
 
   const pageDisplayText = useMemo(() => {
     if (currentPage === 0) return "Cover";
-    if (currentPage > 0 && currentPage <= numPages) {
-      const firstPage = (currentPage - 1) * 2 + 1;
-      const secondPage = firstPage + 1;
-      return `Pages ${firstPage} - ${secondPage}`;
+    
+    if (isMobile) {
+      // Mobile single-page display
+      if (currentPage >= totalMobilePages) return "The End";
+      const pageIndex = currentPage - 1;
+      const storyPageIndex = Math.floor(pageIndex / 2);
+      if (storyPageIndex >= pages.length) return "The End";
+      
+      const isTextPage = pageIndex % 2 === 0;
+      const pageNum = storyPageIndex * 2 + (isTextPage ? 1 : 2);
+      return `Page ${pageNum}`;
+    } else {
+      // Desktop dual-page display
+      if (currentPage > 0 && currentPage <= numPages) {
+        const firstPage = (currentPage - 1) * 2 + 1;
+        const secondPage = firstPage + 1;
+        return `Pages ${firstPage} - ${secondPage}`;
+      }
+      return "The End";
     }
-    return "The End";
-  }, [currentPage, numPages]);
+  }, [currentPage, numPages, isMobile, pages.length, totalMobilePages]);
 
   if (isMobile) {
+    // Single page view for mobile - shows one page at a time
+    const getCurrentPageContent = () => {
+      if (currentPage === 0) {
+        return <Cover title={title} author={author} coverImageUrl={coverImageUrl} />;
+      }
+      
+      // Calculate which actual page we're on (alternating between text and image)
+      const pageIndex = currentPage - 1;
+      const isTextPage = pageIndex % 2 === 0;
+      const storyPageIndex = Math.floor(pageIndex / 2);
+      
+      if (storyPageIndex >= pages.length) {
+        return <EndPage totalPages={numPages * 2} />;
+      }
+      
+      const page = pages[storyPageIndex];
+      
+      if (isTextPage) {
+        // Show text page
+        return <TextPage page={page} author={author} pageNum={storyPageIndex * 2 + 1} onTurn={goToNextPage} />;
+      } else {
+        // Show image page
+        return <ImagePage page={page} pageNum={storyPageIndex * 2 + 2} />;
+      }
+    };
+
     return (
       <div className="w-full h-full flex flex-col items-center justify-center gap-3">
         <div 
-          className="w-full h-[65vh] relative"
-          style={{ perspective: '1500px' }}
+          className="w-full h-[75vh] relative"
           onTouchStart={handleTouchStart}
           onTouchMove={handleTouchMove}
           onTouchEnd={handleTouchEnd}
         >
-          <div
-            className="w-full h-full relative transition-transform duration-700 ease-in-out"
-            style={{
-              transformStyle: 'preserve-3d',
-              transform: `scale(${isBookOpen ? 1 : 0.92})`,
-            }}
-          >
-            <div className="absolute top-0 left-0 w-full h-full" style={{ transformStyle: 'preserve-3d' }}>
-              {bookSheets.map((sheet, index) => {
-                const isFlipped = currentPage > index;
-                const zIndex = isFlipped ? index + 1 : numSheets - index;
-
-                return (
-                  <div
-                    key={index}
-                    className="absolute top-0 left-1/2 w-1/2 h-full"
-                    style={{
-                      transformStyle: 'preserve-3d',
-                      transformOrigin: 'left center',
-                      transform: isFlipped ? 'rotateY(-180deg)' : 'rotateY(0deg)',
-                      transition: 'transform 0.7s ease-in-out',
-                      zIndex: zIndex,
-                    }}
-                  >
-                    <PageFace className="rounded-r-lg shadow-[-4px_0_10px_-5px_rgba(0,0,0,0.2)]">
-                      {sheet.front}
-                    </PageFace>
-                    <PageFace isBack className="rounded-l-lg shadow-[inset_4px_0_10px_-5px_rgba(0,0,0,0.3)]">
-                      {sheet.back}
-                    </PageFace>
-                  </div>
-                );
-              })}
-            </div>
+          <div className="w-full h-full relative bg-white dark:bg-slate-900 rounded-lg shadow-2xl overflow-hidden">
+            {getCurrentPageContent()}
           </div>
         </div>
 
@@ -254,7 +264,7 @@ export function FlipbookViewer({ pages, title, author = "AI Author", coverImageU
           </span>
           <button
             onClick={goToNextPage}
-            disabled={currentPage >= numSheets}
+            disabled={currentPage >= totalMobilePages}
             className="p-2 rounded-full hover:bg-slate-200 dark:hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             aria-label="Next Page"
             data-testid="button-next-page"

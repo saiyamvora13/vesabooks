@@ -164,10 +164,10 @@ Preferred communication style: Simple, everyday language.
 - Integration with TanStack Query for data fetching and caching
 
 ### Mobile-Centric Design (LATEST)
-- **Responsive Flipbook Viewer**: Dual-page layout works across all devices
+- **Responsive Flipbook Viewer**: Optimized for each device type
   - Desktop (≥768px): Full 3D flipbook with dual-page spread and perspective effects
-  - Mobile (<768px): Scaled-down 3D flipbook showing both left and right pages simultaneously
-  - Both views support page-turning animations and visual depth
+  - Mobile (<768px): Single-page view showing one page at a time for better image visibility (75vh height)
+  - Clean page transitions with swipe gestures
 - **Touch Gestures**: Swipe left/right to navigate pages on mobile devices (50px minimum swipe distance)
 - **Mobile Navigation**: 
   - Hamburger menu with slide-down navigation on mobile
