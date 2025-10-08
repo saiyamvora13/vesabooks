@@ -43,7 +43,9 @@ export const storybooks = pgTable("storybooks", {
   createdAt: timestamp("created_at").defaultNow(),
   shareUrl: text("share_url"),
   deletedAt: timestamp("deleted_at"),
-});
+}, (table) => [
+  index("idx_storybooks_user_deleted").on(table.userId, table.deletedAt),
+]);
 
 export const insertStorybookSchema = createInsertSchema(storybooks).omit({
   id: true,
