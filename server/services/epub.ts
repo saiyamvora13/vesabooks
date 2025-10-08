@@ -2,6 +2,10 @@ import type { Storybook } from "@shared/schema";
 import type { Chapter } from "epub-gen-memory";
 import sharp from "sharp";
 import { ObjectStorageService } from "../objectStorage";
+import * as fs from "fs";
+import * as path from "path";
+import * as os from "os";
+import { randomUUID } from "crypto";
 
 export async function generateEpub(storybook: Storybook): Promise<Buffer> {
   // Use dynamic import for CommonJS module
@@ -16,13 +20,16 @@ export async function generateEpub(storybook: Storybook): Promise<Buffer> {
 
   // Generate composite cover image with title/author overlay for external cover
   const coverImageUrl = storybook.coverImageUrl || storybook.pages[0]?.imageUrl;
-  let compositeCoverDataUrl: string | undefined;
+  let compositeCoverPath: string | undefined;
   
   if (coverImageUrl) {
     const compositeBuffer = await generateCompositeCoverImage(coverImageUrl, storybook.title);
     if (compositeBuffer) {
-      // Convert buffer to base64 data URL for epub cover
-      compositeCoverDataUrl = `data:image/png;base64,${compositeBuffer.toString('base64')}`;
+      // Save composite cover to uniquely named temporary file to avoid race conditions
+      const tempDir = os.tmpdir();
+      const uniqueId = randomUUID();
+      compositeCoverPath = path.join(tempDir, `epub-cover-${storybook.id}-${uniqueId}.png`);
+      fs.writeFileSync(compositeCoverPath, compositeBuffer);
     }
     
     // Add internal cover page with title and author overlay
@@ -61,7 +68,7 @@ export async function generateEpub(storybook: Storybook): Promise<Buffer> {
   const options = {
     title: storybook.title,
     author: "AI Storyteller",
-    cover: compositeCoverDataUrl, // Composite cover image with title/author overlay
+    cover: compositeCoverPath, // Composite cover image file path with title/author overlay
     tocTitle: "", // Empty TOC title to hide Table of Contents
     tocInTOC: false, // Hide TOC from appearing in itself (EPUB2)
     appendChapterTitles: false, // Don't add chapter titles to content
@@ -184,7 +191,22 @@ export async function generateEpub(storybook: Storybook): Promise<Buffer> {
   };
 
   // Generate EPUB and return as Buffer
-  return await epub(options, content);
+  try {
+    const epubBuffer = await epub(options, content);
+    
+    // Clean up temporary cover file
+    if (compositeCoverPath && fs.existsSync(compositeCoverPath)) {
+      fs.unlinkSync(compositeCoverPath);
+    }
+    
+    return epubBuffer;
+  } catch (error) {
+    // Clean up temporary cover file even on error
+    if (compositeCoverPath && fs.existsSync(compositeCoverPath)) {
+      fs.unlinkSync(compositeCoverPath);
+    }
+    throw error;
+  }
 }
 
 export async function generateCompositeCoverImage(
