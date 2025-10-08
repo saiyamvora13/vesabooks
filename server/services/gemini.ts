@@ -51,25 +51,29 @@ export async function generateStoryFromPrompt(
     // Adapt system instruction based on whether user specified a style
     const hasCustomStyle = hasStyleInstructions(prompt);
     
+    const hasImages = inspirationImagePaths && inspirationImagePaths.length > 0;
+    
     const systemInstruction = hasCustomStyle
-      ? `You are a creative storyteller. Your task is to generate a complete 3-page story based on a user's prompt and inspirational images. Respect the user's style preferences and tone specified in their prompt. You must respond with a JSON object that strictly follows the provided schema. Ensure you create a compelling 'coverImagePrompt' and that the 'pages' array contains exactly 3 elements. The imagePrompts should match the style and tone requested by the user.`
-      : `You are a creative and whimsical children's storybook author. Your task is to generate a complete 3-page story based on a user's prompt and inspirational images. The story should be suitable for children aged 5-7. You must respond with a JSON object that strictly follows the provided schema. Ensure you create a compelling 'coverImagePrompt' and that the 'pages' array contains exactly 3 elements.`;
+      ? `You are a creative storyteller. Your task is to generate a complete 3-page story based on a user's prompt${hasImages ? ' and optional inspirational images' : ''}. Respect the user's style preferences and tone specified in their prompt. You must respond with a JSON object that strictly follows the provided schema. Ensure you create a compelling 'coverImagePrompt' and that the 'pages' array contains exactly 3 elements. The imagePrompts should match the style and tone requested by the user.`
+      : `You are a creative and whimsical children's storybook author. Your task is to generate a complete 3-page story based on a user's prompt${hasImages ? ' and optional inspirational images' : ''}. The story should be suitable for children aged 5-7. You must respond with a JSON object that strictly follows the provided schema. Ensure you create a compelling 'coverImagePrompt' and that the 'pages' array contains exactly 3 elements.`;
 
     const imageParts = [];
     
-    // Add inspiration images to the content
-    for (const imagePath of inspirationImagePaths) {
-      try {
-        const imageBytes = fs.readFileSync(imagePath);
-        const mimeType = getMimeType(imagePath);
-        imageParts.push({
-          inlineData: {
-            data: imageBytes.toString("base64"),
-            mimeType: mimeType,
-          },
-        });
-      } catch (error) {
-        console.warn(`Failed to read image ${imagePath}:`, error);
+    // Add inspiration images to the content (if provided)
+    if (hasImages) {
+      for (const imagePath of inspirationImagePaths) {
+        try {
+          const imageBytes = fs.readFileSync(imagePath);
+          const mimeType = getMimeType(imagePath);
+          imageParts.push({
+            inlineData: {
+              data: imageBytes.toString("base64"),
+              mimeType: mimeType,
+            },
+          });
+        } catch (error) {
+          console.warn(`Failed to read image ${imagePath}:`, error);
+        }
       }
     }
 
@@ -158,7 +162,7 @@ const delay = (ms: number) => new Promise(res => setTimeout(res, ms));
 export async function generateIllustration(
   imagePrompt: string,
   outputPath: string,
-  baseImagePath: string
+  baseImagePath?: string
 ): Promise<void> {
   let retries = 3;
   let waitTime = 2000; // Start with a 2-second delay
@@ -170,21 +174,26 @@ export async function generateIllustration(
         ? imagePrompt
         : `${imagePrompt}, in the style of a vibrant and colorful children's book illustration, whimsical and gentle.`;
       
-      const baseImageBytes = fs.readFileSync(baseImagePath);
-      const baseImageMimeType = getMimeType(baseImagePath);
+      const contentParts: any[] = [];
       
-      const baseImage = {
-        inlineData: {
-          mimeType: baseImageMimeType,
-          data: baseImageBytes.toString("base64"),
-        },
-      };
+      // Add base image if provided
+      if (baseImagePath && fs.existsSync(baseImagePath)) {
+        const baseImageBytes = fs.readFileSync(baseImagePath);
+        const baseImageMimeType = getMimeType(baseImagePath);
+        
+        contentParts.push({
+          inlineData: {
+            mimeType: baseImageMimeType,
+            data: baseImageBytes.toString("base64"),
+          },
+        });
+      }
+      
+      // Always add the text prompt
+      contentParts.push({ text: fullPrompt });
 
       const contents = {
-        parts: [
-          baseImage,
-          { text: fullPrompt },
-        ],
+        parts: contentParts,
       };
 
       const response = await ai.models.generateContent({

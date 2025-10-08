@@ -52,7 +52,7 @@ export const insertStorybookSchema = createInsertSchema(storybooks).omit({
 
 export const createStorybookSchema = z.object({
   prompt: z.string().min(10, "Story prompt must be at least 10 characters"),
-  inspirationImages: z.array(z.string()).min(1, "At least one inspiration image is required").max(5, "Maximum 5 images allowed"),
+  inspirationImages: z.array(z.string()).min(0).max(5, "Maximum 5 images allowed"),
 });
 
 export type InsertStorybook = z.infer<typeof insertStorybookSchema>;

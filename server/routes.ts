@@ -33,7 +33,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Replit Auth: Get authenticated user
   app.get('/api/auth/user', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      // Use req.user.id which is set from the database user (not OIDC sub)
+      const userId = req.user.id;
       const user = await storage.getUser(userId);
       res.json(user);
     } catch (error) {
@@ -47,16 +48,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { prompt } = req.body;
       const files = req.files as Express.Multer.File[] | undefined;
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
 
-      if (!files || files.length === 0) {
-        return res.status(400).json({ message: "At least one inspiration image is required" });
-      }
+      // Images are now optional - handle empty or undefined files
+      const imagePaths = files ? files.map(f => f.path) : [];
+      const imageFilenames = files ? files.map(f => f.filename) : [];
 
       // Validate request
       const validationResult = createStorybookSchema.safeParse({
         prompt,
-        inspirationImages: files.map(f => f.filename),
+        inspirationImages: imageFilenames,
       });
 
       if (!validationResult.success) {
@@ -66,7 +67,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const sessionId = randomUUID();
 
       // Start generation in background with userId
-      generateStorybookAsync(sessionId, userId, prompt, files.map(f => f.path))
+      generateStorybookAsync(sessionId, userId, prompt, imagePaths)
         .catch((error: unknown) => {
           console.error("Story generation failed:", error);
           const errorMessage = error instanceof Error ? error.message : 'Unknown error';
@@ -105,7 +106,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get user's storybooks (requires authentication)
   app.get("/api/storybooks", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      const userId = req.user.id;
       const storybooks = await storage.getUserStorybooks(userId);
       res.json(storybooks);
     } catch (error) {
@@ -258,8 +259,8 @@ async function generateStorybookAsync(
     const { ObjectStorageService } = await import("./objectStorage");
     const objectStorage = new ObjectStorageService();
 
-    // Use the first inspiration image as the base for all generated images
-    const baseImagePath = imagePaths[0] || "";
+    // Use the first inspiration image as the base for all generated images (if available)
+    const baseImagePath = imagePaths.length > 0 ? imagePaths[0] : undefined;
     
     // Generate cover image
     const coverImageFileName = `${sessionId}_cover.png`;
@@ -280,7 +281,7 @@ async function generateStorybookAsync(
       const imageFileName = `${sessionId}_page_${page.pageNumber}.png`;
       const imagePath = path.join(generatedDir, imageFileName);
 
-      // Generate illustration for this page using the base image
+      // Generate illustration for this page using the base image (if available)
       await generateIllustration(page.imagePrompt, imagePath, baseImagePath);
 
       // Upload to Object Storage

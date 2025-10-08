@@ -26,7 +26,7 @@ import { Info } from "lucide-react";
 
 const createStorySchema = z.object({
   prompt: z.string().min(10, "Story prompt must be at least 10 characters"),
-  images: z.array(z.instanceof(File)).min(1, "At least one inspiration image is required").max(5, "Maximum 5 images allowed"),
+  images: z.array(z.instanceof(File)).min(0).max(5, "Maximum 5 images allowed"),
 });
 
 type CreateStoryForm = z.infer<typeof createStorySchema>;
@@ -149,7 +149,7 @@ export default function Create() {
           <div className="text-center mb-8 sm:mb-12">
             <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold mb-3 sm:mb-4">Create Your Storybook</h2>
             <p className="text-base sm:text-lg text-muted-foreground px-4">
-              Share your story idea and inspiration images to get started
+              Share your story idea to get started. Add inspiration images if you'd like!
             </p>
           </div>
 
@@ -363,8 +363,8 @@ export default function Create() {
                       <FormItem>
                         <FormLabel className="text-sm font-semibold flex items-center">
                           <i className="fas fa-image text-secondary mr-2"></i>
-                          Inspiration Images
-                          <span className="ml-auto text-muted-foreground font-normal">1-5 images</span>
+                          Inspiration Images (Optional)
+                          <span className="ml-auto text-muted-foreground font-normal">0-5 images</span>
                         </FormLabel>
                         <FormControl>
                           <FileUpload

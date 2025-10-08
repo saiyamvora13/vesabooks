@@ -55,10 +55,8 @@ function updateUserSession(
   user.expires_at = user.claims?.exp;
 }
 
-async function upsertUser(
-  claims: any,
-) {
-  await storage.upsertUser({
+async function upsertUser(claims: any) {
+  return await storage.upsertUser({
     id: claims["sub"],
     email: claims["email"],
     firstName: claims["first_name"],
@@ -79,9 +77,13 @@ export async function setupAuth(app: Express) {
     tokens: client.TokenEndpointResponse & client.TokenEndpointResponseHelpers,
     verified: passport.AuthenticateCallback
   ) => {
-    const user = {};
+    // Upsert user and get the actual user from database
+    const dbUser = await upsertUser(tokens.claims());
+    // Create session with full token data
+    const user: any = {};
     updateUserSession(user, tokens);
-    await upsertUser(tokens.claims());
+    // Override the id with the database user's ID to preserve foreign key relationships
+    user.id = dbUser.id;
     verified(null, user);
   };
 
