@@ -156,20 +156,23 @@ Preferred communication style: Simple, everyday language.
 - **Automatic Cleanup**: Temporary local files are deleted after upload to Object Storage
 - **Database Updates**: Image URLs in database updated from local paths to `/api/storage/` URLs
 
-### EPUB E-book Download (October 8, 2025)
+### EPUB E-book Download (LATEST - October 8, 2025)
 - **Cross-Platform E-books**: Users can download their storybooks as EPUB files compatible with Kindle, iOS Books, Android, and other standard e-readers
 - **Download Button**: "Download E-book" button added to view page next to Share button
-- **Viewer-Matched Layout**: EPUB exactly mirrors the app's flipbook viewer with alternating text/image pages
-  - Cover page with image and title/author overlay (with fallback to first page image)
-  - Text pages (odd): White background, large first letter, "AI STORYTELLER" author name, page number at bottom right
-  - Image pages (even): Full-cover illustrations with page number badge at bottom left
-  - End page: "The End" centered with page number at bottom left
-- **Consistent Styling**: Uses same Georgia serif font, slate gray colors, and layout as the flipbook viewer
-- **Professional Formatting**: Proper spacing, page breaks, and typography for optimal reading experience
+- **Simple Clean Structure**: EPUB uses a minimalist image-first layout matching user's reference file
+  - Cover page: Full-page cover image with no overlays
+  - Each story page: Image on top, text paragraph below, page break after each
+  - Clean typography: Georgia serif font, justified text, simple spacing
+  - No page numbers, author names, or decorative elements
+- **Image Packaging**: epub-gen-memory fetches images from localhost HTTP URLs and automatically packages them as embedded images inside the EPUB zip file
+  - Images work offline with relative paths (e.g., `images/cover.png`)
+  - 4 embedded PNG images per storybook (cover + 3 pages)
+  - Uses `<img src="http://localhost:5000/api/storage/...">` which epub-gen-memory converts to embedded images
+- **Professional Formatting**: Proper page breaks, font sizing (1.1rem), and 1.8 line height for optimal reading
 - **Auto Naming**: Files automatically named based on story title (e.g., "magical_fox_adventure.epub")
 - **Backend Service**: `server/services/epub.ts` using epub-gen-memory library
 - **API Endpoint**: GET `/api/storybooks/:id/epub` with proper content-type headers
-- **User Experience**: Toast notification confirms successful download
+- **User Experience**: Toast notification confirms successful download, typical file size 8-10MB
 
 ### Image Style Control (October 8, 2025)
 - **User-Controlled Styles**: Users can now specify their own image style in the story prompt
