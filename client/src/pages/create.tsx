@@ -119,17 +119,17 @@ export default function Create() {
     <div className="min-h-screen bg-background">
       <Navigation />
       
-      <section className="py-20">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl sm:text-4xl font-bold mb-4">Create Your Storybook</h2>
-            <p className="text-lg text-muted-foreground">
+      <section className="py-8 sm:py-12 lg:py-20">
+        <div className="max-w-5xl mx-auto px-3 sm:px-4 lg:px-8">
+          <div className="text-center mb-8 sm:mb-12">
+            <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold mb-3 sm:mb-4">Create Your Storybook</h2>
+            <p className="text-base sm:text-lg text-muted-foreground px-4">
               Share your story idea and inspiration images to get started
             </p>
           </div>
 
-          <Card className="rounded-3xl shadow-xl">
-            <CardContent className="p-8">
+          <Card className="rounded-2xl sm:rounded-3xl shadow-xl">
+            <CardContent className="p-4 sm:p-6 lg:p-8">
               <Form {...form}>
                 <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
                   {/* Story Prompt */}

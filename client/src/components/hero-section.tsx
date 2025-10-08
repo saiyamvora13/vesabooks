@@ -3,32 +3,32 @@ import { Button } from "@/components/ui/button";
 
 export default function HeroSection() {
   return (
-    <section className="relative overflow-hidden py-20 lg:py-32">
+    <section className="relative overflow-hidden py-12 sm:py-20 lg:py-32">
       {/* Background decoration */}
       <div className="absolute inset-0 -z-10">
-        <div className="absolute top-0 right-0 w-96 h-96 bg-primary/10 rounded-full blur-3xl"></div>
-        <div className="absolute bottom-0 left-0 w-96 h-96 bg-secondary/10 rounded-full blur-3xl"></div>
+        <div className="absolute top-0 right-0 w-64 h-64 sm:w-96 sm:h-96 bg-primary/10 rounded-full blur-3xl"></div>
+        <div className="absolute bottom-0 left-0 w-64 h-64 sm:w-96 sm:h-96 bg-secondary/10 rounded-full blur-3xl"></div>
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="grid lg:grid-cols-2 gap-12 items-center">
+        <div className="grid lg:grid-cols-2 gap-8 lg:gap-12 items-center">
           {/* Hero Content */}
           <div className="text-center lg:text-left">
-            <div className="inline-flex items-center space-x-2 px-4 py-2 bg-primary/10 rounded-full mb-6">
-              <i className="fas fa-sparkles text-primary"></i>
-              <span className="text-sm font-medium text-primary">Powered by Google Gemini AI</span>
+            <div className="inline-flex items-center space-x-2 px-3 sm:px-4 py-1.5 sm:py-2 bg-primary/10 rounded-full mb-4 sm:mb-6">
+              <i className="fas fa-sparkles text-primary text-sm"></i>
+              <span className="text-xs sm:text-sm font-medium text-primary">Powered by Google Gemini AI</span>
             </div>
             
-            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold mb-6 leading-tight">
+            <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold mb-4 sm:mb-6 leading-tight">
               Create <span className="gradient-text">Magical</span> Storybooks in Minutes
             </h1>
             
-            <p className="text-lg text-muted-foreground mb-8 max-w-xl">
+            <p className="text-base sm:text-lg text-muted-foreground mb-6 sm:mb-8 max-w-xl mx-auto lg:mx-0">
               Transform your ideas into beautifully illustrated children's storybooks using AI. No design skills required—just your imagination!
             </p>
 
             {/* CTA Buttons */}
-            <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
+            <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center lg:justify-start">
               <Link href="/create">
                 <Button 
                   size="lg" 
@@ -51,28 +51,28 @@ export default function HeroSection() {
             </div>
 
             {/* Stats */}
-            <div className="mt-12 grid grid-cols-3 gap-6">
+            <div className="mt-8 sm:mt-12 grid grid-cols-3 gap-3 sm:gap-6">
               <div>
-                <div className="text-3xl font-bold gradient-text">50K+</div>
-                <div className="text-sm text-muted-foreground">Stories Created</div>
+                <div className="text-2xl sm:text-3xl font-bold gradient-text">50K+</div>
+                <div className="text-xs sm:text-sm text-muted-foreground">Stories Created</div>
               </div>
               <div>
-                <div className="text-3xl font-bold gradient-text">10K+</div>
-                <div className="text-sm text-muted-foreground">Happy Users</div>
+                <div className="text-2xl sm:text-3xl font-bold gradient-text">10K+</div>
+                <div className="text-xs sm:text-sm text-muted-foreground">Happy Users</div>
               </div>
               <div>
-                <div className="text-3xl font-bold gradient-text">4.9★</div>
-                <div className="text-sm text-muted-foreground">User Rating</div>
+                <div className="text-2xl sm:text-3xl font-bold gradient-text">4.9★</div>
+                <div className="text-xs sm:text-sm text-muted-foreground">User Rating</div>
               </div>
             </div>
           </div>
 
           {/* Hero Image */}
-          <div className="relative">
+          <div className="relative mt-8 lg:mt-0">
             <img 
               src="https://images.unsplash.com/photo-1503454537195-1dcabb73ffb9?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&h=600" 
               alt="Children reading storybook" 
-              className="rounded-3xl shadow-2xl" 
+              className="rounded-2xl sm:rounded-3xl shadow-2xl w-full" 
             />
             
             {/* Floating cards */}

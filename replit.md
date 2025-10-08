@@ -163,22 +163,29 @@ Preferred communication style: Simple, everyday language.
 - "My Library" link in navigation (visible only when authenticated)
 - Integration with TanStack Query for data fetching and caching
 
-### Mobile-Centric Design (NEW)
-- **Responsive Flipbook Viewer**: Automatically adapts to screen size
-  - Desktop (≥768px): 3D flipbook with dual-page layout and perspective effects
-  - Mobile (<768px): Single-page carousel view optimized for small screens
-- **Touch Gestures**: Swipe left/right to navigate pages on mobile devices
-- **Optimized Layouts**: 
-  - Mobile view shows full-height pages (70vh) with better visibility
-  - Reduced padding and spacing on mobile for more screen real estate
-  - Responsive navigation controls sized appropriately for touch
+### Mobile-Centric Design (LATEST)
+- **Responsive Flipbook Viewer**: Dual-page layout works across all devices
+  - Desktop (≥768px): Full 3D flipbook with dual-page spread and perspective effects
+  - Mobile (<768px): Scaled-down 3D flipbook showing both left and right pages simultaneously
+  - Both views support page-turning animations and visual depth
+- **Touch Gestures**: Swipe left/right to navigate pages on mobile devices (50px minimum swipe distance)
+- **Mobile Navigation**: 
+  - Hamburger menu with slide-down navigation on mobile
+  - Touch-friendly menu items with clear active states
+  - User avatar displayed in mobile header
+  - Full-width action buttons in mobile menu
+- **Optimized Layouts Across All Pages**:
+  - **Home Page**: Responsive hero section, mobile-optimized stats, flexible CTAs
+  - **Create Page**: Compact form layout, mobile-friendly upload zone, responsive card padding
+  - **Library Page**: Flexible header with stacked layout on mobile, full-width "Create New" button
+  - **View Page**: Minimal padding (8px) on mobile, 85vh book container, responsive controls
 - **File Upload UI**: 
   - Taller preview images (160px) for better visibility
   - Responsive grid (2/3/5 columns based on screen size)
-  - Gradient filename overlay that doesn't obscure images
-  - Compact upload zone with optimized padding
-- **View Page Optimization**:
-  - Mobile-first padding and spacing
-  - Responsive typography (smaller on mobile, larger on desktop)
-  - 85vh book container on mobile vs 80vh on desktop
-  - Minimal padding (8px) on mobile containers
+  - Full-width gradient filename overlay at bottom
+  - Compact upload zone (32px padding vs 48px)
+- **Typography & Spacing**:
+  - Progressive text sizing: smaller on mobile, larger on desktop
+  - Reduced padding across all containers on mobile
+  - Touch-friendly button sizes (44px minimum tap target)
+  - Responsive navigation controls (28px on mobile, 32px on desktop)

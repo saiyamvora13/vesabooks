@@ -65,19 +65,19 @@ export default function Library() {
     <div className="min-h-screen bg-background">
       <Navigation />
       
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <div className="flex items-center justify-between mb-8">
+      <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-8 py-6 sm:py-8 lg:py-12">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6 sm:mb-8">
           <div>
-            <h1 className="text-4xl font-bold font-display gradient-text mb-2" data-testid="text-library-title">
+            <h1 className="text-3xl sm:text-4xl font-bold font-display gradient-text mb-2" data-testid="text-library-title">
               My Storybooks
             </h1>
-            <p className="text-muted-foreground" data-testid="text-storybook-count">
+            <p className="text-sm sm:text-base text-muted-foreground" data-testid="text-storybook-count">
               {storybooks?.length || 0} storybook{storybooks?.length === 1 ? '' : 's'} created
             </p>
           </div>
           
           <Link href="/create">
-            <Button className="gradient-bg hover:opacity-90" data-testid="button-create-new">
+            <Button className="gradient-bg hover:opacity-90 w-full sm:w-auto" data-testid="button-create-new">
               <Plus className="mr-2 h-4 w-4" />
               Create New
             </Button>

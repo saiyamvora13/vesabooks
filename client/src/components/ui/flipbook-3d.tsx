@@ -192,52 +192,54 @@ export function FlipbookViewer({ pages, title, author = "AI Author", coverImageU
     return "The End";
   }, [currentPage, numPages]);
 
-  const mobilePages = useMemo(() => {
-    const allPages = [];
-    
-    allPages.push({
-      type: 'cover',
-      content: <Cover title={title} author={author} coverImageUrl={coverImageUrl} />,
-      label: 'Cover',
-    });
-
-    pages.forEach((page, idx) => {
-      allPages.push({
-        type: 'image',
-        content: <ImagePage page={page} pageNum={idx + 1} />,
-        label: `Page ${idx + 1}`,
-      });
-      allPages.push({
-        type: 'text',
-        content: <TextPage page={page} author={author} pageNum={idx + 1} onTurn={goToNextPage} />,
-        label: `Page ${idx + 1}`,
-      });
-    });
-
-    allPages.push({
-      type: 'end',
-      content: <EndPage totalPages={pages.length} />,
-      label: 'The End',
-    });
-
-    return allPages;
-  }, [pages, title, author, coverImageUrl, goToNextPage]);
-
   if (isMobile) {
-    const mobilePage = mobilePages[currentPage] || mobilePages[0];
-    
     return (
-      <div className="w-full h-full flex flex-col items-center justify-center gap-4">
+      <div className="w-full h-full flex flex-col items-center justify-center gap-3">
         <div 
-          className="w-full max-w-md h-[70vh] relative bg-white dark:bg-slate-900 rounded-2xl shadow-2xl overflow-hidden"
+          className="w-full h-[65vh] relative"
+          style={{ perspective: '1500px' }}
           onTouchStart={handleTouchStart}
           onTouchMove={handleTouchMove}
           onTouchEnd={handleTouchEnd}
         >
-          {mobilePage.content}
+          <div
+            className="w-full h-full relative transition-transform duration-700 ease-in-out"
+            style={{
+              transformStyle: 'preserve-3d',
+              transform: `scale(${isBookOpen ? 1 : 0.92})`,
+            }}
+          >
+            <div className="absolute top-0 left-0 w-full h-full" style={{ transformStyle: 'preserve-3d' }}>
+              {bookSheets.map((sheet, index) => {
+                const isFlipped = currentPage > index;
+                const zIndex = isFlipped ? index + 1 : numSheets - index;
+
+                return (
+                  <div
+                    key={index}
+                    className="absolute top-0 left-1/2 w-1/2 h-full"
+                    style={{
+                      transformStyle: 'preserve-3d',
+                      transformOrigin: 'left center',
+                      transform: isFlipped ? 'rotateY(-180deg)' : 'rotateY(0deg)',
+                      transition: 'transform 0.7s ease-in-out',
+                      zIndex: zIndex,
+                    }}
+                  >
+                    <PageFace className="rounded-r-lg shadow-[-4px_0_10px_-5px_rgba(0,0,0,0.2)]">
+                      {sheet.front}
+                    </PageFace>
+                    <PageFace isBack className="rounded-l-lg shadow-[inset_4px_0_10px_-5px_rgba(0,0,0,0.3)]">
+                      {sheet.back}
+                    </PageFace>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
         </div>
 
-        <div className="flex items-center justify-center gap-4 bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm p-3 rounded-full shadow-lg">
+        <div className="flex items-center justify-center gap-3 bg-white/90 dark:bg-slate-800/90 backdrop-blur-sm px-4 py-2 rounded-full shadow-lg">
           <button
             onClick={goToPrevPage}
             disabled={currentPage === 0}
@@ -245,23 +247,23 @@ export function FlipbookViewer({ pages, title, author = "AI Author", coverImageU
             aria-label="Previous Page"
             data-testid="button-previous-page"
           >
-            <ChevronLeft className="w-6 h-6 text-slate-700 dark:text-slate-200" />
+            <ChevronLeft className="w-7 h-7 text-slate-700 dark:text-slate-200" />
           </button>
-          <span className="text-slate-700 dark:text-slate-200 font-medium w-24 text-center text-sm" aria-live="polite" data-testid="text-page-indicator">
-            {mobilePage.label}
+          <span className="text-slate-700 dark:text-slate-200 font-semibold w-28 text-center text-sm" aria-live="polite" data-testid="text-page-indicator">
+            {pageDisplayText}
           </span>
           <button
             onClick={goToNextPage}
-            disabled={currentPage >= mobilePages.length - 1}
+            disabled={currentPage >= numSheets}
             className="p-2 rounded-full hover:bg-slate-200 dark:hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             aria-label="Next Page"
             data-testid="button-next-page"
           >
-            <ChevronRight className="w-6 h-6 text-slate-700 dark:text-slate-200" />
+            <ChevronRight className="w-7 h-7 text-slate-700 dark:text-slate-200" />
           </button>
         </div>
 
-        <p className="text-xs text-muted-foreground">Swipe to navigate</p>
+        <p className="text-xs text-muted-foreground">Swipe to turn pages</p>
       </div>
     );
   }
