@@ -1,8 +1,11 @@
-import epub from "epub-gen-memory";
+import * as epubGen from "epub-gen-memory";
 import type { Storybook } from "@shared/schema";
 import type { Chapter } from "epub-gen-memory";
 import * as fs from "fs";
 import * as path from "path";
+
+// Handle both ESM and CommonJS exports
+const epub = (epubGen as any).default || epubGen;
 
 export async function generateEpub(storybook: Storybook): Promise<Buffer> {
   // Prepare content array for EPUB
