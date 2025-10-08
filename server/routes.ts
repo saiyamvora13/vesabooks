@@ -168,6 +168,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Download storybook as EPUB
+  app.get("/api/storybooks/:id/epub", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const storybook = await storage.getStorybook(id);
+      
+      if (!storybook) {
+        return res.status(404).json({ message: "Storybook not found" });
+      }
+
+      const { generateEpub } = await import("./services/epub");
+      const epubBuffer = await generateEpub(storybook);
+      
+      // Set headers for file download
+      const filename = `${storybook.title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.epub`;
+      res.setHeader('Content-Type', 'application/epub+zip');
+      res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+      res.setHeader('Content-Length', epubBuffer.length);
+      
+      res.send(epubBuffer);
+    } catch (error) {
+      console.error("EPUB generation error:", error);
+      res.status(500).json({ message: "Failed to generate EPUB" });
+    }
+  });
+
   // Serve generated images
   app.use("/api/images", express.static(path.join(process.cwd(), "generated")));
 
