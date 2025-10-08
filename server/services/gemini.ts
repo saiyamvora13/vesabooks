@@ -23,12 +23,37 @@ function getMimeType(filePath: string): string {
   return 'image/jpeg'; // default fallback
 }
 
+// Helper function to detect if the prompt already contains style instructions
+function hasStyleInstructions(prompt: string): boolean {
+  const lowerPrompt = prompt.toLowerCase();
+  
+  // Check for explicit style keywords
+  const styleKeywords = [
+    'style', 'realistic', 'photorealistic', 'photo-realistic', 'photograph',
+    'cartoon', 'animated', 'anime', 'manga',
+    'oil painting', 'watercolor', 'sketch', 'drawing', 'pencil',
+    '3d', 'cgi', 'rendered', 'render',
+    'vintage', 'retro', 'modern', 'contemporary',
+    'abstract', 'surreal', 'impressionist',
+    'noir', 'black and white', 'monochrome',
+    'cinematic', 'dramatic lighting',
+    'minimalist', 'detailed', 'hyper-realistic'
+  ];
+  
+  return styleKeywords.some(keyword => lowerPrompt.includes(keyword));
+}
+
 export async function generateStoryFromPrompt(
   prompt: string,
   inspirationImagePaths: string[]
 ): Promise<GeneratedStory> {
   try {
-    const systemInstruction = `You are a creative and whimsical children's storybook author. Your task is to generate a complete 3-page story based on a user's prompt and inspirational images. The story should be suitable for children aged 5-7. You must respond with a JSON object that strictly follows the provided schema. Ensure you create a compelling 'coverImagePrompt' and that the 'pages' array contains exactly 3 elements.`;
+    // Adapt system instruction based on whether user specified a style
+    const hasCustomStyle = hasStyleInstructions(prompt);
+    
+    const systemInstruction = hasCustomStyle
+      ? `You are a creative storyteller. Your task is to generate a complete 3-page story based on a user's prompt and inspirational images. Respect the user's style preferences and tone specified in their prompt. You must respond with a JSON object that strictly follows the provided schema. Ensure you create a compelling 'coverImagePrompt' and that the 'pages' array contains exactly 3 elements. The imagePrompts should match the style and tone requested by the user.`
+      : `You are a creative and whimsical children's storybook author. Your task is to generate a complete 3-page story based on a user's prompt and inspirational images. The story should be suitable for children aged 5-7. You must respond with a JSON object that strictly follows the provided schema. Ensure you create a compelling 'coverImagePrompt' and that the 'pages' array contains exactly 3 elements.`;
 
     const imageParts = [];
     
@@ -60,7 +85,9 @@ export async function generateStoryFromPrompt(
       properties: {
         title: {
           type: Type.STRING,
-          description: "A creative and catchy title for the children's story.",
+          description: hasCustomStyle 
+            ? "A creative and catchy title for the story that matches the requested style and tone."
+            : "A creative and catchy title for the children's story.",
         },
         author: {
           type: Type.STRING,
@@ -82,11 +109,15 @@ export async function generateStoryFromPrompt(
               },
               text: {
                 type: Type.STRING,
-                description: "The text for one page of the story, between 100 and 150 words. It should be engaging for a child.",
+                description: hasCustomStyle
+                  ? "The text for one page of the story, between 100 and 150 words. Match the tone and style specified in the user's prompt."
+                  : "The text for one page of the story, between 100 and 150 words. It should be engaging for a child.",
               },
               imagePrompt: {
                 type: Type.STRING,
-                description: "A detailed, descriptive prompt for an AI image generator to create an illustration for this page. Describe the scene, characters, actions, style, and colors clearly. The style should be consistent with a whimsical, illustrated children's book.",
+                description: hasCustomStyle
+                  ? "A detailed, descriptive prompt for an AI image generator to create an illustration for this page. Describe the scene, characters, actions, style, and colors clearly. The style should match what the user requested in their prompt."
+                  : "A detailed, descriptive prompt for an AI image generator to create an illustration for this page. Describe the scene, characters, actions, style, and colors clearly. The style should be consistent with a whimsical, illustrated children's book.",
               },
             },
             required: ["pageNumber", "text", "imagePrompt"],
@@ -134,7 +165,10 @@ export async function generateIllustration(
 
   while (retries > 0) {
     try {
-      const fullPrompt = `${imagePrompt}, in the style of a vibrant and colorful children's book illustration, whimsical and gentle.`;
+      // Only add children's book style if user hasn't specified their own style
+      const fullPrompt = hasStyleInstructions(imagePrompt)
+        ? imagePrompt
+        : `${imagePrompt}, in the style of a vibrant and colorful children's book illustration, whimsical and gentle.`;
       
       const baseImageBytes = fs.readFileSync(baseImagePath);
       const baseImageMimeType = getMimeType(baseImagePath);

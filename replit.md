@@ -137,7 +137,18 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes (October 2025)
 
-### Error Handling & Retry Logic (LATEST - October 8, 2025)
+### Image Style Control (LATEST - October 8, 2025)
+- **User-Controlled Styles**: Users can now specify their own image style in the story prompt
+- **Smart Detection**: System detects 25+ style keywords (realistic, photorealistic, cartoon, anime, oil painting, watercolor, 3D, vintage, noir, cinematic, etc.)
+- **Default Fallback**: If no style is specified, defaults to "vibrant and colorful children's book illustration, whimsical and gentle"
+- **Adaptive Story Generation**: Story tone and structure adapt to match requested style
+- **Examples**:
+  - "Create a realistic photographic story about a robot" → Realistic images
+  - "Create a noir detective story in black and white style" → Noir B&W images  
+  - "Create a watercolor painting style fairy tale" → Watercolor images
+  - "Create a story about dinosaurs" → Default children's book style
+
+### Error Handling & Retry Logic (October 8, 2025)
 - **Automatic Retry**: App automatically retries once when generation fails
 - **Manual Retry Button**: Users can click "Try Again" button if automatic retry fails
 - **Error Detection**: Detects errors via `error` field or "Generation failed:" message prefix
