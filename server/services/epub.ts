@@ -14,9 +14,18 @@ export async function generateEpub(storybook: Storybook): Promise<Buffer> {
   // Use localhost HTTP URLs - epub-gen-memory will fetch and package images automatically
   const baseUrl = "http://localhost:5000";
 
-  // Add custom cover page with title and author overlay
+  // Generate composite cover image with title/author overlay for external cover
   const coverImageUrl = storybook.coverImageUrl || storybook.pages[0]?.imageUrl;
+  let compositeCoverDataUrl: string | undefined;
+  
   if (coverImageUrl) {
+    const compositeBuffer = await generateCompositeCoverImage(coverImageUrl, storybook.title);
+    if (compositeBuffer) {
+      // Convert buffer to base64 data URL for epub cover
+      compositeCoverDataUrl = `data:image/png;base64,${compositeBuffer.toString('base64')}`;
+    }
+    
+    // Add internal cover page with title and author overlay
     const coverUrl = `${baseUrl}${coverImageUrl}`;
     content.push({
       content: `<div class="cover-page">
@@ -52,7 +61,7 @@ export async function generateEpub(storybook: Storybook): Promise<Buffer> {
   const options = {
     title: storybook.title,
     author: "AI Storyteller",
-    // No cover option - let readers use first content page (with title/author overlay) as cover
+    cover: compositeCoverDataUrl, // Composite cover image with title/author overlay
     tocTitle: "", // Empty TOC title to hide Table of Contents
     tocInTOC: false, // Hide TOC from appearing in itself (EPUB2)
     appendChapterTitles: false, // Don't add chapter titles to content
