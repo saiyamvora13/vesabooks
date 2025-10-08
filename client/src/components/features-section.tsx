@@ -17,7 +17,7 @@ export default function FeaturesSection() {
             <Card className="rounded-3xl p-8 hover:shadow-xl transition-shadow">
               <CardContent className="p-0">
                 <div className="w-16 h-16 bg-gradient-to-br from-primary to-secondary rounded-2xl flex items-center justify-center mb-6 animate-float-slow relative">
-                  <i className="fas fa-lightbulb text-white text-2xl animate-pulse-slow"></i>
+                  <i className="fas fa-lightbulb text-[hsl(258,90%,20%)] text-2xl animate-pulse-slow"></i>
                   <span className="absolute -top-1 -right-1 text-yellow-300 text-sm">✨</span>
                 </div>
                 <div className="absolute top-4 right-4 w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center">
@@ -36,7 +36,7 @@ export default function FeaturesSection() {
             <Card className="rounded-3xl p-8 hover:shadow-xl transition-shadow">
               <CardContent className="p-0">
                 <div className="w-16 h-16 bg-gradient-to-br from-secondary to-accent rounded-2xl flex items-center justify-center mb-6 animate-float-slow relative" style={{ animationDelay: '0.5s' }}>
-                  <i className="fas fa-wand-sparkles text-white text-2xl animate-sparkle"></i>
+                  <i className="fas fa-wand-sparkles text-[hsl(258,90%,20%)] text-2xl animate-sparkle"></i>
                   <span className="absolute top-0 right-0 text-yellow-300 text-xs animate-ping">⭐</span>
                 </div>
                 <div className="absolute top-4 right-4 w-10 h-10 bg-secondary/10 rounded-full flex items-center justify-center">
@@ -55,7 +55,7 @@ export default function FeaturesSection() {
             <Card className="rounded-3xl p-8 hover:shadow-xl transition-shadow">
               <CardContent className="p-0">
                 <div className="w-16 h-16 bg-gradient-to-br from-accent to-primary rounded-2xl flex items-center justify-center mb-6 animate-float-slow relative" style={{ animationDelay: '1s' }}>
-                  <i className="fas fa-book-open text-white text-2xl animate-wiggle"></i>
+                  <i className="fas fa-book-open text-[hsl(258,90%,20%)] text-2xl animate-wiggle"></i>
                   <span className="absolute bottom-0 right-0 text-yellow-300 text-sm animate-bounce">💫</span>
                 </div>
                 <div className="absolute top-4 right-4 w-10 h-10 bg-accent/10 rounded-full flex items-center justify-center">

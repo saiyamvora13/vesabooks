@@ -26,7 +26,7 @@ export default function Navigation() {
           <Link href="/">
             <div className="flex items-center space-x-2 sm:space-x-3 cursor-pointer" data-testid="link-home">
               <div className="w-9 h-9 sm:w-10 sm:h-10 gradient-bg rounded-xl flex items-center justify-center">
-                <i className="fas fa-book-open text-white text-base sm:text-lg"></i>
+                <i className="fas fa-book-open text-[hsl(258,90%,20%)] text-base sm:text-lg"></i>
               </div>
               <span className="text-lg sm:text-xl font-bold font-display gradient-text">StoryBook AI</span>
             </div>

@@ -137,7 +137,7 @@ export default function HeroSection() {
             <div className="absolute -top-4 -left-4 bg-card p-4 rounded-2xl shadow-xl animate-bounce-subtle hidden lg:block">
               <div className="flex items-center space-x-3">
                 <div className="w-12 h-12 gradient-bg rounded-xl flex items-center justify-center">
-                  <i className="fas fa-wand-magic-sparkles text-white"></i>
+                  <i className="fas fa-wand-magic-sparkles text-[hsl(258,90%,20%)]"></i>
                 </div>
                 <div>
                   <div className="text-sm font-semibold">AI Generated</div>
@@ -149,7 +149,7 @@ export default function HeroSection() {
             <div className="absolute -bottom-4 -right-4 bg-card p-4 rounded-2xl shadow-xl hidden lg:block">
               <div className="flex items-center space-x-3">
                 <div className="w-12 h-12 bg-gradient-to-br from-accent to-primary rounded-xl flex items-center justify-center">
-                  <i className="fas fa-palette text-white"></i>
+                  <i className="fas fa-palette text-[hsl(258,90%,20%)]"></i>
                 </div>
                 <div>
                   <div className="text-sm font-semibold">Custom Art</div>

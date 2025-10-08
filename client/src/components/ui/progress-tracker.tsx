@@ -67,7 +67,7 @@ export function ProgressTracker({ sessionId, onComplete, onRetry, shouldAutoRetr
         <Card className="rounded-3xl shadow-xl">
           <CardContent className="p-12 text-center">
             <div className="w-24 h-24 mx-auto bg-gradient-to-br from-primary to-secondary rounded-3xl flex items-center justify-center animate-pulse mb-8">
-              <i className="fas fa-wand-magic-sparkles text-white text-4xl"></i>
+              <i className="fas fa-wand-magic-sparkles text-[hsl(258,90%,20%)] text-4xl"></i>
             </div>
             <h2 className="text-2xl font-bold mb-4">Initializing...</h2>
             <p className="text-muted-foreground">Starting your storybook generation...</p>
@@ -146,7 +146,7 @@ export function ProgressTracker({ sessionId, onComplete, onRetry, shouldAutoRetr
               </div>
             ) : (
               <div className="w-24 h-24 mx-auto bg-gradient-to-br from-primary to-secondary rounded-3xl flex items-center justify-center">
-                <i className="fas fa-check text-white text-4xl"></i>
+                <i className="fas fa-check text-[hsl(258,90%,20%)] text-4xl"></i>
               </div>
             )}
           </div>
@@ -200,7 +200,7 @@ export function ProgressTracker({ sessionId, onComplete, onRetry, shouldAutoRetr
                           : 'fas fa-clock'
                       } ${
                         status === 'complete' || status === 'active'
-                          ? 'text-white'
+                          ? 'text-[hsl(258,90%,20%)]'
                           : 'text-muted-foreground'
                       } text-sm`}></i>
                     </div>
