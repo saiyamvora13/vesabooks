@@ -104,7 +104,7 @@ export default function Navigation() {
             
             <Link href="/create">
               <Button 
-                className="px-4 py-2 text-sm font-medium rounded-full gradient-bg text-white hover:opacity-90 transition-opacity"
+                className="px-4 py-2 text-sm font-medium rounded-full gradient-bg text-gray-900 dark:text-white hover:opacity-90 transition-opacity"
                 data-testid="button-get-started"
               >
                 Get Started
@@ -179,7 +179,7 @@ export default function Navigation() {
                 )}
                 
                 <Link href="/create" onClick={() => setMobileMenuOpen(false)}>
-                  <Button className="w-full rounded-full gradient-bg text-white">
+                  <Button className="w-full rounded-full gradient-bg text-gray-900 dark:text-white">
                     Get Started
                   </Button>
                 </Link>
