@@ -10,7 +10,8 @@ export async function generateEpub(storybook: Storybook): Promise<Buffer> {
 
   // Add cover page
   if (storybook.coverImageUrl) {
-    const coverPath = path.join(process.cwd(), "uploads", path.basename(storybook.coverImageUrl));
+    const coverFilename = storybook.coverImageUrl.replace('/api/images/', '');
+    const coverPath = path.join(process.cwd(), "generated", coverFilename);
     if (fs.existsSync(coverPath)) {
       const coverImage = fs.readFileSync(coverPath).toString('base64');
       content.push({
@@ -21,17 +22,22 @@ export async function generateEpub(storybook: Storybook): Promise<Buffer> {
         </div>`,
         beforeToc: true,
       });
+    } else {
+      console.warn(`Cover image not found at path: ${coverPath}`);
     }
   }
 
   // Add each page
   for (const page of storybook.pages) {
-    const imagePath = path.join(process.cwd(), "uploads", path.basename(page.imageUrl));
+    const imageFilename = page.imageUrl.replace('/api/images/', '');
+    const imagePath = path.join(process.cwd(), "generated", imageFilename);
     let imageData = '';
     
     if (fs.existsSync(imagePath)) {
       const imageBuffer = fs.readFileSync(imagePath);
       imageData = imageBuffer.toString('base64');
+    } else {
+      console.warn(`Page image not found at path: ${imagePath}`);
     }
 
     content.push({
