@@ -55,6 +55,7 @@ Preferred communication style: Simple, everyday language.
 - `GET /api/storybooks/:id` - Retrieve storybook by ID
 - `GET /api/shared/:shareUrl` - Retrieve storybook by share URL
 - `POST /api/storybooks/:id/share` - Generate shareable URL
+- `GET /api/storybooks/:id/epub` - Download storybook as EPUB e-book file
 - `GET /api/generation/:sessionId/progress` - Poll generation progress
 - `GET /api/auth/user` - Get current authenticated user
 - `GET /api/login` - Initiate OAuth login flow
@@ -137,7 +138,18 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes (October 2025)
 
-### Image Style Control (LATEST - October 8, 2025)
+### EPUB E-book Download (LATEST - October 8, 2025)
+- **Cross-Platform E-books**: Users can download their storybooks as EPUB files compatible with Kindle, iOS Books, Android, and other standard e-readers
+- **Download Button**: "Download E-book" button added to view page next to Share button
+- **Complete Package**: EPUB includes cover image, all pages with illustrations, and formatted text
+- **Image Embedding**: All images are embedded as Base64 data URIs for offline reading
+- **Professional Formatting**: Uses Georgia serif font, proper spacing, and page breaks for optimal reading experience
+- **Auto Naming**: Files automatically named based on story title (e.g., "magical_fox_adventure.epub")
+- **Backend Service**: `server/services/epub.ts` using epub-gen-memory library
+- **API Endpoint**: GET `/api/storybooks/:id/epub` with proper content-type headers
+- **User Experience**: Toast notification confirms successful download
+
+### Image Style Control (October 8, 2025)
 - **User-Controlled Styles**: Users can now specify their own image style in the story prompt
 - **Smart Detection**: System detects 25+ style keywords (realistic, photorealistic, cartoon, anime, oil painting, watercolor, 3D, vintage, noir, cinematic, etc.)
 - **Default Fallback**: If no style is specified, defaults to "vibrant and colorful children's book illustration, whimsical and gentle"
