@@ -137,6 +137,14 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes (October 2025)
 
+### Error Handling & Retry Logic (LATEST - October 8, 2025)
+- **Automatic Retry**: App automatically retries once when generation fails
+- **Manual Retry Button**: Users can click "Try Again" button if automatic retry fails
+- **Error Detection**: Detects errors via `error` field or "Generation failed:" message prefix
+- **Visual Progress Bar**: Progress bar now properly fills as generation progresses (0-100%)
+- **Error UI**: Clear error message displayed with retry option
+- **Smart Retry**: Preserves form data (prompt + images) for seamless retry experience
+
 ### User Authentication & Authorization
 - Implemented Replit Auth (OAuth) for user authentication
 - Supports multiple OAuth providers: Google, GitHub, X, Apple, email/password

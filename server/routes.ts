@@ -74,6 +74,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             step: 'processing_images',
             progress: 0,
             message: `Generation failed: ${errorMessage}`,
+            error: errorMessage,
           });
         });
 
@@ -285,6 +286,7 @@ async function generateStorybookAsync(
       step: 'processing_images',
       progress: 0,
       message: `Generation failed: ${errorMessage}`,
+      error: errorMessage,
     });
     throw error;
   }

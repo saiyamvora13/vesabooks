@@ -30,6 +30,8 @@ export default function Create() {
   const [, setLocation] = useLocation();
   const [isGenerating, setIsGenerating] = useState(false);
   const [sessionId, setSessionId] = useState<string | null>(null);
+  const [lastFormData, setLastFormData] = useState<CreateStoryForm | null>(null);
+  const [retryCount, setRetryCount] = useState(0);
   const { toast } = useToast();
 
   const form = useForm<CreateStoryForm>({
@@ -92,12 +94,24 @@ export default function Create() {
   });
 
   const onSubmit = (data: CreateStoryForm) => {
+    setLastFormData(data); // Save form data for retry
+    setRetryCount(0); // Reset retry count on new submission
     createStoryMutation.mutate(data);
   };
 
   const onGenerationComplete = (storybookId: string) => {
     setIsGenerating(false);
+    setRetryCount(0); // Reset retry count on success
     setLocation(`/view/${storybookId}`);
+  };
+
+  const handleRetry = () => {
+    if (lastFormData) {
+      setRetryCount(prev => prev + 1);
+      setIsGenerating(false);
+      setSessionId(null);
+      createStoryMutation.mutate(lastFormData);
+    }
   };
 
   if (isGenerating && sessionId) {
@@ -108,6 +122,8 @@ export default function Create() {
           <ProgressTracker 
             sessionId={sessionId} 
             onComplete={onGenerationComplete}
+            onRetry={handleRetry}
+            shouldAutoRetry={retryCount === 0}
             data-testid="progress-tracker"
           />
         </div>

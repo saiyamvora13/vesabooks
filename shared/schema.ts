@@ -63,4 +63,5 @@ export interface StoryGenerationProgress {
   step: 'processing_images' | 'generating_story' | 'generating_illustrations' | 'finalizing';
   progress: number;
   message: string;
+  error?: string;
 }

@@ -1,13 +1,16 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { type StoryGenerationProgress } from "@shared/schema";
+import { AlertCircle } from "lucide-react";
 
 interface ProgressTrackerProps {
   sessionId: string;
   onComplete: (storybookId: string) => void;
+  onRetry?: () => void;
+  shouldAutoRetry?: boolean;
   "data-testid"?: string;
 }
 
@@ -18,16 +21,34 @@ const progressSteps = [
   { key: 'finalizing', label: 'Finalizing storybook', icon: 'fas fa-check-circle' },
 ] as const;
 
-export function ProgressTracker({ sessionId, onComplete, "data-testid": testId }: ProgressTrackerProps) {
+export function ProgressTracker({ sessionId, onComplete, onRetry, shouldAutoRetry = false, "data-testid": testId }: ProgressTrackerProps) {
   const [isComplete, setIsComplete] = useState(false);
+  const [hasError, setHasError] = useState(false);
+  const hasAutoRetried = useRef(false);
 
   const { data: progress, isLoading } = useQuery<StoryGenerationProgress>({
     queryKey: ['/api/generation', sessionId, 'progress'],
-    refetchInterval: isComplete ? false : 2000, // Poll every 2 seconds unless complete
-    enabled: !!sessionId && !isComplete,
+    refetchInterval: (isComplete || hasError) ? false : 2000, // Poll every 2 seconds unless complete or error
+    enabled: !!sessionId && !isComplete && !hasError,
   });
 
   useEffect(() => {
+    // Check for errors
+    if (progress?.error || progress?.message?.startsWith('Generation failed:')) {
+      setHasError(true);
+      
+      // Auto-retry once (only if shouldAutoRetry is true and we haven't retried yet)
+      if (shouldAutoRetry && !hasAutoRetried.current && onRetry) {
+        hasAutoRetried.current = true;
+        console.log('Auto-retrying generation...');
+        setTimeout(() => {
+          onRetry();
+        }, 2000);
+      }
+      return;
+    }
+
+    // Check for completion
     if (progress?.progress === 100 && progress?.step === 'finalizing') {
       setIsComplete(true);
       // The storybook ID is stored in the message field when complete
@@ -38,7 +59,7 @@ export function ProgressTracker({ sessionId, onComplete, "data-testid": testId }
         }, 2000); // Small delay to show completion
       }
     }
-  }, [progress, onComplete]);
+  }, [progress, onComplete, onRetry]);
 
   if (isLoading || !progress) {
     return (
@@ -65,6 +86,41 @@ export function ProgressTracker({ sessionId, onComplete, "data-testid": testId }
     return 'pending';
   };
 
+  // Show error state (always show retry button when there's an error)
+  if (hasError) {
+    return (
+      <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8" data-testid={testId}>
+        <Card className="rounded-3xl shadow-xl border-destructive/50">
+          <CardContent className="p-12 text-center">
+            {/* Error Icon */}
+            <div className="mb-8">
+              <div className="w-24 h-24 mx-auto bg-destructive/10 rounded-3xl flex items-center justify-center">
+                <AlertCircle className="text-destructive w-12 h-12" />
+              </div>
+            </div>
+
+            <h2 className="text-2xl font-bold mb-4">Generation Failed</h2>
+            <p className="text-muted-foreground mb-8">
+              {progress?.message || 'An error occurred while generating your storybook. The AI service may be temporarily unavailable or overloaded.'}
+            </p>
+
+            {/* Retry Button */}
+            {onRetry && (
+              <Button 
+                onClick={onRetry}
+                className="gradient-bg hover:opacity-90"
+                data-testid="button-retry-generation"
+              >
+                <i className="fas fa-redo mr-2"></i>
+                Try Again
+              </Button>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
   return (
     <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8" data-testid={testId}>
       <Card className="rounded-3xl shadow-xl">
@@ -88,9 +144,9 @@ export function ProgressTracker({ sessionId, onComplete, "data-testid": testId }
 
           {/* Progress Bar */}
           <div className="mb-8">
-            <Progress value={progress.progress} className="h-3" />
+            <Progress value={progress.progress || 0} className="h-3" />
             <div className="mt-2 text-sm font-medium text-primary">
-              {Math.round(progress.progress)}% Complete
+              {Math.round(progress.progress || 0)}% Complete
             </div>
           </div>
 
