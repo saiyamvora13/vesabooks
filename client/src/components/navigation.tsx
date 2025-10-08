@@ -35,18 +35,18 @@ export default function Navigation() {
           {/* Desktop Navigation */}
           <div className="hidden md:flex items-center space-x-8">
             <Link href="/">
-              <span className={`text-muted-foreground hover:text-foreground transition-colors cursor-pointer ${location === '/' ? 'text-foreground' : ''}`}>
+              <span className={`text-foreground/70 hover:text-foreground transition-colors cursor-pointer font-medium ${location === '/' ? 'text-primary' : ''}`}>
                 Home
               </span>
             </Link>
             <Link href="/create">
-              <span className={`text-muted-foreground hover:text-foreground transition-colors cursor-pointer ${location === '/create' ? 'text-foreground' : ''}`}>
+              <span className={`text-foreground/70 hover:text-foreground transition-colors cursor-pointer font-medium ${location === '/create' ? 'text-primary' : ''}`}>
                 Create
               </span>
             </Link>
             {isAuthenticated && (
               <Link href="/library">
-                <span className={`text-muted-foreground hover:text-foreground transition-colors cursor-pointer ${location === '/library' ? 'text-foreground' : ''}`} data-testid="link-library">
+                <span className={`text-foreground/70 hover:text-foreground transition-colors cursor-pointer font-medium ${location === '/library' ? 'text-primary' : ''}`} data-testid="link-library">
                   My Library
                 </span>
               </Link>
@@ -139,18 +139,18 @@ export default function Navigation() {
           <div className="md:hidden py-4 border-t border-border">
             <div className="flex flex-col space-y-4">
               <Link href="/" onClick={() => setMobileMenuOpen(false)}>
-                <div className={`text-base px-3 py-2 rounded-lg ${location === '/' ? 'bg-primary/10 text-primary font-medium' : 'text-muted-foreground'}`}>
+                <div className={`text-base px-3 py-2 rounded-lg ${location === '/' ? 'bg-primary/10 text-primary font-medium' : 'text-foreground/70 font-medium'}`}>
                   Home
                 </div>
               </Link>
               <Link href="/create" onClick={() => setMobileMenuOpen(false)}>
-                <div className={`text-base px-3 py-2 rounded-lg ${location === '/create' ? 'bg-primary/10 text-primary font-medium' : 'text-muted-foreground'}`}>
+                <div className={`text-base px-3 py-2 rounded-lg ${location === '/create' ? 'bg-primary/10 text-primary font-medium' : 'text-foreground/70 font-medium'}`}>
                   Create Story
                 </div>
               </Link>
               {isAuthenticated && (
                 <Link href="/library" onClick={() => setMobileMenuOpen(false)}>
-                  <div className={`text-base px-3 py-2 rounded-lg ${location === '/library' ? 'bg-primary/10 text-primary font-medium' : 'text-muted-foreground'}`} data-testid="link-library-mobile">
+                  <div className={`text-base px-3 py-2 rounded-lg ${location === '/library' ? 'bg-primary/10 text-primary font-medium' : 'text-foreground/70 font-medium'}`} data-testid="link-library-mobile">
                     My Library
                   </div>
                 </Link>
