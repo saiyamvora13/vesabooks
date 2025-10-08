@@ -33,8 +33,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Replit Auth: Get authenticated user
   app.get('/api/auth/user', isAuthenticated, async (req: any, res) => {
     try {
-      // Use req.user.id which is set from the database user (not OIDC sub)
-      const userId = req.user.id;
+      // Use req.user.id if available (from auth changes), fallback to claims.sub for compatibility
+      const userId = req.user.id || req.user.claims?.sub;
       const user = await storage.getUser(userId);
       res.json(user);
     } catch (error) {
@@ -48,7 +48,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { prompt } = req.body;
       const files = req.files as Express.Multer.File[] | undefined;
-      const userId = req.user.id;
+      // Use req.user.id if available (from auth changes), fallback to claims.sub for compatibility
+      const userId = req.user.id || req.user.claims?.sub;
 
       // Images are now optional - handle empty or undefined files
       const imagePaths = files ? files.map(f => f.path) : [];
@@ -106,7 +107,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get user's storybooks (requires authentication)
   app.get("/api/storybooks", isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.id;
+      // Use req.user.id if available (from auth changes), fallback to claims.sub for compatibility
+      const userId = req.user.id || req.user.claims?.sub;
       const storybooks = await storage.getUserStorybooks(userId);
       res.json(storybooks);
     } catch (error) {
