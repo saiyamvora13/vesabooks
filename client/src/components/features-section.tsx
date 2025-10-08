@@ -16,8 +16,8 @@ export default function FeaturesSection() {
           <div className="relative">
             <Card className="rounded-3xl p-8 hover:shadow-xl transition-shadow">
               <CardContent className="p-0">
-                <div className="w-16 h-16 bg-gradient-to-br from-primary to-secondary rounded-2xl flex items-center justify-center mb-6">
-                  <i className="fas fa-pen-fancy text-white text-2xl"></i>
+                <div className="w-16 h-16 bg-gradient-to-br from-primary to-secondary rounded-2xl flex items-center justify-center mb-6 animate-float-slow">
+                  <i className="fas fa-brain text-white text-2xl animate-pulse-slow"></i>
                 </div>
                 <div className="absolute top-4 right-4 w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center">
                   <span className="text-primary font-bold">1</span>
@@ -34,8 +34,8 @@ export default function FeaturesSection() {
           <div className="relative">
             <Card className="rounded-3xl p-8 hover:shadow-xl transition-shadow">
               <CardContent className="p-0">
-                <div className="w-16 h-16 bg-gradient-to-br from-secondary to-accent rounded-2xl flex items-center justify-center mb-6">
-                  <i className="fas fa-images text-white text-2xl"></i>
+                <div className="w-16 h-16 bg-gradient-to-br from-secondary to-accent rounded-2xl flex items-center justify-center mb-6 animate-float-slow" style={{ animationDelay: '0.5s' }}>
+                  <i className="fas fa-wand-magic-sparkles text-white text-2xl animate-sparkle"></i>
                 </div>
                 <div className="absolute top-4 right-4 w-10 h-10 bg-secondary/10 rounded-full flex items-center justify-center">
                   <span className="text-secondary font-bold">2</span>
@@ -52,8 +52,8 @@ export default function FeaturesSection() {
           <div className="relative">
             <Card className="rounded-3xl p-8 hover:shadow-xl transition-shadow">
               <CardContent className="p-0">
-                <div className="w-16 h-16 bg-gradient-to-br from-accent to-primary rounded-2xl flex items-center justify-center mb-6">
-                  <i className="fas fa-book-open text-white text-2xl"></i>
+                <div className="w-16 h-16 bg-gradient-to-br from-accent to-primary rounded-2xl flex items-center justify-center mb-6 animate-float-slow" style={{ animationDelay: '1s' }}>
+                  <i className="fas fa-book-sparkles text-white text-2xl animate-wiggle"></i>
                 </div>
                 <div className="absolute top-4 right-4 w-10 h-10 bg-accent/10 rounded-full flex items-center justify-center">
                   <span className="text-accent font-bold">3</span>
