@@ -42,12 +42,14 @@ export const storybooks = pgTable("storybooks", {
   coverImageUrl: text("cover_image_url"),
   createdAt: timestamp("created_at").defaultNow(),
   shareUrl: text("share_url"),
+  deletedAt: timestamp("deleted_at"),
 });
 
 export const insertStorybookSchema = createInsertSchema(storybooks).omit({
   id: true,
   createdAt: true,
   shareUrl: true,
+  deletedAt: true,
 });
 
 export const createStorybookSchema = z.object({

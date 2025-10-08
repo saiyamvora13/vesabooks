@@ -1,6 +1,6 @@
 import { type Storybook, type InsertStorybook, type StoryGenerationProgress, storybooks, users, type User, type UpsertUser } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc, count, countDistinct } from "drizzle-orm";
+import { eq, desc, count, countDistinct, isNull, and } from "drizzle-orm";
 
 export interface IStorage {
   // Replit Auth: User operations (mandatory)
@@ -94,7 +94,7 @@ export class DatabaseStorage implements IStorage {
     const [storybook] = await db
       .select()
       .from(storybooks)
-      .where(eq(storybooks.id, id));
+      .where(and(eq(storybooks.id, id), isNull(storybooks.deletedAt)));
     return storybook || undefined;
   }
 
@@ -102,7 +102,7 @@ export class DatabaseStorage implements IStorage {
     const [storybook] = await db
       .select()
       .from(storybooks)
-      .where(eq(storybooks.shareUrl, shareUrl));
+      .where(and(eq(storybooks.shareUrl, shareUrl), isNull(storybooks.deletedAt)));
     return storybook || undefined;
   }
 
@@ -110,7 +110,7 @@ export class DatabaseStorage implements IStorage {
     const userStorybooks = await db
       .select()
       .from(storybooks)
-      .where(eq(storybooks.userId, userId))
+      .where(and(eq(storybooks.userId, userId), isNull(storybooks.deletedAt)))
       .orderBy(desc(storybooks.createdAt));
     return userStorybooks;
   }
@@ -139,7 +139,8 @@ export class DatabaseStorage implements IStorage {
 
   async deleteStorybook(id: string): Promise<void> {
     await db
-      .delete(storybooks)
+      .update(storybooks)
+      .set({ deletedAt: new Date() })
       .where(eq(storybooks.id, id));
   }
 
@@ -158,15 +159,16 @@ export class DatabaseStorage implements IStorage {
 
   // Metrics
   async getMetrics(): Promise<{ storiesCreated: number; activeUsers: number }> {
-    // Get total count of storybooks
+    // Get total count of ALL storybooks (including soft-deleted ones)
     const [storiesResult] = await db
       .select({ count: count() })
       .from(storybooks);
     
-    // Get count of distinct users who have created at least 1 storybook
+    // Get count of distinct users who have created at least 1 non-deleted storybook
     const [usersResult] = await db
       .select({ count: countDistinct(storybooks.userId) })
-      .from(storybooks);
+      .from(storybooks)
+      .where(isNull(storybooks.deletedAt));
     
     return {
       storiesCreated: storiesResult?.count || 0,
