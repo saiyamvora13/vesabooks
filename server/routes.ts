@@ -254,6 +254,10 @@ async function generateStorybookAsync(
       fs.mkdirSync(generatedDir, { recursive: true });
     }
 
+    // Initialize Object Storage service
+    const { ObjectStorageService } = await import("./objectStorage");
+    const objectStorage = new ObjectStorageService();
+
     // Use the first inspiration image as the base for all generated images
     const baseImagePath = imagePaths[0] || "";
     
@@ -261,6 +265,14 @@ async function generateStorybookAsync(
     const coverImageFileName = `${sessionId}_cover.png`;
     const coverImagePath = path.join(generatedDir, coverImageFileName);
     await generateIllustration(generatedStory.coverImagePrompt, coverImagePath, baseImagePath);
+    
+    // Upload cover image to Object Storage
+    const coverImageUrl = await objectStorage.uploadFile(coverImagePath, coverImageFileName);
+    
+    // Clean up local cover image
+    if (fs.existsSync(coverImagePath)) {
+      fs.unlinkSync(coverImagePath);
+    }
 
     const pages = [];
     for (let i = 0; i < generatedStory.pages.length; i++) {
@@ -271,10 +283,18 @@ async function generateStorybookAsync(
       // Generate illustration for this page using the base image
       await generateIllustration(page.imagePrompt, imagePath, baseImagePath);
 
+      // Upload to Object Storage
+      const imageUrl = await objectStorage.uploadFile(imagePath, imageFileName);
+      
+      // Clean up local image
+      if (fs.existsSync(imagePath)) {
+        fs.unlinkSync(imagePath);
+      }
+
       pages.push({
         pageNumber: page.pageNumber,
         text: page.text,
-        imageUrl: `/api/images/${imageFileName}`,
+        imageUrl,
       });
 
       // Update progress
@@ -300,7 +320,7 @@ async function generateStorybookAsync(
       prompt,
       pages,
       inspirationImages: [],
-      coverImageUrl: `/api/images/${coverImageFileName}`,
+      coverImageUrl,
     });
 
     // Complete

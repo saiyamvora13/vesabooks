@@ -12,7 +12,9 @@ export interface IStorage {
   getStorybook(id: string): Promise<Storybook | undefined>;
   getStorybookByShareUrl(shareUrl: string): Promise<Storybook | undefined>;
   getUserStorybooks(userId: string): Promise<Storybook[]>;
+  getAllStorybooks(): Promise<Storybook[]>;
   updateStorybookShareUrl(id: string, shareUrl: string): Promise<void>;
+  updateStorybookImages(id: string, coverImageUrl: string, pages: Storybook['pages']): Promise<void>;
   
   // Progress tracking (kept in-memory for real-time updates)
   setGenerationProgress(sessionId: string, progress: StoryGenerationProgress): Promise<void>;
@@ -87,6 +89,21 @@ export class DatabaseStorage implements IStorage {
     await db
       .update(storybooks)
       .set({ shareUrl })
+      .where(eq(storybooks.id, id));
+  }
+
+  async getAllStorybooks(): Promise<Storybook[]> {
+    const allStorybooks = await db
+      .select()
+      .from(storybooks)
+      .orderBy(desc(storybooks.createdAt));
+    return allStorybooks;
+  }
+
+  async updateStorybookImages(id: string, coverImageUrl: string, pages: Storybook['pages']): Promise<void> {
+    await db
+      .update(storybooks)
+      .set({ coverImageUrl, pages })
       .where(eq(storybooks.id, id));
   }
 
