@@ -125,11 +125,30 @@ export function ProgressTracker({ sessionId, onComplete, onRetry, shouldAutoRetr
     <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8" data-testid={testId}>
       <Card className="rounded-3xl shadow-xl">
         <CardContent className="p-12 text-center">
-          {/* Animated Icon */}
-          <div className="mb-8">
-            <div className={`w-24 h-24 mx-auto bg-gradient-to-br from-primary to-secondary rounded-3xl flex items-center justify-center ${isComplete ? '' : 'animate-pulse'}`}>
-              <i className={`fas ${isComplete ? 'fa-check' : 'fa-wand-magic-sparkles'} text-white text-4xl`}></i>
-            </div>
+          {/* Magical Book Animation */}
+          <div className="mb-8 relative">
+            {!isComplete ? (
+              <div className="magical-book-container">
+                {/* Book Base */}
+                <div className="book">
+                  <div className="book-spine"></div>
+                  <div className="book-cover book-cover-left"></div>
+                  <div className="book-cover book-cover-right"></div>
+                  <div className="book-page page-1"></div>
+                  <div className="book-page page-2"></div>
+                  <div className="book-page page-3"></div>
+                </div>
+                {/* Sparkles */}
+                <div className="sparkle sparkle-1">✨</div>
+                <div className="sparkle sparkle-2">✨</div>
+                <div className="sparkle sparkle-3">✨</div>
+                <div className="sparkle sparkle-4">⭐</div>
+              </div>
+            ) : (
+              <div className="w-24 h-24 mx-auto bg-gradient-to-br from-primary to-secondary rounded-3xl flex items-center justify-center">
+                <i className="fas fa-check text-white text-4xl"></i>
+              </div>
+            )}
           </div>
 
           <h2 className="text-2xl font-bold mb-4">
