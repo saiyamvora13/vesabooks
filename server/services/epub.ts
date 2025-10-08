@@ -1,5 +1,7 @@
 import type { Storybook } from "@shared/schema";
 import type { Chapter } from "epub-gen-memory";
+import sharp from "sharp";
+import { ObjectStorageService } from "../objectStorage";
 
 export async function generateEpub(storybook: Storybook): Promise<Buffer> {
   // Use dynamic import for CommonJS module
@@ -174,4 +176,68 @@ export async function generateEpub(storybook: Storybook): Promise<Buffer> {
 
   // Generate EPUB and return as Buffer
   return await epub(options, content);
+}
+
+export async function generateCompositeCoverImage(
+  coverImageUrl: string,
+  title: string
+): Promise<Buffer | null> {
+  try {
+    // Extract filename from coverImageUrl (e.g., "/api/storage/xxx_cover.png" → "xxx_cover.png")
+    const filename = coverImageUrl.split('/').pop();
+    if (!filename) {
+      return null;
+    }
+
+    // Download the cover image using ObjectStorageService
+    const objectStorageService = new ObjectStorageService();
+    const imageBuffer = await objectStorageService.getFileBuffer(filename);
+
+    // Get image dimensions
+    const image = sharp(imageBuffer);
+    const metadata = await image.metadata();
+    const width = metadata.width || 800;
+    const height = metadata.height || 1200;
+
+    // Calculate positions for overlay and text
+    const overlayHeight = Math.floor(height * 0.25); // 25% of image height
+    const overlayY = height - overlayHeight;
+    
+    // Position text in the bottom 20% area
+    const titleY = height - Math.floor(height * 0.15); // Title at 15% from bottom
+    const authorY = height - Math.floor(height * 0.08); // Author at 8% from bottom
+
+    // Create SVG overlay with semi-transparent background and text
+    const svg = `<svg width="${width}" height="${height}">
+      <rect x="0" y="${overlayY}" width="${width}" height="${overlayHeight}" fill="rgba(255,255,255,0.95)"/>
+      <text x="50%" y="${titleY}" text-anchor="middle" font-size="80" font-weight="bold" fill="#1e293b">${escapeXml(title)}</text>
+      <text x="50%" y="${authorY}" text-anchor="middle" font-size="40" fill="#475569">By AI Storyteller</text>
+    </svg>`;
+
+    // Create composite image
+    const compositeBuffer = await sharp(imageBuffer)
+      .composite([
+        {
+          input: Buffer.from(svg),
+          top: 0,
+          left: 0,
+        },
+      ])
+      .png()
+      .toBuffer();
+
+    return compositeBuffer;
+  } catch (error) {
+    console.error('Error generating composite cover image:', error);
+    return null;
+  }
+}
+
+function escapeXml(text: string): string {
+  return text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&apos;');
 }
