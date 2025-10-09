@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -11,12 +12,30 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { LogOut, Menu, X } from "lucide-react";
+import { LogOut, Menu, X, ShoppingCart, ShoppingBag } from "lucide-react";
+import { getCartCount } from "@/lib/cartUtils";
 
 export default function Navigation() {
   const [location] = useLocation();
   const { user, isAuthenticated, isLoading } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [cartCount, setCartCount] = useState(0);
+
+  useEffect(() => {
+    const updateCartCount = () => {
+      setCartCount(getCartCount());
+    };
+
+    updateCartCount();
+
+    window.addEventListener('storage', updateCartCount);
+    window.addEventListener('cartUpdated', updateCartCount);
+
+    return () => {
+      window.removeEventListener('storage', updateCartCount);
+      window.removeEventListener('cartUpdated', updateCartCount);
+    };
+  }, []);
 
   return (
     <nav className="sticky top-0 z-50 bg-card/95 backdrop-blur-lg border-b border-border">
@@ -45,12 +64,33 @@ export default function Navigation() {
               </span>
             </Link>
             {isAuthenticated && (
-              <Link href="/library">
-                <span className={`text-foreground/70 hover:text-foreground transition-colors cursor-pointer font-medium ${location === '/library' ? 'text-primary' : ''}`} data-testid="link-library">
-                  My Library
-                </span>
-              </Link>
+              <>
+                <Link href="/library">
+                  <span className={`text-foreground/70 hover:text-foreground transition-colors cursor-pointer font-medium ${location === '/library' ? 'text-primary' : ''}`} data-testid="link-library">
+                    My Library
+                  </span>
+                </Link>
+                <Link href="/purchases">
+                  <span className={`text-foreground/70 hover:text-foreground transition-colors cursor-pointer font-medium ${location === '/purchases' ? 'text-primary' : ''}`} data-testid="link-purchases">
+                    My Purchases
+                  </span>
+                </Link>
+              </>
             )}
+            <Link href="/cart">
+              <div className="relative cursor-pointer" data-testid="link-cart">
+                <ShoppingCart className={`h-5 w-5 ${location === '/cart' ? 'text-primary' : 'text-foreground/70 hover:text-foreground'} transition-colors`} />
+                {cartCount > 0 && (
+                  <Badge 
+                    variant="destructive" 
+                    className="absolute -top-2 -right-2 h-5 w-5 flex items-center justify-center p-0 text-xs"
+                    data-testid="badge-cart-count"
+                  >
+                    {cartCount}
+                  </Badge>
+                )}
+              </div>
+            </Link>
           </div>
 
           {/* Desktop CTA Buttons */}
@@ -149,12 +189,33 @@ export default function Navigation() {
                 </div>
               </Link>
               {isAuthenticated && (
-                <Link href="/library" onClick={() => setMobileMenuOpen(false)}>
-                  <div className={`text-base px-3 py-2 rounded-lg ${location === '/library' ? 'bg-primary/10 text-primary font-medium' : 'text-foreground/70 font-medium'}`} data-testid="link-library-mobile">
-                    My Library
-                  </div>
-                </Link>
+                <>
+                  <Link href="/library" onClick={() => setMobileMenuOpen(false)}>
+                    <div className={`text-base px-3 py-2 rounded-lg ${location === '/library' ? 'bg-primary/10 text-primary font-medium' : 'text-foreground/70 font-medium'}`} data-testid="link-library-mobile">
+                      My Library
+                    </div>
+                  </Link>
+                  <Link href="/purchases" onClick={() => setMobileMenuOpen(false)}>
+                    <div className={`text-base px-3 py-2 rounded-lg flex items-center ${location === '/purchases' ? 'bg-primary/10 text-primary font-medium' : 'text-foreground/70 font-medium'}`} data-testid="link-purchases">
+                      <ShoppingBag className="h-5 w-5 mr-2" />
+                      My Purchases
+                    </div>
+                  </Link>
+                </>
               )}
+              <Link href="/cart" onClick={() => setMobileMenuOpen(false)}>
+                <div className={`text-base px-3 py-2 rounded-lg flex items-center justify-between ${location === '/cart' ? 'bg-primary/10 text-primary font-medium' : 'text-foreground/70 font-medium'}`} data-testid="link-cart-mobile">
+                  <span className="flex items-center">
+                    <ShoppingCart className="h-5 w-5 mr-2" />
+                    Cart
+                  </span>
+                  {cartCount > 0 && (
+                    <Badge variant="destructive" className="ml-2" data-testid="badge-cart-count-mobile">
+                      {cartCount}
+                    </Badge>
+                  )}
+                </div>
+              </Link>
               
               <div className="pt-4 border-t border-border space-y-3">
                 {!isLoading && !isAuthenticated ? (

@@ -16,6 +16,12 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', {
   apiVersion: "2025-09-30.clover",
 });
 
+// Price constants - server is the source of truth for pricing
+const PRICES = {
+  digital: 399,  // $3.99 in cents
+  print: 2499    // $24.99 in cents
+};
+
 // Configure multer for image uploads
 const upload = multer({
   dest: "uploads/",
@@ -317,14 +323,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const lineItems = [];
+      const processedItems = [];
       
       for (const item of items) {
-        const { storybookId, type, price } = item;
+        const { storybookId, type } = item;
+        
+        // Validate type
+        if (type !== 'digital' && type !== 'print') {
+          return res.status(400).json({ message: `Invalid type: ${type}. Must be 'digital' or 'print'` });
+        }
         
         const storybook = await storage.getStorybook(storybookId);
         if (!storybook) {
           return res.status(404).json({ message: `Storybook ${storybookId} not found` });
         }
+
+        // SECURITY: Calculate price server-side, ignore client-provided price
+        const serverPrice = PRICES[type as 'digital' | 'print'];
 
         lineItems.push({
           price_data: {
@@ -335,9 +350,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 ? 'Downloadable EPUB format' 
                 : 'Professionally printed and bound storybook',
             },
-            unit_amount: price,
+            unit_amount: serverPrice,
           },
           quantity: 1,
+        });
+
+        // Store items with server-calculated prices for metadata
+        processedItems.push({
+          storybookId: item.storybookId,
+          type: item.type,
+          price: serverPrice,
         });
       }
 
@@ -353,11 +375,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         cancel_url: `${baseUrl}/cart?cancelled=true`,
         metadata: {
           userId,
-          items: JSON.stringify(items.map((item: any) => ({
-            storybookId: item.storybookId,
-            type: item.type,
-            price: item.price,
-          }))),
+          items: JSON.stringify(processedItems),
         },
       });
 
@@ -395,6 +413,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         const items = JSON.parse(itemsJson);
         
+        // Create purchase records
         for (const item of items) {
           const { storybookId, type, price } = item;
           
@@ -406,6 +425,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
             stripePaymentIntentId: session.payment_intent as string,
             status: 'completed',
           });
+        }
+
+        // Handle print orders - send PDFs via email
+        const printOrders = items.filter((item: any) => item.type === 'print');
+        
+        if (printOrders.length > 0) {
+          // Get user email
+          const user = await storage.getUser(userId);
+          
+          if (user && user.email) {
+            // Process each print order
+            for (const printOrder of printOrders) {
+              try {
+                // Get storybook details
+                const storybook = await storage.getStorybook(printOrder.storybookId);
+                
+                if (storybook) {
+                  // Generate PDF
+                  const { generateStorybookPDF } = await import("./services/pdf");
+                  const pdfBuffer = await generateStorybookPDF(storybook);
+                  
+                  // Send email with PDF attachment
+                  const { sendPrintOrderEmail } = await import("./services/resend-email");
+                  await sendPrintOrderEmail(user.email, storybook, pdfBuffer);
+                  
+                  console.log(`Print order email sent for storybook ${storybook.id} to ${user.email}`);
+                }
+              } catch (emailError) {
+                // Log error but don't fail the webhook
+                console.error(`Failed to send print order email for storybook ${printOrder.storybookId}:`, emailError);
+              }
+            }
+          }
         }
       }
 

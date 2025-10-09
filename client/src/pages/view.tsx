@@ -7,8 +7,12 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useToast } from "@/hooks/use-toast";
 import { type Storybook } from "@shared/schema";
+import { ShoppingCart } from "lucide-react";
+import { addToCart } from "@/lib/cartUtils";
+import { useAuth } from "@/hooks/useAuth";
 
 export default function View() {
   const params = useParams();
@@ -16,6 +20,7 @@ export default function View() {
   const [shareUrl, setShareUrl] = useState<string>("");
   const [isDownloading, setIsDownloading] = useState(false);
   const { toast } = useToast();
+  const { isAuthenticated } = useAuth();
 
   // Determine if viewing by ID or share URL
   const storybookId = params.id;
@@ -24,6 +29,22 @@ export default function View() {
   const { data: storybook, isLoading, error } = useQuery<Storybook>({
     queryKey: sharedUrl ? ['/api/shared', sharedUrl] : ['/api/storybooks', storybookId],
     enabled: !!(storybookId || sharedUrl),
+  });
+
+  const { data: digitalPurchase } = useQuery<{ owned: boolean }>({
+    queryKey: ['/api/purchases/check', storybookId, 'digital'],
+    queryFn: async () => {
+      if (!isAuthenticated || !storybookId) return { owned: false };
+      const response = await fetch('/api/purchases/check', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ storybookId, type: 'digital' }),
+        credentials: 'include',
+      });
+      if (!response.ok) return { owned: false };
+      return response.json();
+    },
+    enabled: !!isAuthenticated && !!storybookId,
   });
 
   const generateShareUrl = async () => {
@@ -58,10 +79,18 @@ export default function View() {
 
   const downloadEpub = async () => {
     if (!storybook || isDownloading) return;
+
+    if (!digitalPurchase?.owned) {
+      toast({
+        title: "Purchase required",
+        description: "Please purchase the digital version to download",
+        variant: "destructive",
+      });
+      return;
+    }
     
     setIsDownloading(true);
     
-    // Show preparing toast
     toast({
       title: "Preparing your e-book...",
       description: "This may take a few seconds for large files",
@@ -97,6 +126,25 @@ export default function View() {
     } finally {
       setIsDownloading(false);
     }
+  };
+
+  const handleBuyDigital = () => {
+    if (!storybook) return;
+    
+    addToCart({
+      storybookId: storybook.id,
+      type: 'digital',
+      title: storybook.title,
+      price: 399,
+    });
+    
+    toast({
+      title: "Added to cart",
+      description: `${storybook.title} - Digital Edition`,
+    });
+    
+    window.dispatchEvent(new Event('cartUpdated'));
+    setLocation('/cart');
   };
 
   if (isLoading) {
@@ -184,16 +232,49 @@ export default function View() {
                 </DialogContent>
               </Dialog>
               
-              <Button 
-                variant="outline" 
-                className="rounded-xl" 
-                onClick={downloadEpub} 
-                disabled={isDownloading}
-                data-testid="button-download-epub"
-              >
-                <i className={`fas ${isDownloading ? 'fa-spinner fa-spin' : 'fa-book'} mr-2`}></i>
-                {isDownloading ? 'Preparing...' : 'Download E-book'}
-              </Button>
+              {digitalPurchase?.owned ? (
+                <Button 
+                  variant="outline" 
+                  className="rounded-xl" 
+                  onClick={downloadEpub} 
+                  disabled={isDownloading}
+                  data-testid="button-download-epub"
+                >
+                  <i className={`fas ${isDownloading ? 'fa-spinner fa-spin' : 'fa-book'} mr-2`}></i>
+                  {isDownloading ? 'Preparing...' : 'Download E-book'}
+                </Button>
+              ) : (
+                <>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button 
+                          variant="outline" 
+                          className="rounded-xl opacity-50 cursor-not-allowed" 
+                          disabled
+                          data-testid="button-download-epub"
+                        >
+                          <i className="fas fa-book mr-2"></i>
+                          Download E-book
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Purchase to download</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                  
+                  <Button 
+                    variant="default" 
+                    className="rounded-xl gradient-bg !text-[hsl(258,90%,20%)]" 
+                    onClick={handleBuyDigital}
+                    data-testid="button-buy-digital-viewer"
+                  >
+                    <ShoppingCart className="h-4 w-4 mr-2" />
+                    Buy Digital ($3.99)
+                  </Button>
+                </>
+              )}
             </div>
           </div>
 

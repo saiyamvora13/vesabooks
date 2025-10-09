@@ -5,7 +5,8 @@ import Navigation from "@/components/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { BookOpen, Calendar, Plus, Trash2 } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { BookOpen, Calendar, Plus, Trash2, ShoppingCart, Check } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import {
   AlertDialog,
@@ -19,7 +20,8 @@ import {
 } from "@/components/ui/alert-dialog";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { addToCart, isInCart } from "@/lib/cartUtils";
 
 interface Storybook {
   id: string;
@@ -28,6 +30,118 @@ interface Storybook {
   pages: Array<{ pageNumber: number; text: string; imageUrl: string }>;
   createdAt: string;
   shareUrl: string | null;
+}
+
+function StorybookPurchaseButtons({ storybook }: { storybook: Storybook }) {
+  const { toast } = useToast();
+  const [cartUpdated, setCartUpdated] = useState(0);
+
+  const { data: digitalPurchase } = useQuery<{ owned: boolean }>({
+    queryKey: ['/api/purchases/check', storybook.id, 'digital', cartUpdated],
+    queryFn: async () => {
+      const response = await fetch('/api/purchases/check', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ storybookId: storybook.id, type: 'digital' }),
+        credentials: 'include',
+      });
+      if (!response.ok) throw new Error('Failed to check purchase');
+      return response.json();
+    },
+  });
+
+  const { data: printPurchase } = useQuery<{ owned: boolean }>({
+    queryKey: ['/api/purchases/check', storybook.id, 'print', cartUpdated],
+    queryFn: async () => {
+      const response = await fetch('/api/purchases/check', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ storybookId: storybook.id, type: 'print' }),
+        credentials: 'include',
+      });
+      if (!response.ok) throw new Error('Failed to check purchase');
+      return response.json();
+    },
+  });
+
+  const handleAddToCart = (type: 'digital' | 'print') => {
+    const price = type === 'digital' ? 399 : 2499;
+    addToCart({
+      storybookId: storybook.id,
+      type,
+      title: storybook.title,
+      price,
+    });
+    toast({
+      title: "Added to cart",
+      description: `${storybook.title} - ${type === 'digital' ? 'Digital' : 'Print'} Edition`,
+    });
+    window.dispatchEvent(new Event('cartUpdated'));
+    setCartUpdated(prev => prev + 1);
+  };
+
+  const inCartDigital = isInCart(storybook.id, 'digital');
+  const inCartPrint = isInCart(storybook.id, 'print');
+
+  return (
+    <div className="space-y-2 mt-3">
+      {digitalPurchase?.owned ? (
+        <Badge variant="secondary" className="w-full justify-center py-1">
+          <Check className="h-3 w-3 mr-1" />
+          Digital Purchased
+        </Badge>
+      ) : (
+        <Button
+          size="sm"
+          variant={inCartDigital ? "secondary" : "outline"}
+          className="w-full"
+          onClick={() => handleAddToCart('digital')}
+          disabled={inCartDigital}
+          data-testid={`button-buy-digital-${storybook.id}`}
+        >
+          {inCartDigital ? (
+            <>
+              <Check className="h-4 w-4 mr-1" />
+              In Cart
+            </>
+          ) : (
+            <>
+              <ShoppingCart className="h-4 w-4 mr-1" />
+              Buy Digital ($3.99)
+            </>
+          )}
+        </Button>
+      )}
+
+      {printPurchase?.owned ? (
+        <Badge variant="secondary" className="w-full justify-center py-1">
+          <Check className="h-3 w-3 mr-1" />
+          Print Purchased
+        </Badge>
+      ) : (
+        <Button
+          size="sm"
+          variant={inCartPrint ? "secondary" : "outline"}
+          className="w-full"
+          onClick={() => handleAddToCart('print')}
+          disabled={inCartPrint}
+          data-testid={`button-buy-print-${storybook.id}`}
+        >
+          {inCartPrint ? (
+            <>
+              <Check className="h-4 w-4 mr-1" />
+              In Cart
+            </>
+          ) : (
+            <>
+              <ShoppingCart className="h-4 w-4 mr-1" />
+              Buy Print ($24.99)
+            </>
+          )}
+        </Button>
+      )}
+    </div>
+  );
 }
 
 export default function Library() {
@@ -187,31 +301,33 @@ export default function Library() {
                   </CardDescription>
                 </CardHeader>
                 
-                <CardFooter className="flex items-center justify-between text-sm text-muted-foreground">
-                  <div className="flex items-center gap-1">
+                <CardContent className="pb-3">
+                  <div className="flex items-center gap-1 text-sm text-muted-foreground mb-2">
                     <Calendar className="h-4 w-4" />
                     <span data-testid={`text-date-${storybook.id}`}>
                       {formatDistanceToNow(new Date(storybook.createdAt), { addSuffix: true })}
                     </span>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <Link href={`/view/${storybook.id}`}>
-                      <Button variant="ghost" size="sm" data-testid={`button-view-${storybook.id}`}>
-                        View
-                      </Button>
-                    </Link>
-                    <Button
-                      variant="destructive"
-                      size="sm"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        setDeletingBookId(storybook.id);
-                      }}
-                      data-testid={`button-delete-${storybook.id}`}
-                    >
-                      <Trash2 className="h-4 w-4" />
+                  <StorybookPurchaseButtons storybook={storybook} />
+                </CardContent>
+                
+                <CardFooter className="flex items-center justify-between gap-2 pt-3">
+                  <Link href={`/view/${storybook.id}`} className="flex-1">
+                    <Button variant="outline" size="sm" className="w-full" data-testid={`button-view-${storybook.id}`}>
+                      View
                     </Button>
-                  </div>
+                  </Link>
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      setDeletingBookId(storybook.id);
+                    }}
+                    data-testid={`button-delete-${storybook.id}`}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
                 </CardFooter>
               </Card>
             ))}
