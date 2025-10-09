@@ -3,12 +3,18 @@ import express from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { generateStoryFromPrompt, generateIllustration } from "./services/gemini";
-import { createStorybookSchema, type StoryGenerationProgress } from "@shared/schema";
+import { createStorybookSchema, type StoryGenerationProgress, type Purchase, type InsertPurchase } from "@shared/schema";
 import { randomUUID } from "crypto";
 import * as fs from "fs";
 import * as path from "path";
 import multer from "multer";
 import { setupAuth, isAuthenticated } from "./replitAuth";
+import Stripe from "stripe";
+import { z } from "zod";
+
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', {
+  apiVersion: "2025-09-30.clover",
+});
 
 // Configure multer for image uploads
 const upload = multer({
@@ -281,6 +287,147 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Legacy: Serve generated images from filesystem (for backward compatibility)
   app.use("/api/images", express.static(path.join(process.cwd(), "generated")));
+
+  // Check if user owns a book (requires authentication)
+  app.post("/api/purchases/check", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.id || req.user.claims?.sub;
+      const { storybookId, type } = req.body;
+
+      if (!storybookId || !type) {
+        return res.status(400).json({ message: "storybookId and type are required" });
+      }
+
+      const purchase = await storage.getStorybookPurchase(userId, storybookId, type);
+      res.json({ owned: !!purchase });
+    } catch (error) {
+      console.error("Check purchase error:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Create Stripe checkout session (requires authentication)
+  app.post("/api/checkout", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.id || req.user.claims?.sub;
+      const { items } = req.body;
+
+      if (!items || !Array.isArray(items) || items.length === 0) {
+        return res.status(400).json({ message: "Items array is required" });
+      }
+
+      const lineItems = [];
+      
+      for (const item of items) {
+        const { storybookId, type, price } = item;
+        
+        const storybook = await storage.getStorybook(storybookId);
+        if (!storybook) {
+          return res.status(404).json({ message: `Storybook ${storybookId} not found` });
+        }
+
+        lineItems.push({
+          price_data: {
+            currency: 'usd',
+            product_data: {
+              name: `${storybook.title} - ${type === 'digital' ? 'Digital' : 'Print'} Edition`,
+              description: type === 'digital' 
+                ? 'Downloadable EPUB format' 
+                : 'Professionally printed and bound storybook',
+            },
+            unit_amount: price,
+          },
+          quantity: 1,
+        });
+      }
+
+      const protocol = req.get('x-forwarded-proto') || req.protocol;
+      const host = req.get('host');
+      const baseUrl = `${protocol}://${host}`;
+
+      const session = await stripe.checkout.sessions.create({
+        payment_method_types: ['card'],
+        line_items: lineItems,
+        mode: 'payment',
+        success_url: `${baseUrl}/purchases?success=true`,
+        cancel_url: `${baseUrl}/cart?cancelled=true`,
+        metadata: {
+          userId,
+          items: JSON.stringify(items.map((item: any) => ({
+            storybookId: item.storybookId,
+            type: item.type,
+            price: item.price,
+          }))),
+        },
+      });
+
+      res.json({ sessionId: session.id, url: session.url });
+    } catch (error) {
+      console.error("Checkout error:", error);
+      res.status(500).json({ message: "Failed to create checkout session" });
+    }
+  });
+
+  // Stripe webhook handler (no authentication required, uses signature verification)
+  app.post("/api/webhook/stripe", async (req: any, res) => {
+    const sig = req.headers['stripe-signature'];
+
+    if (!sig) {
+      return res.status(400).json({ message: "Missing stripe-signature header" });
+    }
+
+    try {
+      const event = stripe.webhooks.constructEvent(
+        req.rawBody,
+        sig,
+        process.env.STRIPE_WEBHOOK_SECRET || ''
+      );
+
+      if (event.type === 'checkout.session.completed') {
+        const session = event.data.object as Stripe.Checkout.Session;
+        
+        const { userId, items: itemsJson } = session.metadata || {};
+        
+        if (!userId || !itemsJson) {
+          console.error("Missing metadata in session:", session.id);
+          return res.status(400).json({ message: "Missing metadata" });
+        }
+
+        const items = JSON.parse(itemsJson);
+        
+        for (const item of items) {
+          const { storybookId, type, price } = item;
+          
+          await storage.createPurchase({
+            userId,
+            storybookId,
+            type,
+            price: price.toString(),
+            stripePaymentIntentId: session.payment_intent as string,
+            status: 'completed',
+          });
+        }
+      }
+
+      res.json({ received: true });
+    } catch (error) {
+      console.error("Webhook error:", error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      res.status(400).json({ message: `Webhook Error: ${errorMessage}` });
+    }
+  });
+
+  // Get user's purchases (requires authentication)
+  app.get("/api/purchases", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.id || req.user.claims?.sub;
+      const purchases = await storage.getUserPurchases(userId);
+      res.json(purchases);
+    } catch (error) {
+      console.error("Get purchases error:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
 
   const httpServer = createServer(app);
   return httpServer;

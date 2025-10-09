@@ -1,4 +1,4 @@
-import { type Storybook, type InsertStorybook, type StoryGenerationProgress, storybooks, users, type User, type UpsertUser } from "@shared/schema";
+import { type Storybook, type InsertStorybook, type StoryGenerationProgress, storybooks, users, type User, type UpsertUser, type Purchase, type InsertPurchase, purchases } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, count, countDistinct, isNull, and } from "drizzle-orm";
 
@@ -24,6 +24,12 @@ export interface IStorage {
   
   // Metrics
   getMetrics(): Promise<{ storiesCreated: number; activeUsers: number }>;
+  
+  // Purchase operations
+  createPurchase(purchase: InsertPurchase): Promise<Purchase>;
+  getUserPurchases(userId: string): Promise<Purchase[]>;
+  getStorybookPurchase(userId: string, storybookId: string, type: 'digital' | 'print'): Promise<Purchase | null>;
+  updatePurchaseStatus(id: string, status: string, stripePaymentIntentId?: string): Promise<Purchase>;
 }
 
 // Database storage for persistent data
@@ -85,7 +91,7 @@ export class DatabaseStorage implements IStorage {
   async createStorybook(insertStorybook: InsertStorybook): Promise<Storybook> {
     const [storybook] = await db
       .insert(storybooks)
-      .values(insertStorybook)
+      .values([insertStorybook])
       .returning();
     return storybook;
   }
@@ -174,6 +180,52 @@ export class DatabaseStorage implements IStorage {
       storiesCreated: storiesResult?.count || 0,
       activeUsers: usersResult?.count || 0,
     };
+  }
+
+  // Purchase operations
+  async createPurchase(purchase: InsertPurchase): Promise<Purchase> {
+    const [newPurchase] = await db
+      .insert(purchases)
+      .values(purchase)
+      .returning();
+    return newPurchase;
+  }
+
+  async getUserPurchases(userId: string): Promise<Purchase[]> {
+    const userPurchases = await db
+      .select()
+      .from(purchases)
+      .where(eq(purchases.userId, userId))
+      .orderBy(desc(purchases.createdAt));
+    return userPurchases;
+  }
+
+  async getStorybookPurchase(userId: string, storybookId: string, type: 'digital' | 'print'): Promise<Purchase | null> {
+    const [purchase] = await db
+      .select()
+      .from(purchases)
+      .where(
+        and(
+          eq(purchases.userId, userId),
+          eq(purchases.storybookId, storybookId),
+          eq(purchases.type, type)
+        )
+      );
+    return purchase || null;
+  }
+
+  async updatePurchaseStatus(id: string, status: string, stripePaymentIntentId?: string): Promise<Purchase> {
+    const updateData: any = { status };
+    if (stripePaymentIntentId) {
+      updateData.stripePaymentIntentId = stripePaymentIntentId;
+    }
+    
+    const [updatedPurchase] = await db
+      .update(purchases)
+      .set(updateData)
+      .where(eq(purchases.id, id))
+      .returning();
+    return updatedPurchase;
   }
 }
 

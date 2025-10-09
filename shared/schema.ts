@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, json, timestamp, index, jsonb } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, json, timestamp, index, jsonb, numeric } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -69,3 +69,25 @@ export interface StoryGenerationProgress {
   message: string;
   error?: string;
 }
+
+export const purchases = pgTable("purchases", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
+  storybookId: varchar("storybook_id").notNull().references(() => storybooks.id, { onDelete: 'cascade' }),
+  type: text("type").notNull(),
+  price: numeric("price").notNull(),
+  stripePaymentIntentId: text("stripe_payment_intent_id"),
+  status: text("status").notNull().default('pending'),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("idx_purchases_user").on(table.userId),
+  index("idx_purchases_storybook").on(table.storybookId),
+]);
+
+export const insertPurchaseSchema = createInsertSchema(purchases).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertPurchase = z.infer<typeof insertPurchaseSchema>;
+export type Purchase = typeof purchases.$inferSelect;
