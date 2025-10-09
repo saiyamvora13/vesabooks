@@ -213,20 +213,21 @@ export default function Cart() {
                   </span>
                 </div>
                 
-                <div className="flex flex-col gap-3">
+                <div className="flex flex-col gap-3 items-center">
                   <Button
                     variant="outline"
+                    size="sm"
                     onClick={handleClearCart}
-                    className="w-full"
+                    className="text-xs"
                     data-testid="button-clear-cart"
                   >
-                    <Trash2 className="h-4 w-4 mr-2" />
+                    <Trash2 className="h-3 w-3 mr-1.5" />
                     Clear Cart
                   </Button>
                   <Button
                     onClick={handleCheckout}
                     size="lg"
-                    className="w-full gradient-bg hover:opacity-90 !text-[hsl(258,90%,20%)] shadow-lg text-lg"
+                    className="w-full gradient-bg !text-[hsl(258,90%,20%)] shadow-lg text-lg transition-all duration-200 hover:scale-105 hover:shadow-2xl hover:brightness-105"
                     data-testid="button-checkout"
                   >
                     <ShoppingCart className="h-5 w-5 mr-2" />
