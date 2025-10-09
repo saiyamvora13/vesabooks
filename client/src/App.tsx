@@ -8,6 +8,7 @@ import Create from "@/pages/create";
 import View from "@/pages/view";
 import Library from "@/pages/library";
 import Cart from "@/pages/cart";
+import Checkout from "@/pages/checkout";
 import Purchases from "@/pages/purchases";
 import NotFound from "@/pages/not-found";
 
@@ -18,6 +19,7 @@ function Router() {
       <Route path="/create" component={Create} />
       <Route path="/library" component={Library} />
       <Route path="/cart" component={Cart} />
+      <Route path="/checkout" component={Checkout} />
       <Route path="/purchases" component={Purchases} />
       <Route path="/view/:id" component={View} />
       <Route path="/shared/:shareUrl" component={View} />

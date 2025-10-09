@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, json, timestamp, index, jsonb, numeric } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, json, timestamp, index, jsonb, numeric, unique } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -76,12 +76,13 @@ export const purchases = pgTable("purchases", {
   storybookId: varchar("storybook_id").notNull().references(() => storybooks.id, { onDelete: 'cascade' }),
   type: text("type").notNull(),
   price: numeric("price").notNull(),
-  stripePaymentIntentId: text("stripe_payment_intent_id"),
+  stripePaymentIntentId: text("stripe_payment_intent_id").notNull(),
   status: text("status").notNull().default('pending'),
   createdAt: timestamp("created_at").defaultNow(),
 }, (table) => [
   index("idx_purchases_user").on(table.userId),
   index("idx_purchases_storybook").on(table.storybookId),
+  unique().on(table.stripePaymentIntentId, table.storybookId, table.type),
 ]);
 
 export const insertPurchaseSchema = createInsertSchema(purchases).omit({

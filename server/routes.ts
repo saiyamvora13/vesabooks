@@ -312,6 +312,106 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Create purchase from payment intent (requires authentication)
+  app.post("/api/purchases/create", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.id || req.user.claims?.sub;
+      const { paymentIntentId } = req.body;
+
+      if (!paymentIntentId) {
+        return res.status(400).json({ message: "paymentIntentId is required" });
+      }
+
+      // Fetch Payment Intent from Stripe to get metadata
+      const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
+
+      if (!paymentIntent) {
+        return res.status(404).json({ message: "Payment Intent not found" });
+      }
+
+      // Verify payment is successful
+      if (paymentIntent.status !== 'succeeded') {
+        return res.status(400).json({ message: "Payment has not succeeded" });
+      }
+
+      const { userId: metadataUserId, items: itemsJson } = paymentIntent.metadata || {};
+
+      if (!metadataUserId || !itemsJson) {
+        return res.status(400).json({ message: "Missing metadata in payment intent" });
+      }
+
+      // Verify userId matches
+      if (metadataUserId !== userId) {
+        return res.status(403).json({ message: "Unauthorized - user mismatch" });
+      }
+
+      const items = JSON.parse(itemsJson);
+      const createdPurchases = [];
+
+      // Create purchase records with idempotency
+      for (const item of items) {
+        const { storybookId, type, price } = item;
+
+        try {
+          const purchase = await storage.createPurchase({
+            userId,
+            storybookId,
+            type,
+            price: price.toString(),
+            stripePaymentIntentId: paymentIntent.id,
+            status: 'completed',
+          });
+          createdPurchases.push(purchase);
+        } catch (error: any) {
+          // Handle duplicate purchase (unique constraint violation)
+          if (error.message?.includes('unique') || error.code === '23505') {
+            console.log(`Purchase already exists for payment intent ${paymentIntent.id}, storybookId ${storybookId}`);
+            // Fetch existing purchase
+            const existingPurchase = await storage.getStorybookPurchase(userId, storybookId, type);
+            if (existingPurchase) {
+              createdPurchases.push(existingPurchase);
+            }
+          } else {
+            throw error;
+          }
+        }
+      }
+
+      // Handle print orders - send PDFs via email
+      const printOrders = items.filter((item: any) => item.type === 'print');
+
+      if (printOrders.length > 0) {
+        const user = await storage.getUser(userId);
+
+        if (user && user.email) {
+          for (const printOrder of printOrders) {
+            try {
+              const storybook = await storage.getStorybook(printOrder.storybookId);
+
+              if (storybook) {
+                const { generateStorybookPDF } = await import("./services/pdf");
+                const pdfBuffer = await generateStorybookPDF(storybook);
+
+                const { sendPrintOrderEmail } = await import("./services/resend-email");
+                await sendPrintOrderEmail(user.email, storybook, pdfBuffer);
+
+                console.log(`Print order email sent for storybook ${storybook.id} to ${user.email}`);
+              }
+            } catch (emailError) {
+              console.error(`Failed to send print order email for storybook ${printOrder.storybookId}:`, emailError);
+            }
+          }
+        }
+      }
+
+      res.json({ purchases: createdPurchases });
+    } catch (error) {
+      console.error("Create purchase error:", error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      res.status(500).json({ message: `Failed to create purchase: ${errorMessage}` });
+    }
+  });
+
   // Create Stripe checkout session (requires authentication)
   app.post("/api/checkout", isAuthenticated, async (req: any, res) => {
     try {
@@ -386,6 +486,69 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Create Payment Intent for embedded Stripe checkout (requires authentication)
+  app.post("/api/create-payment-intent", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.id || req.user.claims?.sub;
+      const { items } = req.body;
+
+      // Validate items
+      if (!items || !Array.isArray(items) || items.length === 0) {
+        return res.status(400).json({ message: "Items array is required" });
+      }
+
+      let total = 0;
+      const processedItems = [];
+
+      for (const item of items) {
+        const { storybookId, type } = item;
+        
+        // Validate type
+        if (type !== 'digital' && type !== 'print') {
+          return res.status(400).json({ message: `Invalid type: ${type}. Must be 'digital' or 'print'` });
+        }
+
+        // Verify storybook exists
+        const storybook = await storage.getStorybook(storybookId);
+        if (!storybook) {
+          return res.status(404).json({ message: `Storybook ${storybookId} not found` });
+        }
+
+        // SECURITY: Calculate price server-side using PRICES constants
+        const serverPrice = PRICES[type as 'digital' | 'print'];
+        total += serverPrice;
+
+        processedItems.push({
+          storybookId,
+          type,
+          price: serverPrice,
+        });
+      }
+
+      // Create Stripe Payment Intent
+      const paymentIntent = await stripe.paymentIntents.create({
+        amount: total,
+        currency: "usd",
+        automatic_payment_methods: {
+          enabled: true,
+        },
+        metadata: {
+          userId,
+          items: JSON.stringify(processedItems),
+        },
+      });
+
+      res.json({ 
+        clientSecret: paymentIntent.client_secret, 
+        amount: total 
+      });
+    } catch (error) {
+      console.error("Create payment intent error:", error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      res.status(500).json({ message: `Failed to create payment intent: ${errorMessage}` });
+    }
+  });
+
   // Stripe webhook handler (no authentication required, uses signature verification)
   app.post("/api/webhook/stripe", async (req: any, res) => {
     const sig = req.headers['stripe-signature'];
@@ -413,18 +576,98 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         const items = JSON.parse(itemsJson);
         
-        // Create purchase records
+        // Create purchase records with duplicate handling
         for (const item of items) {
           const { storybookId, type, price } = item;
           
-          await storage.createPurchase({
-            userId,
-            storybookId,
-            type,
-            price: price.toString(),
-            stripePaymentIntentId: session.payment_intent as string,
-            status: 'completed',
-          });
+          try {
+            await storage.createPurchase({
+              userId,
+              storybookId,
+              type,
+              price: price.toString(),
+              stripePaymentIntentId: session.payment_intent as string,
+              status: 'completed',
+            });
+            console.log(`Webhook created purchase for payment intent ${session.payment_intent}, storybookId ${storybookId}`);
+          } catch (error: any) {
+            // Handle duplicate purchase (unique constraint violation)
+            if (error.message?.includes('unique') || error.code === '23505') {
+              console.log(`Purchase already exists for payment intent ${session.payment_intent}, storybookId ${storybookId} - skipping (created by client)`);
+            } else {
+              // Re-throw other errors
+              throw error;
+            }
+          }
+        }
+
+        // Handle print orders - send PDFs via email
+        const printOrders = items.filter((item: any) => item.type === 'print');
+        
+        if (printOrders.length > 0) {
+          // Get user email
+          const user = await storage.getUser(userId);
+          
+          if (user && user.email) {
+            // Process each print order
+            for (const printOrder of printOrders) {
+              try {
+                // Get storybook details
+                const storybook = await storage.getStorybook(printOrder.storybookId);
+                
+                if (storybook) {
+                  // Generate PDF
+                  const { generateStorybookPDF } = await import("./services/pdf");
+                  const pdfBuffer = await generateStorybookPDF(storybook);
+                  
+                  // Send email with PDF attachment
+                  const { sendPrintOrderEmail } = await import("./services/resend-email");
+                  await sendPrintOrderEmail(user.email, storybook, pdfBuffer);
+                  
+                  console.log(`Print order email sent for storybook ${storybook.id} to ${user.email}`);
+                }
+              } catch (emailError) {
+                // Log error but don't fail the webhook
+                console.error(`Failed to send print order email for storybook ${printOrder.storybookId}:`, emailError);
+              }
+            }
+          }
+        }
+      } else if (event.type === 'payment_intent.succeeded') {
+        const paymentIntent = event.data.object as Stripe.PaymentIntent;
+        
+        const { userId, items: itemsJson } = paymentIntent.metadata || {};
+        
+        if (!userId || !itemsJson) {
+          console.error("Missing metadata in payment intent:", paymentIntent.id);
+          return res.status(400).json({ message: "Missing metadata" });
+        }
+
+        const items = JSON.parse(itemsJson);
+        
+        // Create purchase records with duplicate handling
+        for (const item of items) {
+          const { storybookId, type, price } = item;
+          
+          try {
+            await storage.createPurchase({
+              userId,
+              storybookId,
+              type,
+              price: price.toString(),
+              stripePaymentIntentId: paymentIntent.id,
+              status: 'completed',
+            });
+            console.log(`Webhook created purchase for payment intent ${paymentIntent.id}, storybookId ${storybookId}`);
+          } catch (error: any) {
+            // Handle duplicate purchase (unique constraint violation)
+            if (error.message?.includes('unique') || error.code === '23505') {
+              console.log(`Purchase already exists for payment intent ${paymentIntent.id}, storybookId ${storybookId} - skipping (created by client)`);
+            } else {
+              // Re-throw other errors
+              throw error;
+            }
+          }
         }
 
         // Handle print orders - send PDFs via email

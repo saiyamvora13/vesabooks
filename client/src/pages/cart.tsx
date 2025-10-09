@@ -14,7 +14,6 @@ export default function Cart() {
   const { toast } = useToast();
   const { isAuthenticated } = useAuth();
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
-  const [isCheckingOut, setIsCheckingOut] = useState(false);
 
   useEffect(() => {
     const loadCart = () => {
@@ -70,7 +69,7 @@ export default function Cart() {
     });
   };
 
-  const handleCheckout = async () => {
+  const handleCheckout = () => {
     if (!isAuthenticated) {
       toast({
         title: "Authentication required",
@@ -90,44 +89,8 @@ export default function Cart() {
       return;
     }
 
-    setIsCheckingOut(true);
-
-    try {
-      const items = cartItems.map(item => ({
-        storybookId: item.storybookId,
-        type: item.type,
-        price: item.price,
-      }));
-
-      const response = await fetch('/api/checkout', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include',
-        body: JSON.stringify({ items }),
-      });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || 'Failed to create checkout session');
-      }
-
-      const { url } = await response.json();
-
-      // Note: Cart is NOT cleared here to preserve items if user cancels
-      // Cart will be cleared on successful purchase in the purchases page
-
-      window.location.href = url;
-    } catch (error) {
-      console.error('Checkout error:', error);
-      toast({
-        title: "Checkout failed",
-        description: error instanceof Error ? error.message : "Please try again later",
-        variant: "destructive",
-      });
-      setIsCheckingOut(false);
-    }
+    // Redirect to embedded checkout page
+    setLocation('/checkout');
   };
 
   const totalPrice = cartItems.reduce((sum, item) => sum + item.price, 0);
@@ -221,21 +184,11 @@ export default function Cart() {
                   </Button>
                   <Button
                     onClick={handleCheckout}
-                    disabled={isCheckingOut}
                     className="flex-1 gradient-bg hover:opacity-90 !text-[hsl(258,90%,20%)]"
                     data-testid="button-checkout"
                   >
-                    {isCheckingOut ? (
-                      <>
-                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-[hsl(258,90%,20%)] mr-2"></div>
-                        Processing...
-                      </>
-                    ) : (
-                      <>
-                        <ShoppingCart className="h-4 w-4 mr-2" />
-                        Proceed to Checkout
-                      </>
-                    )}
+                    <ShoppingCart className="h-4 w-4 mr-2" />
+                    Proceed to Checkout
                   </Button>
                 </div>
               </CardContent>
