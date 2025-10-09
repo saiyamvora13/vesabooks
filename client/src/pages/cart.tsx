@@ -4,10 +4,79 @@ import Navigation from "@/components/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
 import { ShoppingCart, Trash2, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { getCart, removeFromCart, clearCart, type CartItem } from "@/lib/cartUtils";
 import { useAuth } from "@/hooks/useAuth";
+import { useQuery } from "@tanstack/react-query";
+import type { Storybook } from "@shared/schema";
+
+function CartItemCard({ item, onRemove }: { item: CartItem; onRemove: (storybookId: string, type: 'digital' | 'print') => void }) {
+  const { data: storybook, isLoading } = useQuery<Storybook>({
+    queryKey: ['/api/storybooks', item.storybookId],
+  });
+
+  const coverImageUrl = storybook?.pages?.[0]?.imageUrl;
+
+  return (
+    <Card data-testid={`card-item-${item.storybookId}-${item.type}`}>
+      <CardHeader className="pb-3">
+        <div className="flex items-start gap-4">
+          {isLoading ? (
+            <Skeleton className="w-20 h-28 rounded-lg flex-shrink-0" data-testid={`skeleton-image-${item.storybookId}`} />
+          ) : coverImageUrl ? (
+            <img
+              src={coverImageUrl}
+              alt={`${item.title} cover`}
+              className="w-20 h-28 object-cover rounded-lg flex-shrink-0"
+              data-testid={`img-cover-${item.storybookId}-${item.type}`}
+            />
+          ) : (
+            <div className="w-20 h-28 bg-muted rounded-lg flex-shrink-0 flex items-center justify-center">
+              <ShoppingCart className="h-8 w-8 text-muted-foreground" />
+            </div>
+          )}
+          
+          <div className="flex-1 min-w-0">
+            <CardTitle className="text-lg mb-2" data-testid={`text-title-${item.storybookId}-${item.type}`}>
+              {item.title}
+            </CardTitle>
+            <div className="space-y-2">
+              <div className="flex items-center gap-2 flex-wrap">
+                <Badge variant={item.type === 'digital' ? 'default' : 'secondary'} data-testid={`badge-type-${item.storybookId}-${item.type}`}>
+                  {item.type === 'digital' ? 'E-book Edition' : 'Print Edition'}
+                </Badge>
+                <span className="text-sm text-muted-foreground">
+                  {item.type === 'digital' ? 'Downloadable EPUB' : 'Professionally printed'}
+                </span>
+              </div>
+              {item.type === 'print' && (
+                <Badge variant="outline" className="w-fit" data-testid={`badge-free-ebook-${item.storybookId}`}>
+                  ✨ Includes free e-book
+                </Badge>
+              )}
+            </div>
+          </div>
+          
+          <div className="flex items-center gap-3 flex-shrink-0">
+            <span className="text-lg font-semibold" data-testid={`text-price-${item.storybookId}-${item.type}`}>
+              ${(item.price / 100).toFixed(2)}
+            </span>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => onRemove(item.storybookId, item.type)}
+              data-testid={`button-remove-${item.storybookId}-${item.type}`}
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+      </CardHeader>
+    </Card>
+  );
+}
 
 export default function Cart() {
   const [, setLocation] = useLocation();
@@ -89,7 +158,6 @@ export default function Cart() {
       return;
     }
 
-    // Redirect to embedded checkout page
     setLocation('/checkout');
   };
 
@@ -128,62 +196,28 @@ export default function Cart() {
           <div className="space-y-6">
             <div className="space-y-4">
               {cartItems.map((item) => (
-                <Card key={`${item.storybookId}-${item.type}`} data-testid={`card-item-${item.storybookId}-${item.type}`}>
-                  <CardHeader className="pb-3">
-                    <div className="flex items-start justify-between gap-4">
-                      <div className="flex-1">
-                        <CardTitle className="text-lg mb-2" data-testid={`text-title-${item.storybookId}-${item.type}`}>
-                          {item.title}
-                        </CardTitle>
-                        <div className="space-y-2">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <Badge variant={item.type === 'digital' ? 'default' : 'secondary'} data-testid={`badge-type-${item.storybookId}-${item.type}`}>
-                              {item.type === 'digital' ? 'E-book Edition' : 'Print Edition'}
-                            </Badge>
-                            <span className="text-sm text-muted-foreground">
-                              {item.type === 'digital' ? 'Downloadable EPUB' : 'Professionally printed'}
-                            </span>
-                          </div>
-                          {item.type === 'print' && (
-                            <Badge variant="outline" className="w-fit" data-testid={`badge-free-ebook-${item.storybookId}`}>
-                              ✨ Includes free e-book
-                            </Badge>
-                          )}
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-3">
-                        <span className="text-lg font-semibold" data-testid={`text-price-${item.storybookId}-${item.type}`}>
-                          ${(item.price / 100).toFixed(2)}
-                        </span>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleRemoveItem(item.storybookId, item.type)}
-                          data-testid={`button-remove-${item.storybookId}-${item.type}`}
-                        >
-                          <X className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </div>
-                  </CardHeader>
-                </Card>
+                <CartItemCard
+                  key={`${item.storybookId}-${item.type}`}
+                  item={item}
+                  onRemove={handleRemoveItem}
+                />
               ))}
             </div>
 
             <Card className="bg-muted/50">
               <CardContent className="pt-6">
-                <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center justify-between mb-6">
                   <span className="text-lg font-semibold">Total</span>
                   <span className="text-2xl font-bold gradient-text" data-testid="text-total">
                     ${(totalPrice / 100).toFixed(2)}
                   </span>
                 </div>
                 
-                <div className="flex flex-col sm:flex-row gap-3">
+                <div className="flex flex-col gap-3">
                   <Button
                     variant="outline"
                     onClick={handleClearCart}
-                    className="w-full sm:w-auto"
+                    className="w-full"
                     data-testid="button-clear-cart"
                   >
                     <Trash2 className="h-4 w-4 mr-2" />
@@ -191,10 +225,11 @@ export default function Cart() {
                   </Button>
                   <Button
                     onClick={handleCheckout}
-                    className="flex-1 gradient-bg hover:opacity-90 !text-[hsl(258,90%,20%)]"
+                    size="lg"
+                    className="w-full gradient-bg hover:opacity-90 !text-[hsl(258,90%,20%)] shadow-lg text-lg"
                     data-testid="button-checkout"
                   >
-                    <ShoppingCart className="h-4 w-4 mr-2" />
+                    <ShoppingCart className="h-5 w-5 mr-2" />
                     Proceed to Checkout
                   </Button>
                 </div>
