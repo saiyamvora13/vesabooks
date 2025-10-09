@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, json, timestamp, index, jsonb, numeric, unique } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, json, timestamp, index, jsonb, numeric, unique, boolean } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -21,6 +21,12 @@ export const users = pgTable("users", {
   firstName: varchar("first_name"),
   lastName: varchar("last_name"),
   profileImageUrl: varchar("profile_image_url"),
+  password: varchar("password"),
+  authProvider: varchar("auth_provider").notNull().default('email'),
+  emailVerified: boolean("email_verified").notNull().default(false),
+  googleId: varchar("google_id").unique(),
+  facebookId: varchar("facebook_id").unique(),
+  appleId: varchar("apple_id").unique(),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
