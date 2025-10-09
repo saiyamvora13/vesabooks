@@ -135,13 +135,20 @@ export default function Cart() {
                         <CardTitle className="text-lg mb-2" data-testid={`text-title-${item.storybookId}-${item.type}`}>
                           {item.title}
                         </CardTitle>
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <Badge variant={item.type === 'digital' ? 'default' : 'secondary'} data-testid={`badge-type-${item.storybookId}-${item.type}`}>
-                            {item.type === 'digital' ? 'Digital Edition' : 'Print Edition'}
-                          </Badge>
-                          <span className="text-sm text-muted-foreground">
-                            {item.type === 'digital' ? 'Downloadable EPUB' : 'Professionally printed'}
-                          </span>
+                        <div className="space-y-2">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <Badge variant={item.type === 'digital' ? 'default' : 'secondary'} data-testid={`badge-type-${item.storybookId}-${item.type}`}>
+                              {item.type === 'digital' ? 'Digital Edition' : 'Print Edition'}
+                            </Badge>
+                            <span className="text-sm text-muted-foreground">
+                              {item.type === 'digital' ? 'Downloadable EPUB' : 'Professionally printed'}
+                            </span>
+                          </div>
+                          {item.type === 'print' && (
+                            <Badge variant="outline" className="w-fit" data-testid={`badge-free-ebook-${item.storybookId}`}>
+                              ✨ Includes FREE Digital E-book
+                            </Badge>
+                          )}
                         </div>
                       </div>
                       <div className="flex items-center gap-3">

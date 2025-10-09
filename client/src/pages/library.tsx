@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
-import { BookOpen, Calendar, Plus, Trash2, ShoppingCart, Check } from "lucide-react";
+import { BookOpen, Calendar, Plus, Trash2, ShoppingCart, Check, X } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import {
   AlertDialog,
@@ -21,7 +21,7 @@ import {
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useState, useEffect } from "react";
-import { addToCart, isInCart } from "@/lib/cartUtils";
+import { addToCart, isInCart, removeFromCart } from "@/lib/cartUtils";
 
 interface Storybook {
   id: string;
@@ -80,6 +80,16 @@ function StorybookPurchaseButtons({ storybook }: { storybook: Storybook }) {
     setCartUpdated(prev => prev + 1);
   };
 
+  const handleRemoveFromCart = (type: 'digital' | 'print') => {
+    removeFromCart(storybook.id, type);
+    toast({
+      title: "Removed from cart",
+      description: `${storybook.title} - ${type === 'digital' ? 'Digital' : 'Print'} Edition`,
+    });
+    window.dispatchEvent(new Event('cartUpdated'));
+    setCartUpdated(prev => prev + 1);
+  };
+
   const inCartDigital = isInCart(storybook.id, 'digital');
   const inCartPrint = isInCart(storybook.id, 'print');
 
@@ -95,14 +105,13 @@ function StorybookPurchaseButtons({ storybook }: { storybook: Storybook }) {
           size="sm"
           variant={inCartDigital ? "secondary" : "outline"}
           className="w-full"
-          onClick={() => handleAddToCart('digital')}
-          disabled={inCartDigital}
+          onClick={() => inCartDigital ? handleRemoveFromCart('digital') : handleAddToCart('digital')}
           data-testid={`button-buy-digital-${storybook.id}`}
         >
           {inCartDigital ? (
             <>
-              <Check className="h-4 w-4 mr-1" />
-              In Cart
+              <X className="h-4 w-4 mr-1" />
+              Remove from Cart
             </>
           ) : (
             <>
@@ -123,19 +132,18 @@ function StorybookPurchaseButtons({ storybook }: { storybook: Storybook }) {
           size="sm"
           variant={inCartPrint ? "secondary" : "outline"}
           className="w-full"
-          onClick={() => handleAddToCart('print')}
-          disabled={inCartPrint}
+          onClick={() => inCartPrint ? handleRemoveFromCart('print') : handleAddToCart('print')}
           data-testid={`button-buy-print-${storybook.id}`}
         >
           {inCartPrint ? (
             <>
-              <Check className="h-4 w-4 mr-1" />
-              In Cart
+              <X className="h-4 w-4 mr-1" />
+              Remove from Cart
             </>
           ) : (
             <>
               <ShoppingCart className="h-4 w-4 mr-1" />
-              Buy Print ($24.99)
+              Buy Print ($24.99) • FREE e-book
             </>
           )}
         </Button>

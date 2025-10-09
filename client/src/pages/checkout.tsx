@@ -318,13 +318,19 @@ export default function Checkout() {
                           <p className="font-medium text-sm truncate" data-testid={`text-item-title-${item.storybookId}-${item.type}`}>
                             {item.title}
                           </p>
-                          <Badge 
-                            variant={item.type === 'digital' ? 'default' : 'secondary'}
-                            className="mt-1"
-                            data-testid={`badge-item-type-${item.storybookId}-${item.type}`}
-                          >
-                            {item.type === 'digital' ? 'Digital' : 'Print'}
-                          </Badge>
+                          <div className="mt-1 space-y-1">
+                            <Badge 
+                              variant={item.type === 'digital' ? 'default' : 'secondary'}
+                              data-testid={`badge-item-type-${item.storybookId}-${item.type}`}
+                            >
+                              {item.type === 'digital' ? 'Digital' : 'Print Edition'}
+                            </Badge>
+                            {item.type === 'print' && (
+                              <p className="text-xs text-muted-foreground mt-1" data-testid={`text-free-ebook-${item.storybookId}`}>
+                                (includes FREE digital e-book)
+                              </p>
+                            )}
+                          </div>
                         </div>
                         <span className="text-sm font-semibold whitespace-nowrap" data-testid={`text-item-price-${item.storybookId}-${item.type}`}>
                           ${(item.price / 100).toFixed(2)}

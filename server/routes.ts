@@ -377,6 +377,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
+      // Auto-create digital purchases for print purchases
+      const printPurchases = createdPurchases.filter(p => p.type === 'print');
+
+      for (const printPurchase of printPurchases) {
+        // Check if digital already exists
+        const existingDigital = await storage.getStorybookPurchase(userId, printPurchase.storybookId, 'digital');
+        
+        if (!existingDigital) {
+          try {
+            const digitalPurchase = await storage.createPurchase({
+              userId,
+              storybookId: printPurchase.storybookId,
+              type: 'digital',
+              price: '0', // Free with print
+              stripePaymentIntentId: paymentIntent.id,
+              status: 'completed',
+            });
+            createdPurchases.push(digitalPurchase);
+            console.log(`Auto-created free digital version for print purchase of ${printPurchase.storybookId}`);
+          } catch (error: any) {
+            // Ignore duplicates
+            if (!(error.message?.includes('unique') || error.code === '23505')) {
+              throw error;
+            }
+          }
+        }
+      }
+
       // Handle print orders - send PDFs via email
       const printOrders = items.filter((item: any) => item.type === 'print');
 
@@ -575,13 +603,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
 
         const items = JSON.parse(itemsJson);
+        const createdPurchases = [];
         
         // Create purchase records with duplicate handling
         for (const item of items) {
           const { storybookId, type, price } = item;
           
           try {
-            await storage.createPurchase({
+            const purchase = await storage.createPurchase({
               userId,
               storybookId,
               type,
@@ -589,6 +618,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               stripePaymentIntentId: session.payment_intent as string,
               status: 'completed',
             });
+            createdPurchases.push(purchase);
             console.log(`Webhook created purchase for payment intent ${session.payment_intent}, storybookId ${storybookId}`);
           } catch (error: any) {
             // Handle duplicate purchase (unique constraint violation)
@@ -597,6 +627,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
             } else {
               // Re-throw other errors
               throw error;
+            }
+          }
+        }
+
+        // Auto-create digital purchases for print purchases
+        const printPurchases = createdPurchases.filter(p => p.type === 'print');
+
+        for (const printPurchase of printPurchases) {
+          // Check if digital already exists
+          const existingDigital = await storage.getStorybookPurchase(userId, printPurchase.storybookId, 'digital');
+          
+          if (!existingDigital) {
+            try {
+              await storage.createPurchase({
+                userId,
+                storybookId: printPurchase.storybookId,
+                type: 'digital',
+                price: '0', // Free with print
+                stripePaymentIntentId: session.payment_intent as string,
+                status: 'completed',
+              });
+              console.log(`Auto-created free digital version for print purchase of ${printPurchase.storybookId}`);
+            } catch (error: any) {
+              // Ignore duplicates
+              if (!(error.message?.includes('unique') || error.code === '23505')) {
+                throw error;
+              }
             }
           }
         }
@@ -644,13 +701,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
 
         const items = JSON.parse(itemsJson);
+        const createdPurchases = [];
         
         // Create purchase records with duplicate handling
         for (const item of items) {
           const { storybookId, type, price } = item;
           
           try {
-            await storage.createPurchase({
+            const purchase = await storage.createPurchase({
               userId,
               storybookId,
               type,
@@ -658,6 +716,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               stripePaymentIntentId: paymentIntent.id,
               status: 'completed',
             });
+            createdPurchases.push(purchase);
             console.log(`Webhook created purchase for payment intent ${paymentIntent.id}, storybookId ${storybookId}`);
           } catch (error: any) {
             // Handle duplicate purchase (unique constraint violation)
@@ -666,6 +725,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
             } else {
               // Re-throw other errors
               throw error;
+            }
+          }
+        }
+
+        // Auto-create digital purchases for print purchases
+        const printPurchases = createdPurchases.filter(p => p.type === 'print');
+
+        for (const printPurchase of printPurchases) {
+          // Check if digital already exists
+          const existingDigital = await storage.getStorybookPurchase(userId, printPurchase.storybookId, 'digital');
+          
+          if (!existingDigital) {
+            try {
+              await storage.createPurchase({
+                userId,
+                storybookId: printPurchase.storybookId,
+                type: 'digital',
+                price: '0', // Free with print
+                stripePaymentIntentId: paymentIntent.id,
+                status: 'completed',
+              });
+              console.log(`Auto-created free digital version for print purchase of ${printPurchase.storybookId}`);
+            } catch (error: any) {
+              // Ignore duplicates
+              if (!(error.message?.includes('unique') || error.code === '23505')) {
+                throw error;
+              }
             }
           }
         }
