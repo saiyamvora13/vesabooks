@@ -1,5 +1,6 @@
 import { Resend } from 'resend';
-import type { Storybook } from '@shared/schema';
+import type { Storybook, Purchase } from '@shared/schema';
+import { storage } from '../storage';
 
 let connectionSettings: any;
 
@@ -90,5 +91,130 @@ export async function sendPrintOrderEmail(
         content: pdfBuffer,
       }
     ],
+  });
+}
+
+export async function sendInvoiceEmail(
+  userEmail: string,
+  userName: string,
+  purchases: Purchase[],
+  paymentIntentId: string
+): Promise<void> {
+  const { client, fromEmail } = await getUncachableResendClient();
+  
+  const invoiceNumber = paymentIntentId.slice(-8).toUpperCase();
+  const invoiceDate = new Date().toLocaleDateString('en-US', { 
+    year: 'numeric', 
+    month: 'long', 
+    day: 'numeric' 
+  });
+  
+  const purchaseItems = await Promise.all(
+    purchases.map(async (purchase) => {
+      const storybook = await storage.getStorybook(purchase.storybookId);
+      return {
+        title: storybook?.title || 'Unknown Storybook',
+        type: purchase.type === 'digital' ? 'Digital Edition' : 'Print Edition',
+        price: parseFloat(purchase.price),
+      };
+    })
+  );
+  
+  const subtotal = purchaseItems.reduce((sum, item) => sum + item.price, 0);
+  const total = subtotal;
+  
+  const formatPrice = (cents: number) => `$${(cents / 100).toFixed(2)}`;
+  
+  const itemsHtml = purchaseItems.map(item => `
+    <tr>
+      <td style="padding: 12px; border-bottom: 1px solid #e5e7eb; color: #374151;">
+        ${item.title}<br>
+        <span style="font-size: 14px; color: #6b7280;">${item.type}</span>
+      </td>
+      <td style="padding: 12px; border-bottom: 1px solid #e5e7eb; text-align: right; color: #374151;">
+        ${formatPrice(item.price)}
+      </td>
+    </tr>
+  `).join('');
+  
+  const htmlBody = `
+    <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 650px; margin: 0 auto; padding: 20px; background-color: #ffffff;">
+      <div style="background-color: hsl(258, 90%, 20%); color: #ffffff; padding: 30px; text-align: center; border-radius: 8px 8px 0 0;">
+        <h1 style="margin: 0; font-size: 32px; font-weight: 600;">INVOICE</h1>
+        <p style="margin: 10px 0 0 0; font-size: 18px; opacity: 0.9;">Invoice #${invoiceNumber}</p>
+      </div>
+      
+      <div style="background-color: #f9f7f3; padding: 25px; border-radius: 0 0 8px 8px;">
+        <div style="margin-bottom: 25px;">
+          <p style="margin: 0 0 5px 0; color: #6b7280; font-size: 14px;">Invoice Date</p>
+          <p style="margin: 0; color: #111827; font-size: 16px; font-weight: 500;">${invoiceDate}</p>
+        </div>
+        
+        <div style="margin-bottom: 25px;">
+          <p style="margin: 0 0 5px 0; color: #6b7280; font-size: 14px;">Customer Details</p>
+          <p style="margin: 0; color: #111827; font-size: 16px; font-weight: 500;">${userName}</p>
+          <p style="margin: 5px 0 0 0; color: #374151; font-size: 14px;">${userEmail}</p>
+        </div>
+      </div>
+      
+      <div style="margin-top: 30px;">
+        <table style="width: 100%; border-collapse: collapse; background-color: #ffffff; border: 1px solid #e5e7eb; border-radius: 8px; overflow: hidden;">
+          <thead>
+            <tr style="background-color: hsl(258, 90%, 20%); color: #ffffff;">
+              <th style="padding: 15px; text-align: left; font-weight: 600;">Item</th>
+              <th style="padding: 15px; text-align: right; font-weight: 600;">Price</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${itemsHtml}
+          </tbody>
+          <tfoot>
+            <tr style="background-color: #f9f7f3;">
+              <td style="padding: 15px; font-weight: 600; color: #111827; border-top: 2px solid hsl(258, 90%, 20%);">
+                Subtotal
+              </td>
+              <td style="padding: 15px; text-align: right; font-weight: 600; color: #111827; border-top: 2px solid hsl(258, 90%, 20%);">
+                ${formatPrice(subtotal)}
+              </td>
+            </tr>
+            <tr style="background-color: hsl(258, 90%, 20%); color: #ffffff;">
+              <td style="padding: 15px; font-weight: 700; font-size: 18px;">
+                Total
+              </td>
+              <td style="padding: 15px; text-align: right; font-weight: 700; font-size: 18px;">
+                ${formatPrice(total)}
+              </td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+      
+      <div style="margin-top: 30px; padding: 20px; background-color: #f9f7f3; border-radius: 8px;">
+        <p style="margin: 0 0 10px 0; color: #6b7280; font-size: 14px;">Payment Method</p>
+        <p style="margin: 0; color: #111827; font-size: 16px; font-weight: 500;">Paid via Stripe</p>
+      </div>
+      
+      <div style="margin-top: 30px; padding: 20px; text-align: center; border-top: 1px solid #e5e7eb;">
+        <p style="margin: 0 0 10px 0; color: #374151; font-size: 14px;">
+          Thank you for your purchase!
+        </p>
+        <p style="margin: 0; color: #6b7280; font-size: 14px;">
+          Visit our website: <a href="[WEBSITE_URL_PLACEHOLDER]" style="color: hsl(258, 90%, 20%); text-decoration: none;">[WEBSITE_URL_PLACEHOLDER]</a>
+        </p>
+      </div>
+      
+      <div style="margin-top: 20px; padding: 15px; text-align: center;">
+        <p style="margin: 0; color: #9ca3af; font-size: 12px;">
+          This is an automated invoice. Please do not reply to this email.
+        </p>
+      </div>
+    </div>
+  `;
+
+  await client.emails.send({
+    from: fromEmail,
+    to: userEmail,
+    subject: `Invoice #${invoiceNumber} - Thank you for your purchase`,
+    html: htmlBody,
   });
 }

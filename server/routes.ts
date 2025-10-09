@@ -432,6 +432,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
+      // Send invoice email for all purchases
+      try {
+        const user = await storage.getUser(userId);
+        
+        if (user && user.email) {
+          const userName = `${user.firstName || ''} ${user.lastName || ''}`.trim() || 'Customer';
+          const { sendInvoiceEmail } = await import("./services/resend-email");
+          await sendInvoiceEmail(user.email, userName, createdPurchases, paymentIntent.id);
+          
+          console.log(`Invoice email sent for payment intent ${paymentIntent.id} to ${user.email}`);
+        }
+      } catch (invoiceError) {
+        console.error(`Failed to send invoice email for payment intent ${paymentIntent.id}:`, invoiceError);
+      }
+
       res.json({ purchases: createdPurchases });
     } catch (error) {
       console.error("Create purchase error:", error);
@@ -690,6 +705,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
             }
           }
         }
+
+        // Send invoice email for all purchases
+        try {
+          const user = await storage.getUser(userId);
+          
+          if (user && user.email && createdPurchases.length > 0) {
+            const userName = `${user.firstName || ''} ${user.lastName || ''}`.trim() || 'Customer';
+            const { sendInvoiceEmail } = await import("./services/resend-email");
+            await sendInvoiceEmail(user.email, userName, createdPurchases, session.payment_intent as string);
+            
+            console.log(`Invoice email sent for payment intent ${session.payment_intent} to ${user.email}`);
+          }
+        } catch (invoiceError) {
+          console.error(`Failed to send invoice email for payment intent ${session.payment_intent}:`, invoiceError);
+        }
       } else if (event.type === 'payment_intent.succeeded') {
         const paymentIntent = event.data.object as Stripe.PaymentIntent;
         
@@ -787,6 +817,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
               }
             }
           }
+        }
+
+        // Send invoice email for all purchases
+        try {
+          const user = await storage.getUser(userId);
+          
+          if (user && user.email && createdPurchases.length > 0) {
+            const userName = `${user.firstName || ''} ${user.lastName || ''}`.trim() || 'Customer';
+            const { sendInvoiceEmail } = await import("./services/resend-email");
+            await sendInvoiceEmail(user.email, userName, createdPurchases, paymentIntent.id);
+            
+            console.log(`Invoice email sent for payment intent ${paymentIntent.id} to ${user.email}`);
+          }
+        } catch (invoiceError) {
+          console.error(`Failed to send invoice email for payment intent ${paymentIntent.id}:`, invoiceError);
         }
       }
 
