@@ -138,7 +138,7 @@ export default function Cart() {
                         <div className="space-y-2">
                           <div className="flex items-center gap-2 flex-wrap">
                             <Badge variant={item.type === 'digital' ? 'default' : 'secondary'} data-testid={`badge-type-${item.storybookId}-${item.type}`}>
-                              {item.type === 'digital' ? 'Digital Edition' : 'Print Edition'}
+                              {item.type === 'digital' ? 'E-book Edition' : 'Print Edition'}
                             </Badge>
                             <span className="text-sm text-muted-foreground">
                               {item.type === 'digital' ? 'Downloadable EPUB' : 'Professionally printed'}
@@ -146,7 +146,7 @@ export default function Cart() {
                           </div>
                           {item.type === 'print' && (
                             <Badge variant="outline" className="w-fit" data-testid={`badge-free-ebook-${item.storybookId}`}>
-                              ✨ Includes FREE Digital E-book
+                              ✨ Includes free e-book
                             </Badge>
                           )}
                         </div>

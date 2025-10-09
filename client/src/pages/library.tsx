@@ -116,7 +116,7 @@ function StorybookPurchaseButtons({ storybook }: { storybook: Storybook }) {
           ) : (
             <>
               <ShoppingCart className="h-4 w-4 mr-1" />
-              Buy Digital ($3.99)
+              Buy e-book ($3.99)
             </>
           )}
         </Button>
@@ -131,7 +131,7 @@ function StorybookPurchaseButtons({ storybook }: { storybook: Storybook }) {
         <Button
           size="sm"
           variant={inCartPrint ? "secondary" : "outline"}
-          className="w-full"
+          className="w-full h-auto py-2"
           onClick={() => inCartPrint ? handleRemoveFromCart('print') : handleAddToCart('print')}
           data-testid={`button-buy-print-${storybook.id}`}
         >
@@ -141,10 +141,13 @@ function StorybookPurchaseButtons({ storybook }: { storybook: Storybook }) {
               Remove from Cart
             </>
           ) : (
-            <>
-              <ShoppingCart className="h-4 w-4 mr-1" />
-              Buy Print ($24.99) • FREE e-book
-            </>
+            <div className="flex flex-col items-center gap-0.5">
+              <div className="flex items-center gap-1.5">
+                <ShoppingCart className="h-4 w-4" />
+                <span>Buy Print ($24.99)</span>
+              </div>
+              <span className="text-xs text-muted-foreground">+ Free e-book included</span>
+            </div>
           )}
         </Button>
       )}

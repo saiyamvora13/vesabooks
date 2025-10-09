@@ -323,11 +323,11 @@ export default function Checkout() {
                               variant={item.type === 'digital' ? 'default' : 'secondary'}
                               data-testid={`badge-item-type-${item.storybookId}-${item.type}`}
                             >
-                              {item.type === 'digital' ? 'Digital' : 'Print Edition'}
+                              {item.type === 'digital' ? 'E-book' : 'Print Edition'}
                             </Badge>
                             {item.type === 'print' && (
                               <p className="text-xs text-muted-foreground mt-1" data-testid={`text-free-ebook-${item.storybookId}`}>
-                                (includes FREE digital e-book)
+                                (includes free e-book)
                               </p>
                             )}
                           </div>
