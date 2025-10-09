@@ -208,7 +208,7 @@ export default function Cart() {
               <CardContent className="pt-6">
                 <div className="flex items-center justify-between mb-6">
                   <span className="text-lg font-semibold">Total</span>
-                  <span className="text-2xl font-bold gradient-text" data-testid="text-total">
+                  <span className="text-3xl font-bold text-[hsl(258,90%,20%)] dark:text-[hsl(258,70%,70%)]" data-testid="text-total">
                     ${(totalPrice / 100).toFixed(2)}
                   </span>
                 </div>
@@ -227,7 +227,7 @@ export default function Cart() {
                   <Button
                     onClick={handleCheckout}
                     size="lg"
-                    className="w-full gradient-bg !text-[hsl(258,90%,20%)] shadow-lg text-lg transition-all duration-200 hover:scale-105 hover:shadow-2xl hover:brightness-105"
+                    className="w-full gradient-bg !text-[hsl(258,90%,20%)] shadow-lg text-lg transition-all duration-200 hover:scale-105 hover:shadow-2xl hover:brightness-110 hover:ring-2 hover:ring-[hsl(258,90%,40%)] hover:ring-offset-2"
                     data-testid="button-checkout"
                   >
                     <ShoppingCart className="h-5 w-5 mr-2" />
