@@ -101,8 +101,30 @@ export async function setupAuth(app: Express) {
     passport.use(strategy);
   }
 
-  passport.serializeUser((user: Express.User, cb) => cb(null, user));
-  passport.deserializeUser((user: Express.User, cb) => cb(null, user));
+  passport.serializeUser((user: Express.User, cb) => {
+    const userObj = user as any;
+    if (userObj.claims) {
+      cb(null, user);
+    } else {
+      cb(null, userObj.id);
+    }
+  });
+  
+  passport.deserializeUser(async (data: any, cb) => {
+    if (typeof data === 'string') {
+      try {
+        const user = await storage.getUser(data);
+        if (!user) {
+          return cb(null, false);
+        }
+        cb(null, user);
+      } catch (error) {
+        cb(error);
+      }
+    } else {
+      cb(null, data);
+    }
+  });
 
   app.get("/api/login", (req, res, next) => {
     passport.authenticate(`replitauth:${req.hostname}`, {
@@ -131,10 +153,14 @@ export async function setupAuth(app: Express) {
 }
 
 export const isAuthenticated: RequestHandler = async (req, res, next) => {
+  if (!req.isAuthenticated()) {
+    return res.status(401).json({ message: "Unauthorized" });
+  }
+
   const user = req.user as any;
 
-  if (!req.isAuthenticated() || !user.expires_at) {
-    return res.status(401).json({ message: "Unauthorized" });
+  if (!user.expires_at) {
+    return next();
   }
 
   const now = Math.floor(Date.now() / 1000);

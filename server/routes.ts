@@ -3,12 +3,13 @@ import express from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { generateStoryFromPrompt, generateIllustration } from "./services/gemini";
-import { createStorybookSchema, type StoryGenerationProgress, type Purchase, type InsertPurchase } from "@shared/schema";
+import { createStorybookSchema, type StoryGenerationProgress, type Purchase, type InsertPurchase, type User } from "@shared/schema";
 import { randomUUID } from "crypto";
 import * as fs from "fs";
 import * as path from "path";
 import multer from "multer";
 import { setupAuth, isAuthenticated } from "./replitAuth";
+import passport, { normalizeEmail, validateEmail, hashPassword } from "./auth";
 import Stripe from "stripe";
 import { z } from "zod";
 
@@ -42,9 +43,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Replit Auth: Setup authentication middleware
   await setupAuth(app);
 
-  // Replit Auth: Get authenticated user
-  app.get('/api/auth/user', isAuthenticated, async (req: any, res) => {
+  // Get authenticated user (or null for anonymous users)
+  app.get('/api/auth/user', async (req: any, res) => {
     try {
+      // Return null for anonymous/unauthenticated users
+      if (!req.isAuthenticated() || !req.user) {
+        return res.json(null);
+      }
+
       // Use req.user.id if available (from auth changes), fallback to claims.sub for compatibility
       const userId = req.user.id || req.user.claims?.sub;
       const user = await storage.getUser(userId);
@@ -53,6 +59,121 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error fetching user:", error);
       res.status(500).json({ message: "Failed to fetch user" });
     }
+  });
+
+  // Traditional Email/Password Authentication Endpoints
+
+  // POST /api/auth/signup - Create new user account
+  app.post('/api/auth/signup', async (req, res) => {
+    try {
+      const { email, password, firstName, lastName } = req.body;
+
+      // Validate required fields
+      if (!email || !password) {
+        return res.status(400).json({ message: 'Email and password are required' });
+      }
+
+      // Normalize and validate email
+      const normalizedEmail = normalizeEmail(email);
+      if (!validateEmail(normalizedEmail)) {
+        return res.status(400).json({ message: 'Invalid email format' });
+      }
+
+      // Validate password length (minimum 8 characters)
+      if (password.length < 8) {
+        return res.status(400).json({ message: 'Password must be at least 8 characters long' });
+      }
+
+      // Check if user already exists
+      const existingUser = await storage.getUserByEmail(normalizedEmail);
+      if (existingUser) {
+        return res.status(409).json({ message: 'Email already exists' });
+      }
+
+      // Hash password
+      const hashedPassword = await hashPassword(password);
+
+      // Create user
+      const user = await storage.createUser({
+        email: normalizedEmail,
+        password: hashedPassword,
+        authProvider: 'email',
+        firstName,
+        lastName,
+        emailVerified: false,
+      });
+
+      // Automatically log in the user after signup
+      req.logIn(user, (loginErr) => {
+        if (loginErr) {
+          console.error('Auto-login after signup error:', loginErr);
+          return res.status(500).json({ message: 'Account created but login failed' });
+        }
+
+        // Return user without password
+        const { password: _, ...userWithoutPassword } = user;
+        res.status(201).json(userWithoutPassword);
+      });
+    } catch (error) {
+      console.error('Signup error:', error);
+      res.status(500).json({ message: 'Internal server error' });
+    }
+  });
+
+  // POST /api/auth/login - Login with email and password
+  app.post('/api/auth/login', (req, res, next) => {
+    passport.authenticate('local', (err: any, user: User | false, info: any) => {
+      if (err) {
+        console.error('Login error:', err);
+        return res.status(500).json({ message: 'Internal server error' });
+      }
+      
+      if (!user) {
+        return res.status(401).json({ message: info?.message || 'Invalid credentials' });
+      }
+
+      req.logIn(user, (loginErr) => {
+        if (loginErr) {
+          console.error('Login session error:', loginErr);
+          return res.status(500).json({ message: 'Internal server error' });
+        }
+
+        // Return user without password
+        const { password: _, ...userWithoutPassword } = user;
+        res.json(userWithoutPassword);
+      });
+    })(req, res, next);
+  });
+
+  // POST /api/auth/logout - Logout current user
+  app.post('/api/auth/logout', (req, res) => {
+    req.logout((err) => {
+      if (err) {
+        console.error('Logout error:', err);
+        return res.status(500).json({ message: 'Internal server error' });
+      }
+
+      req.session.destroy((destroyErr) => {
+        if (destroyErr) {
+          console.error('Session destroy error:', destroyErr);
+          return res.status(500).json({ message: 'Failed to destroy session' });
+        }
+
+        res.json({ message: 'Logout successful' });
+      });
+    });
+  });
+
+  // GET /api/auth/me - Get current authenticated user
+  app.get('/api/auth/me', (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ message: 'Unauthorized' });
+    }
+
+    const user = req.user as User;
+    // Return user without password
+    const { password: _, ...userWithoutPassword } = user;
+    res.json(userWithoutPassword);
   });
 
   // Get metrics (public - no auth required)

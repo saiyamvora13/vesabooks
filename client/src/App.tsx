@@ -10,12 +10,16 @@ import Library from "@/pages/library";
 import Cart from "@/pages/cart";
 import Checkout from "@/pages/checkout";
 import Purchases from "@/pages/purchases";
+import Signup from "@/pages/signup";
+import Login from "@/pages/login";
 import NotFound from "@/pages/not-found";
 
 function Router() {
   return (
     <Switch>
       <Route path="/" component={Home} />
+      <Route path="/signup" component={Signup} />
+      <Route path="/login" component={Login} />
       <Route path="/create" component={Create} />
       <Route path="/library" component={Library} />
       <Route path="/cart" component={Cart} />

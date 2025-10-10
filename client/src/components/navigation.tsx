@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link, useLocation } from "wouter";
+import { useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -14,12 +15,23 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { LogOut, Menu, X, ShoppingCart, ShoppingBag } from "lucide-react";
 import { getCartCount } from "@/lib/cartUtils";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 
 export default function Navigation() {
-  const [location] = useLocation();
+  const [location, setLocation] = useLocation();
   const { user, isAuthenticated, isLoading } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [cartCount, setCartCount] = useState(0);
+
+  const logoutMutation = useMutation({
+    mutationFn: async () => {
+      await apiRequest("POST", "/api/auth/logout");
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+      setLocation("/");
+    },
+  });
 
   useEffect(() => {
     const updateCartCount = () => {
@@ -96,14 +108,26 @@ export default function Navigation() {
           {/* Desktop CTA Buttons */}
           <div className="hidden md:flex items-center space-x-4">
             {!isLoading && !isAuthenticated && (
-              <Button 
-                onClick={() => window.location.href = '/api/login'}
-                variant="outline"
-                className="px-4 py-2 text-sm font-medium rounded-full"
-                data-testid="button-login"
-              >
-                Log In
-              </Button>
+              <>
+                <Link href="/login">
+                  <Button 
+                    variant="outline"
+                    className="px-4 py-2 text-sm font-medium rounded-full"
+                    data-testid="button-login"
+                  >
+                    Log In
+                  </Button>
+                </Link>
+                <Link href="/signup">
+                  <Button 
+                    variant="outline"
+                    className="px-4 py-2 text-sm font-medium rounded-full"
+                    data-testid="button-signup"
+                  >
+                    Sign Up
+                  </Button>
+                </Link>
+              </>
             )}
             
             {!isLoading && isAuthenticated && user && (
@@ -134,7 +158,7 @@ export default function Navigation() {
                     </div>
                   </DropdownMenuLabel>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={() => window.location.href = '/api/logout'} data-testid="button-logout">
+                  <DropdownMenuItem onClick={() => logoutMutation.mutate()} data-testid="button-logout">
                     <LogOut className="mr-2 h-4 w-4" />
                     <span>Log out</span>
                   </DropdownMenuItem>
@@ -219,17 +243,29 @@ export default function Navigation() {
               
               <div className="pt-4 border-t border-border space-y-3">
                 {!isLoading && !isAuthenticated ? (
-                  <Button 
-                    onClick={() => window.location.href = '/api/login'}
-                    variant="outline"
-                    className="w-full rounded-full"
-                    data-testid="button-login-mobile"
-                  >
-                    Log In
-                  </Button>
+                  <>
+                    <Link href="/login" onClick={() => setMobileMenuOpen(false)}>
+                      <Button 
+                        variant="outline"
+                        className="w-full rounded-full"
+                        data-testid="button-login-mobile"
+                      >
+                        Log In
+                      </Button>
+                    </Link>
+                    <Link href="/signup" onClick={() => setMobileMenuOpen(false)}>
+                      <Button 
+                        variant="outline"
+                        className="w-full rounded-full"
+                        data-testid="button-signup-mobile"
+                      >
+                        Sign Up
+                      </Button>
+                    </Link>
+                  </>
                 ) : (
                   <Button 
-                    onClick={() => window.location.href = '/api/logout'}
+                    onClick={() => logoutMutation.mutate()}
                     variant="outline"
                     className="w-full rounded-full"
                     data-testid="button-logout-mobile"
