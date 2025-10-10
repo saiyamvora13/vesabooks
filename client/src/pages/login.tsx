@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -10,17 +11,19 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { Link } from "wouter";
-
-const loginSchema = z.object({
-  email: z.string().email("Please enter a valid email address"),
-  password: z.string().min(1, "Password is required"),
-});
-
-type LoginForm = z.infer<typeof loginSchema>;
+import { useTranslation } from 'react-i18next';
 
 export default function Login() {
+  const { t, i18n } = useTranslation();
   const [, setLocation] = useLocation();
   const { toast } = useToast();
+
+  const loginSchema = useMemo(() => z.object({
+    email: z.string().email(t('common.validation.emailInvalid')),
+    password: z.string().min(1, t('common.validation.passwordRequired')),
+  }), [i18n.language]);
+
+  type LoginForm = z.infer<typeof loginSchema>;
 
   const form = useForm<LoginForm>({
     resolver: zodResolver(loginSchema),
@@ -37,8 +40,8 @@ export default function Login() {
     },
     onSuccess: () => {
       toast({
-        title: "Welcome back!",
-        description: "Redirecting to your library...",
+        title: t('auth.login.toast.success.title'),
+        description: t('auth.login.toast.success.description'),
       });
       setTimeout(() => {
         setLocation("/library");
@@ -46,7 +49,7 @@ export default function Login() {
     },
     onError: (error: Error) => {
       toast({
-        title: "Login failed",
+        title: t('auth.login.toast.error.title'),
         description: error.message,
         variant: "destructive",
       });
@@ -62,9 +65,9 @@ export default function Login() {
       <Card className="w-full max-w-md rounded-2xl shadow-xl">
         <CardContent className="p-8">
           <div className="text-center mb-8">
-            <h1 className="text-3xl font-bold mb-2">Welcome Back</h1>
+            <h1 className="text-3xl font-bold mb-2">{t('auth.login.title')}</h1>
             <p className="text-muted-foreground">
-              Continue your storytelling journey
+              {t('auth.login.subtitle')}
             </p>
           </div>
 
@@ -75,12 +78,12 @@ export default function Login() {
                 name="email"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Email</FormLabel>
+                    <FormLabel>{t('common.labels.email')}</FormLabel>
                     <FormControl>
                       <Input
                         {...field}
                         type="email"
-                        placeholder="your@email.com"
+                        placeholder={t('common.placeholders.email')}
                         className="rounded-lg"
                         data-testid="input-email"
                       />
@@ -95,12 +98,12 @@ export default function Login() {
                 name="password"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Password</FormLabel>
+                    <FormLabel>{t('common.labels.password')}</FormLabel>
                     <FormControl>
                       <Input
                         {...field}
                         type="password"
-                        placeholder="Enter your password"
+                        placeholder={t('common.placeholders.password')}
                         className="rounded-lg"
                         data-testid="input-password"
                       />
@@ -116,7 +119,7 @@ export default function Login() {
                   className="text-sm text-primary hover:underline"
                   data-testid="link-forgot-password"
                 >
-                  Forgot Password?
+                  {t('auth.login.forgotPassword')}
                 </Link>
               </div>
 
@@ -126,17 +129,17 @@ export default function Login() {
                 disabled={loginMutation.isPending}
                 data-testid="button-login"
               >
-                {loginMutation.isPending ? "Logging in..." : "Log In"}
+                {loginMutation.isPending ? t('auth.login.buttonLoading') : t('auth.login.button')}
               </Button>
 
               <div className="text-center text-sm text-muted-foreground">
-                Don't have an account?{" "}
+                {t('auth.login.noAccount')}{" "}
                 <Link 
                   href="/signup" 
                   className="text-primary font-semibold hover:underline"
                   data-testid="link-signup"
                 >
-                  Sign up
+                  {t('auth.login.signUpLink')}
                 </Link>
               </div>
             </form>

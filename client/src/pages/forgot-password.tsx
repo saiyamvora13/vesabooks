@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -9,15 +10,17 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { Link } from "wouter";
-
-const forgotPasswordSchema = z.object({
-  email: z.string().email("Please enter a valid email address"),
-});
-
-type ForgotPasswordForm = z.infer<typeof forgotPasswordSchema>;
+import { useTranslation } from 'react-i18next';
 
 export default function ForgotPassword() {
+  const { t, i18n } = useTranslation();
   const { toast } = useToast();
+
+  const forgotPasswordSchema = useMemo(() => z.object({
+    email: z.string().email(t('common.validation.emailInvalid')),
+  }), [i18n.language]);
+
+  type ForgotPasswordForm = z.infer<typeof forgotPasswordSchema>;
 
   const form = useForm<ForgotPasswordForm>({
     resolver: zodResolver(forgotPasswordSchema),
@@ -33,14 +36,14 @@ export default function ForgotPassword() {
     },
     onSuccess: () => {
       toast({
-        title: "Check your email",
-        description: "Check your email for a password reset link",
+        title: t('auth.forgotPassword.toast.success.title'),
+        description: t('auth.forgotPassword.toast.success.description'),
       });
       form.reset();
     },
     onError: (error: Error) => {
       toast({
-        title: "Request failed",
+        title: t('auth.forgotPassword.toast.error.title'),
         description: error.message,
         variant: "destructive",
       });
@@ -56,9 +59,9 @@ export default function ForgotPassword() {
       <Card className="w-full max-w-md rounded-2xl shadow-xl">
         <CardContent className="p-8">
           <div className="text-center mb-8">
-            <h1 className="text-3xl font-bold mb-2">Forgot Password?</h1>
+            <h1 className="text-3xl font-bold mb-2">{t('auth.forgotPassword.title')}</h1>
             <p className="text-muted-foreground">
-              Enter your email address and we'll send you a link to reset your password
+              {t('auth.forgotPassword.subtitle')}
             </p>
           </div>
 
@@ -69,12 +72,12 @@ export default function ForgotPassword() {
                 name="email"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Email</FormLabel>
+                    <FormLabel>{t('common.labels.email')}</FormLabel>
                     <FormControl>
                       <Input
                         {...field}
                         type="email"
-                        placeholder="your@email.com"
+                        placeholder={t('common.placeholders.email')}
                         className="rounded-lg"
                         data-testid="input-email"
                       />
@@ -90,17 +93,17 @@ export default function ForgotPassword() {
                 disabled={forgotPasswordMutation.isPending}
                 data-testid="button-submit"
               >
-                {forgotPasswordMutation.isPending ? "Sending..." : "Send Reset Link"}
+                {forgotPasswordMutation.isPending ? t('auth.forgotPassword.buttonLoading') : t('auth.forgotPassword.button')}
               </Button>
 
               <div className="text-center text-sm text-muted-foreground">
-                Remember your password?{" "}
+                {t('auth.forgotPassword.rememberPassword')}{" "}
                 <Link 
                   href="/login" 
                   className="text-primary font-semibold hover:underline"
                   data-testid="link-login"
                 >
-                  Log in
+                  {t('auth.forgotPassword.logInLink')}
                 </Link>
               </div>
             </form>

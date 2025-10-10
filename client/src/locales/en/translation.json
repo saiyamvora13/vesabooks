@@ -1,0 +1,505 @@
+{
+  "common": {
+    "appName": "StoryBook AI",
+    "buttons": {
+      "submit": "Submit",
+      "cancel": "Cancel",
+      "delete": "Delete",
+      "deleting": "Deleting...",
+      "view": "View",
+      "create": "Create",
+      "tryAgain": "Try Again",
+      "backToCart": "Back to Cart",
+      "getStarted": "Get Started",
+      "watchDemo": "Watch Demo",
+      "loading": "Loading..."
+    },
+    "labels": {
+      "email": "Email",
+      "password": "Password",
+      "firstName": "First Name (Optional)",
+      "lastName": "Last Name (Optional)"
+    },
+    "placeholders": {
+      "email": "your@email.com",
+      "password": "Enter your password",
+      "passwordMinLength": "At least 8 characters",
+      "firstName": "First name",
+      "lastName": "Last name"
+    },
+    "validation": {
+      "emailInvalid": "Please enter a valid email address",
+      "passwordRequired": "Password is required",
+      "passwordMinLength": "Password must be at least 8 characters",
+      "passwordsNoMatch": "Passwords don't match",
+      "promptMinLength": "Story prompt must be at least 10 characters",
+      "maxImagesExceeded": "Maximum 5 images allowed"
+    },
+    "states": {
+      "loading": "Loading...",
+      "authenticating": "Authenticating...",
+      "preparing": "Preparing...",
+      "processing": "Processing...",
+      "verifying": "Verifying reset link..."
+    }
+  },
+  "navigation": {
+    "home": "Home",
+    "create": "Create",
+    "createStory": "Create Story",
+    "myLibrary": "My Library",
+    "myPurchases": "My Purchases",
+    "cart": "Cart",
+    "logIn": "Log In",
+    "signUp": "Sign Up",
+    "logOut": "Log Out",
+    "getStarted": "Get Started"
+  },
+  "home": {
+    "hero": {
+      "badge": "Powered by Google Gemini AI",
+      "title": "Create <gradient>Magical</gradient> Storybooks in Minutes",
+      "subtitle": "Transform your ideas into beautifully illustrated children's storybooks using AI. No design skills required—just your imagination!",
+      "createStory": "Create Your Story",
+      "watchDemo": "Watch Demo",
+      "stats": {
+        "storiesCreated": "Stories Created",
+        "activeUsers": "Active Users",
+        "rating": "New ⭐",
+        "reviewPrompt": "Be our first reviewer!"
+      }
+    },
+    "features": {
+      "title": "How It Works",
+      "subtitle": "Create your personalized storybook in three simple steps",
+      "step1": {
+        "title": "Describe Your Story",
+        "description": "Tell us about your story idea—characters, themes, and adventures. Be as creative as you want!"
+      },
+      "step2": {
+        "title": "Upload Inspiration",
+        "description": "Add 1-5 photos for visual inspiration. The AI will use them to create a unique art style."
+      },
+      "step3": {
+        "title": "Get Your Storybook",
+        "description": "Watch the magic happen! Your illustrated storybook will be ready in just 2-3 minutes."
+      }
+    },
+    "examples": {
+      "title": "Featured Storybooks",
+      "subtitle": "Get inspired by stories created by our community",
+      "imageAlt": "storybook cover"
+    }
+  },
+  "auth": {
+    "login": {
+      "title": "Welcome Back",
+      "subtitle": "Continue your storytelling journey",
+      "button": "Log In",
+      "buttonLoading": "Logging in...",
+      "forgotPassword": "Forgot Password?",
+      "noAccount": "Don't have an account?",
+      "signUpLink": "Sign up",
+      "toast": {
+        "success": {
+          "title": "Welcome back!",
+          "description": "Redirecting to your library..."
+        },
+        "error": {
+          "title": "Login failed"
+        }
+      }
+    },
+    "signup": {
+      "title": "Create Account",
+      "subtitle": "Start creating magical storybooks",
+      "button": "Sign Up",
+      "buttonLoading": "Creating account...",
+      "haveAccount": "Already have an account?",
+      "logInLink": "Log in",
+      "toast": {
+        "success": {
+          "title": "Account created!",
+          "description": "Welcome! Redirecting to your library..."
+        },
+        "error": {
+          "title": "Signup failed"
+        }
+      }
+    },
+    "forgotPassword": {
+      "title": "Forgot Password?",
+      "subtitle": "Enter your email address and we'll send you a link to reset your password",
+      "button": "Send Reset Link",
+      "buttonLoading": "Sending...",
+      "rememberPassword": "Remember your password?",
+      "logInLink": "Log in",
+      "toast": {
+        "success": {
+          "title": "Check your email",
+          "description": "Check your email for a password reset link"
+        },
+        "error": {
+          "title": "Request failed"
+        }
+      }
+    },
+    "resetPassword": {
+      "title": "Reset Your Password",
+      "subtitle": "Enter your new password below",
+      "invalidTitle": "Invalid Reset Link",
+      "invalidMessage": "No reset token found. Please request a new password reset.",
+      "expiredTitle": "Invalid or expired reset link",
+      "expiredMessage": "This password reset link is invalid or has expired. Please request a new one.",
+      "backButton": "Back to Forgot Password",
+      "labels": {
+        "newPassword": "New Password",
+        "confirmPassword": "Confirm Password"
+      },
+      "placeholders": {
+        "newPassword": "At least 8 characters",
+        "confirmPassword": "Re-enter your password"
+      },
+      "button": "Reset Password",
+      "buttonLoading": "Resetting...",
+      "toast": {
+        "success": {
+          "title": "Password reset successful!",
+          "description": "Redirecting to login..."
+        },
+        "error": {
+          "title": "Reset failed"
+        }
+      }
+    }
+  },
+  "storybook": {
+    "create": {
+      "title": "Create Your Storybook",
+      "subtitle": "Share your story idea to get started. Add inspiration images if you'd like!",
+      "storyIdea": {
+        "label": "Story Idea",
+        "placeholder": "Example: A story about my daughter Maya who loves dinosaurs and ice cream. She goes on an adventure to find the world's biggest ice cream sundae...",
+        "helpText": "Be as creative and detailed as you want! Include character names, themes, and plot ideas."
+      },
+      "images": {
+        "label": "Inspiration Images (Optional)",
+        "count": "0-5 images"
+      },
+      "styleGuide": {
+        "button": "Style Guide",
+        "title": "Image Style Guide",
+        "description": "Use these keywords in your story prompt to control the visual style of your storybook images. If you don't specify a style, we'll default to a colorful children's book illustration.",
+        "categories": {
+          "realistic": {
+            "title": "Realistic & Photographic",
+            "example": "Create a <strong>realistic photographic</strong> story about space exploration",
+            "keywords": ["realistic", "photorealistic", "photo-realistic", "photograph"]
+          },
+          "cartoon": {
+            "title": "Cartoon & Animation",
+            "example": "Create an <strong>anime-style</strong> adventure with samurai warriors",
+            "keywords": ["cartoon", "animated", "anime", "manga"]
+          },
+          "traditional": {
+            "title": "Traditional Art Styles",
+            "example": "Create a <strong>watercolor</strong> fairy tale about a magical garden",
+            "keywords": ["oil painting", "watercolor", "sketch", "drawing", "pencil", "impressionist"]
+          },
+          "digital": {
+            "title": "Digital & 3D",
+            "example": "Create a <strong>3D rendered</strong> story about toy robots",
+            "keywords": ["3D", "CGI", "rendered", "render"]
+          },
+          "timePeriod": {
+            "title": "Time Period & Era",
+            "example": "Create a <strong>vintage</strong> 1950s detective story",
+            "keywords": ["vintage", "retro", "modern", "contemporary"]
+          },
+          "artistic": {
+            "title": "Artistic & Abstract",
+            "example": "Create a <strong>surreal</strong> dreamlike story about floating islands",
+            "keywords": ["abstract", "surreal", "minimalist", "detailed", "hyper-realistic"]
+          },
+          "mood": {
+            "title": "Mood & Lighting",
+            "example": "Create a <strong>noir black and white</strong> mystery story",
+            "keywords": ["noir", "black and white", "monochrome", "cinematic", "dramatic lighting"]
+          }
+        },
+        "tips": {
+          "title": "Pro Tips",
+          "items": [
+            "✨ Mix styles for unique results: \"3D rendered watercolor style\"",
+            "🎯 Be specific: \"cinematic dramatic lighting\" works better than just \"cinematic\"",
+            "🎨 No style specified? We'll create vibrant children's book illustrations by default",
+            "💡 The keyword just needs to appear anywhere in your prompt to work"
+          ]
+        }
+      },
+      "generateButton": "Generate My Storybook",
+      "generatingButton": "Starting Generation...",
+      "toast": {
+        "started": {
+          "title": "Story generation started!",
+          "description": "Your magical storybook is being created..."
+        },
+        "unauthorized": {
+          "title": "Unauthorized",
+          "description": "Please log in to create a storybook."
+        },
+        "failed": {
+          "title": "Generation failed"
+        }
+      }
+    },
+    "library": {
+      "title": "My Storybooks",
+      "count": "{{count}} storybook",
+      "count_plural": "{{count}} storybooks created",
+      "createNew": "Create New",
+      "createFirst": "Create Your First Storybook",
+      "pleaseLogin": {
+        "title": "Please Log In",
+        "description": "You need to be logged in to view your storybook library.",
+        "button": "Log In"
+      },
+      "error": {
+        "title": "Failed to load storybooks",
+        "description": "An unexpected error occurred. Please try again later."
+      },
+      "empty": {
+        "title": "No storybooks yet",
+        "description": "Start creating magical storybooks with AI. Your imagination is the only limit!"
+      },
+      "purchase": {
+        "digitalPurchased": "Digital Purchased",
+        "printPurchased": "Print Purchased",
+        "buyEbook": "Buy e-book ($3.99)",
+        "buyPrint": "Buy Print ($24.99)",
+        "freeEbookIncluded": "+ Free e-book included",
+        "removeFromCart": "Remove from Cart",
+        "addedToCart": {
+          "title": "Added to cart",
+          "description": "{{title}} - {{type}} Edition"
+        },
+        "removedFromCart": {
+          "title": "Removed from cart",
+          "description": "{{title}} - {{type}} Edition"
+        }
+      },
+      "delete": {
+        "title": "Delete Storybook?",
+        "description": "This will permanently delete '{{title}}' and all its images. This action cannot be undone.",
+        "confirmButton": "Delete",
+        "confirmButtonLoading": "Deleting...",
+        "toast": {
+          "success": {
+            "title": "Storybook deleted",
+            "description": "Your storybook has been permanently deleted."
+          },
+          "error": {
+            "title": "Failed to delete",
+            "description": "Something went wrong. Please try again."
+          }
+        }
+      }
+    },
+    "viewer": {
+      "loadingMessage": "Loading your storybook...",
+      "notFound": {
+        "title": "Storybook Not Found",
+        "description": "The storybook you're looking for doesn't exist or has been removed.",
+        "button": "Create New Storybook"
+      },
+      "created": "Created {{date}}",
+      "share": {
+        "button": "Share",
+        "title": "Share Your Storybook",
+        "description": "Anyone with this link can view your story",
+        "generateButton": "Generate Share Link",
+        "copyButton": "Copy",
+        "toast": {
+          "success": {
+            "title": "Share URL copied!",
+            "description": "The link has been copied to your clipboard"
+          },
+          "error": {
+            "title": "Failed to generate share URL",
+            "description": "Please try again later"
+          }
+        }
+      },
+      "download": {
+        "button": "Download E-book",
+        "buttonPreparing": "Preparing...",
+        "purchaseTooltip": "Purchase to download",
+        "toast": {
+          "preparing": {
+            "title": "Preparing your e-book...",
+            "description": "This may take a few seconds for large files"
+          },
+          "success": {
+            "title": "E-book downloaded!",
+            "description": "Your storybook has been downloaded as an EPUB file"
+          },
+          "error": {
+            "title": "Failed to download e-book",
+            "description": "Please try again later"
+          },
+          "purchaseRequired": {
+            "title": "Purchase required",
+            "description": "Please purchase the digital version to download"
+          }
+        }
+      },
+      "buyButton": "Buy Digital ($3.99)",
+      "createAnother": "Create Another Story"
+    }
+  },
+  "cart": {
+    "title": "Shopping Cart",
+    "count": "{{count}} item in your cart",
+    "count_plural": "{{count}} items in your cart",
+    "empty": {
+      "title": "Your cart is empty",
+      "description": "Browse our library and add some amazing storybooks to your cart!",
+      "button": "Browse Library"
+    },
+    "item": {
+      "ebookEdition": "E-book Edition",
+      "printEdition": "Print Edition",
+      "downloadableEpub": "Downloadable EPUB",
+      "professionallyPrinted": "Professionally printed",
+      "includesFreeEbook": "✨ Includes free e-book"
+    },
+    "total": "Total",
+    "clearCart": "Clear Cart",
+    "proceedToCheckout": "Proceed to Checkout",
+    "toast": {
+      "removed": {
+        "title": "Item removed",
+        "description": "The item has been removed from your cart"
+      },
+      "cleared": {
+        "title": "Cart cleared",
+        "description": "All items have been removed from your cart"
+      },
+      "authRequired": {
+        "title": "Authentication required",
+        "description": "Please log in to checkout"
+      },
+      "cartEmpty": {
+        "title": "Cart is empty",
+        "description": "Add items to your cart before checking out"
+      },
+      "cancelled": {
+        "title": "Checkout cancelled",
+        "description": "Your items are still in the cart"
+      },
+      "success": {
+        "title": "Purchase successful!",
+        "description": "Your items have been purchased"
+      }
+    }
+  },
+  "checkout": {
+    "title": "Checkout",
+    "subtitle": "Complete your purchase securely",
+    "orderSummary": {
+      "title": "Order Summary",
+      "ebook": "E-book",
+      "printEdition": "Print Edition",
+      "includesFreeEbook": "(includes free e-book)",
+      "total": "Total"
+    },
+    "payment": {
+      "title": "Payment Details",
+      "submitButton": "Pay ${{amount}}",
+      "processingButton": "Processing..."
+    },
+    "states": {
+      "authenticating": "Authenticating...",
+      "preparingCheckout": "Preparing checkout...",
+      "loading": "Loading..."
+    },
+    "error": {
+      "title": "Checkout Error",
+      "backButton": "Back to Cart"
+    },
+    "toast": {
+      "paymentFailed": {
+        "title": "Payment failed",
+        "description": "An error occurred during payment"
+      },
+      "paymentError": {
+        "title": "Payment error",
+        "description": "An unexpected error occurred"
+      },
+      "paymentSuccessful": {
+        "title": "Payment successful!",
+        "description": "Your purchases are ready."
+      },
+      "processingOrder": {
+        "title": "Payment successful, processing order...",
+        "description": "Your payment was received. We're processing your order."
+      },
+      "initializationFailed": {
+        "title": "Checkout initialization failed"
+      },
+      "authRequired": {
+        "title": "Authentication required",
+        "description": "Please log in to checkout"
+      },
+      "cartEmpty": {
+        "title": "Cart is empty",
+        "description": "Add items to your cart before checking out"
+      }
+    }
+  },
+  "purchases": {
+    "title": "My Purchases",
+    "subtitle": "View and download your purchased storybooks",
+    "empty": {
+      "title": "My Purchases",
+      "description": "You haven't purchased any books yet",
+      "button": "Browse Library"
+    },
+    "viewBook": "View Book",
+    "item": {
+      "digitalEdition": "Digital Edition",
+      "printEdition": "Print Edition",
+      "purchasedOn": "Purchased on {{date}}",
+      "downloadEbook": "Download E-book",
+      "preparing": "Preparing...",
+      "printOrderSent": "Print order sent to email"
+    },
+    "status": {
+      "completed": "Completed",
+      "pending": "Pending",
+      "failed": "Failed"
+    },
+    "toast": {
+      "paymentSuccess": {
+        "title": "Payment successful!",
+        "description": "Your purchases are ready."
+      },
+      "preparingEbook": {
+        "title": "Preparing your e-book...",
+        "description": "This may take a few seconds for large files"
+      },
+      "ebookDownloaded": {
+        "title": "E-book downloaded!",
+        "description": "Your storybook has been downloaded as an EPUB file"
+      },
+      "downloadFailed": {
+        "title": "Failed to download e-book",
+        "description": "Please try again later"
+      }
+    }
+  },
+  "notFound": {
+    "title": "404 Page Not Found",
+    "description": "Did you forget to add the page to the router?"
+  }
+}

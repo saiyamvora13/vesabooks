@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useLocation } from "wouter";
+import { useTranslation } from "react-i18next";
 import { format } from "date-fns";
 import Navigation from "@/components/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -18,6 +19,7 @@ interface PurchaseWithStorybook extends Purchase {
 }
 
 export default function Purchases() {
+  const { t } = useTranslation();
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const { isAuthenticated, isLoading: authLoading } = useAuth();
@@ -61,8 +63,8 @@ export default function Purchases() {
     
     if (success === 'true') {
       toast({
-        title: "Payment successful!",
-        description: "Your purchases are ready.",
+        title: t('purchases.toast.paymentSuccess.title'),
+        description: t('purchases.toast.paymentSuccess.description'),
       });
       
       // Clear cart
@@ -72,7 +74,7 @@ export default function Purchases() {
       // Clean up URL
       window.history.replaceState({}, '', '/purchases');
     }
-  }, [toast]);
+  }, [toast, t]);
 
   // Redirect to login if not authenticated
   useEffect(() => {
@@ -85,8 +87,8 @@ export default function Purchases() {
     setDownloadingPurchaseId(purchaseId);
     
     toast({
-      title: "Preparing your e-book...",
-      description: "This may take a few seconds for large files",
+      title: t('purchases.toast.preparingEbook.title'),
+      description: t('purchases.toast.preparingEbook.description'),
     });
     
     try {
@@ -107,13 +109,13 @@ export default function Purchases() {
       document.body.removeChild(a);
       
       toast({
-        title: "E-book downloaded!",
-        description: "Your storybook has been downloaded as an EPUB file",
+        title: t('purchases.toast.ebookDownloaded.title'),
+        description: t('purchases.toast.ebookDownloaded.description'),
       });
     } catch (error) {
       toast({
-        title: "Failed to download e-book",
-        description: "Please try again later",
+        title: t('purchases.toast.downloadFailed.title'),
+        description: t('purchases.toast.downloadFailed.description'),
         variant: "destructive",
       });
     } finally {
@@ -144,7 +146,7 @@ export default function Purchases() {
         <Navigation />
         <section className="py-12">
           <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
-            <h1 className="text-3xl font-bold mb-8">My Purchases</h1>
+            <h1 className="text-3xl font-bold mb-8">{t('purchases.title')}</h1>
             <div className="space-y-4">
               {[1, 2, 3].map((i) => (
                 <Card key={i}>
@@ -174,13 +176,13 @@ export default function Purchases() {
           <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="text-center">
               <Package className="h-16 w-16 mx-auto text-muted-foreground mb-4" />
-              <h1 className="text-3xl font-bold mb-4">My Purchases</h1>
+              <h1 className="text-3xl font-bold mb-4">{t('purchases.empty.title')}</h1>
               <p className="text-lg text-muted-foreground mb-8">
-                You haven't purchased any books yet
+                {t('purchases.empty.description')}
               </p>
               <Button onClick={() => setLocation('/library')} size="lg" data-testid="button-browse-library">
                 <BookOpen className="h-4 w-4 mr-2" />
-                Browse Library
+                {t('purchases.empty.button')}
               </Button>
             </div>
           </div>
@@ -205,9 +207,9 @@ export default function Purchases() {
       <section className="py-12">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="mb-8">
-            <h1 className="text-3xl font-bold mb-2">My Purchases</h1>
+            <h1 className="text-3xl font-bold mb-2">{t('purchases.title')}</h1>
             <p className="text-muted-foreground">
-              View and download your purchased storybooks
+              {t('purchases.subtitle')}
             </p>
           </div>
 
@@ -236,7 +238,7 @@ export default function Purchases() {
                         onClick={() => setLocation(`/view/${storybookId}`)}
                         data-testid={`button-view-storybook-${storybookId}`}
                       >
-                        View Book
+                        {t('purchases.viewBook')}
                       </Button>
                     </CardTitle>
                   </CardHeader>
@@ -252,15 +254,15 @@ export default function Purchases() {
                             <div className="flex items-center gap-2 flex-wrap">
                               <Badge variant={purchase.type === 'digital' ? 'default' : 'secondary'} className="gap-1">
                                 {getPurchaseTypeIcon(purchase.type)}
-                                {purchase.type === 'digital' ? 'Digital Edition' : 'Print Edition'}
+                                {purchase.type === 'digital' ? t('purchases.item.digitalEdition') : t('purchases.item.printEdition')}
                               </Badge>
                               <Badge variant={getStatusBadgeVariant(purchase.status)}>
-                                {purchase.status.charAt(0).toUpperCase() + purchase.status.slice(1)}
+                                {t(`purchases.status.${purchase.status}`)}
                               </Badge>
                             </div>
                             <div className="text-sm text-muted-foreground space-y-1">
                               <p>
-                                Purchased on {purchase.createdAt ? format(new Date(purchase.createdAt), 'MMM dd, yyyy') : 'Unknown date'}
+                                {t('purchases.item.purchasedOn', { date: purchase.createdAt ? format(new Date(purchase.createdAt), 'MMM dd, yyyy') : 'Unknown date' })}
                               </p>
                               <p className="font-semibold text-foreground">
                                 ${(Number(purchase.price) / 100).toFixed(2)}
@@ -279,12 +281,12 @@ export default function Purchases() {
                                 {downloadingPurchaseId === purchase.id ? (
                                   <>
                                     <i className="fas fa-spinner fa-spin mr-2"></i>
-                                    Preparing...
+                                    {t('purchases.item.preparing')}
                                   </>
                                 ) : (
                                   <>
                                     <Download className="h-4 w-4 mr-2" />
-                                    Download E-book
+                                    {t('purchases.item.downloadEbook')}
                                   </>
                                 )}
                               </Button>
@@ -292,7 +294,7 @@ export default function Purchases() {
                             {purchase.type === 'print' && purchase.status === 'completed' && (
                               <div className="flex items-center gap-2 text-sm text-muted-foreground bg-muted px-4 py-2 rounded-lg">
                                 <Mail className="h-4 w-4" />
-                                <span>Print order sent to email</span>
+                                <span>{t('purchases.item.printOrderSent')}</span>
                               </div>
                             )}
                           </div>

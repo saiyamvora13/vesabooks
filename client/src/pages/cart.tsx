@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link, useLocation } from "wouter";
+import { useTranslation } from "react-i18next";
 import Navigation from "@/components/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -13,6 +14,7 @@ import { useQuery } from "@tanstack/react-query";
 import type { Storybook } from "@shared/schema";
 
 function CartItemCard({ item, onRemove }: { item: CartItem; onRemove: (storybookId: string, type: 'digital' | 'print') => void }) {
+  const { t } = useTranslation();
   const { data: storybook, isLoading } = useQuery<Storybook>({
     queryKey: ['/api/storybooks', item.storybookId],
   });
@@ -45,15 +47,15 @@ function CartItemCard({ item, onRemove }: { item: CartItem; onRemove: (storybook
             <div className="space-y-2">
               <div className="flex items-center gap-2 flex-wrap">
                 <Badge variant={item.type === 'digital' ? 'default' : 'secondary'} data-testid={`badge-type-${item.storybookId}-${item.type}`}>
-                  {item.type === 'digital' ? 'E-book Edition' : 'Print Edition'}
+                  {item.type === 'digital' ? t('cart.item.ebookEdition') : t('cart.item.printEdition')}
                 </Badge>
                 <span className="text-sm text-muted-foreground">
-                  {item.type === 'digital' ? 'Downloadable EPUB' : 'Professionally printed'}
+                  {item.type === 'digital' ? t('cart.item.downloadableEpub') : t('cart.item.professionallyPrinted')}
                 </span>
               </div>
               {item.type === 'print' && (
                 <Badge variant="outline" className="w-fit" data-testid={`badge-free-ebook-${item.storybookId}`}>
-                  ✨ Includes free e-book
+                  {t('cart.item.includesFreeEbook')}
                 </Badge>
               )}
             </div>
@@ -79,6 +81,7 @@ function CartItemCard({ item, onRemove }: { item: CartItem; onRemove: (storybook
 }
 
 export default function Cart() {
+  const { t } = useTranslation();
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const { isAuthenticated } = useAuth();
@@ -97,8 +100,8 @@ export default function Cart() {
     const params = new URLSearchParams(window.location.search);
     if (params.get('cancelled') === 'true') {
       toast({
-        title: "Checkout cancelled",
-        description: "Your items are still in the cart",
+        title: t('cart.toast.cancelled.title'),
+        description: t('cart.toast.cancelled.description'),
       });
       window.history.replaceState({}, '', '/cart');
     } else if (params.get('success') === 'true') {
@@ -106,8 +109,8 @@ export default function Cart() {
       loadCart();
       window.dispatchEvent(new Event('cartUpdated'));
       toast({
-        title: "Purchase successful!",
-        description: "Your items have been purchased",
+        title: t('cart.toast.success.title'),
+        description: t('cart.toast.success.description'),
       });
       window.history.replaceState({}, '', '/cart');
     }
@@ -123,8 +126,8 @@ export default function Cart() {
     setCartItems(getCart());
     window.dispatchEvent(new Event('cartUpdated'));
     toast({
-      title: "Item removed",
-      description: "The item has been removed from your cart",
+      title: t('cart.toast.removed.title'),
+      description: t('cart.toast.removed.description'),
     });
   };
 
@@ -133,16 +136,16 @@ export default function Cart() {
     setCartItems([]);
     window.dispatchEvent(new Event('cartUpdated'));
     toast({
-      title: "Cart cleared",
-      description: "All items have been removed from your cart",
+      title: t('cart.toast.cleared.title'),
+      description: t('cart.toast.cleared.description'),
     });
   };
 
   const handleCheckout = () => {
     if (!isAuthenticated) {
       toast({
-        title: "Authentication required",
-        description: "Please log in to checkout",
+        title: t('cart.toast.authRequired.title'),
+        description: t('cart.toast.authRequired.description'),
         variant: "destructive",
       });
       window.location.href = '/api/login';
@@ -151,8 +154,8 @@ export default function Cart() {
 
     if (cartItems.length === 0) {
       toast({
-        title: "Cart is empty",
-        description: "Add items to your cart before checking out",
+        title: t('cart.toast.cartEmpty.title'),
+        description: t('cart.toast.cartEmpty.description'),
         variant: "destructive",
       });
       return;
@@ -170,10 +173,10 @@ export default function Cart() {
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
         <div className="mb-8">
           <h1 className="text-3xl sm:text-4xl font-bold font-display gradient-text mb-2" data-testid="text-cart-title">
-            Shopping Cart
+            {t('cart.title')}
           </h1>
           <p className="text-muted-foreground" data-testid="text-cart-count">
-            {cartItems.length} {cartItems.length === 1 ? 'item' : 'items'} in your cart
+            {t('cart.count', { count: cartItems.length })}
           </p>
         </div>
 
@@ -181,14 +184,14 @@ export default function Cart() {
           <div className="text-center py-16">
             <ShoppingCart className="mx-auto h-16 w-16 text-muted-foreground mb-6" />
             <h2 className="text-2xl font-semibold mb-4" data-testid="text-empty-cart">
-              Your cart is empty
+              {t('cart.empty.title')}
             </h2>
             <p className="text-muted-foreground mb-8 max-w-md mx-auto">
-              Browse our library and add some amazing storybooks to your cart!
+              {t('cart.empty.description')}
             </p>
             <Link href="/library">
               <Button className="gradient-bg hover:opacity-90 !text-[hsl(258,90%,20%)]" data-testid="link-library">
-                Browse Library
+                {t('cart.empty.button')}
               </Button>
             </Link>
           </div>
@@ -207,7 +210,7 @@ export default function Cart() {
             <Card className="bg-muted/50">
               <CardContent className="pt-6">
                 <div className="flex items-center justify-between mb-6">
-                  <span className="text-lg font-semibold">Total</span>
+                  <span className="text-lg font-semibold">{t('cart.total')}</span>
                   <span className="text-3xl font-bold text-[hsl(258,90%,20%)] dark:text-[hsl(258,70%,70%)]" data-testid="text-total">
                     ${(totalPrice / 100).toFixed(2)}
                   </span>
@@ -222,7 +225,7 @@ export default function Cart() {
                     data-testid="button-clear-cart"
                   >
                     <Trash2 className="h-3 w-3 mr-1.5" />
-                    Clear Cart
+                    {t('cart.clearCart')}
                   </Button>
                   <Button
                     onClick={handleCheckout}
@@ -231,7 +234,7 @@ export default function Cart() {
                     data-testid="button-checkout"
                   >
                     <ShoppingCart className="h-5 w-5 mr-2" />
-                    Proceed to Checkout
+                    {t('cart.proceedToCheckout')}
                   </Button>
                 </div>
               </CardContent>

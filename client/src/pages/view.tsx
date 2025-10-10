@@ -1,6 +1,7 @@
 import { useParams, useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import Navigation from "@/components/navigation";
 import { FlipbookViewer } from "@/components/ui/flipbook-3d";
 import { Button } from "@/components/ui/button";
@@ -15,6 +16,7 @@ import { addToCart } from "@/lib/cartUtils";
 import { useAuth } from "@/hooks/useAuth";
 
 export default function View() {
+  const { t } = useTranslation();
   const params = useParams();
   const [, setLocation] = useLocation();
   const [shareUrl, setShareUrl] = useState<string>("");
@@ -65,13 +67,13 @@ export default function View() {
       // Copy to clipboard
       await navigator.clipboard.writeText(data.shareUrl);
       toast({
-        title: "Share URL copied!",
-        description: "The link has been copied to your clipboard",
+        title: t('storybook.viewer.share.toast.success.title'),
+        description: t('storybook.viewer.share.toast.success.description'),
       });
     } catch (error) {
       toast({
-        title: "Failed to generate share URL",
-        description: "Please try again later",
+        title: t('storybook.viewer.share.toast.error.title'),
+        description: t('storybook.viewer.share.toast.error.description'),
         variant: "destructive",
       });
     }
@@ -82,8 +84,8 @@ export default function View() {
 
     if (!digitalPurchase?.owned) {
       toast({
-        title: "Purchase required",
-        description: "Please purchase the digital version to download",
+        title: t('storybook.viewer.download.toast.purchaseRequired.title'),
+        description: t('storybook.viewer.download.toast.purchaseRequired.description'),
         variant: "destructive",
       });
       return;
@@ -92,8 +94,8 @@ export default function View() {
     setIsDownloading(true);
     
     toast({
-      title: "Preparing your e-book...",
-      description: "This may take a few seconds for large files",
+      title: t('storybook.viewer.download.toast.preparing.title'),
+      description: t('storybook.viewer.download.toast.preparing.description'),
     });
     
     try {
@@ -114,13 +116,13 @@ export default function View() {
       document.body.removeChild(a);
       
       toast({
-        title: "E-book downloaded!",
-        description: "Your storybook has been downloaded as an EPUB file",
+        title: t('storybook.viewer.download.toast.success.title'),
+        description: t('storybook.viewer.download.toast.success.description'),
       });
     } catch (error) {
       toast({
-        title: "Failed to download e-book",
-        description: "Please try again later",
+        title: t('storybook.viewer.download.toast.error.title'),
+        description: t('storybook.viewer.download.toast.error.description'),
         variant: "destructive",
       });
     } finally {
@@ -154,7 +156,7 @@ export default function View() {
         <div className="flex items-center justify-center min-h-[50vh]">
           <div className="text-center">
             <i className="fas fa-spinner fa-spin text-4xl text-primary mb-4"></i>
-            <p className="text-lg text-muted-foreground">Loading your storybook...</p>
+            <p className="text-lg text-muted-foreground">{t('storybook.viewer.loadingMessage')}</p>
           </div>
         </div>
       </div>
@@ -169,12 +171,12 @@ export default function View() {
           <Card className="max-w-md">
             <CardContent className="p-6 text-center">
               <i className="fas fa-exclamation-triangle text-4xl text-destructive mb-4"></i>
-              <h2 className="text-xl font-bold mb-2">Storybook Not Found</h2>
+              <h2 className="text-xl font-bold mb-2">{t('storybook.viewer.notFound.title')}</h2>
               <p className="text-muted-foreground mb-4">
-                The storybook you're looking for doesn't exist or has been removed.
+                {t('storybook.viewer.notFound.description')}
               </p>
               <Button onClick={() => setLocation("/create")} data-testid="button-create-new">
-                Create New Storybook
+                {t('storybook.viewer.notFound.button')}
               </Button>
             </CardContent>
           </Card>
@@ -194,23 +196,23 @@ export default function View() {
             <div>
               <h2 className="text-2xl md:text-3xl font-bold mb-2" data-testid="text-story-title">{storybook.title}</h2>
               <p className="text-sm md:text-base text-muted-foreground">
-                Created {storybook.createdAt ? new Date(storybook.createdAt).toLocaleDateString() : 'Unknown'}
+                {t('storybook.viewer.created', { date: storybook.createdAt ? new Date(storybook.createdAt).toLocaleDateString() : 'Unknown' })}
               </p>
             </div>
             <div className="flex flex-wrap gap-3">
               <Dialog>
                 <DialogTrigger asChild>
                   <Button variant="outline" className="rounded-xl" data-testid="button-share">
-                    <i className="fas fa-share-alt mr-2"></i>Share
+                    <i className="fas fa-share-alt mr-2"></i>{t('storybook.viewer.share.button')}
                   </Button>
                 </DialogTrigger>
                 <DialogContent className="max-w-lg">
                   <DialogHeader>
-                    <DialogTitle>Share Your Storybook</DialogTitle>
+                    <DialogTitle>{t('storybook.viewer.share.title')}</DialogTitle>
                   </DialogHeader>
                   <div className="space-y-4">
                     <p className="text-muted-foreground">
-                      Anyone with this link can view your story
+                      {t('storybook.viewer.share.description')}
                     </p>
                     {shareUrl ? (
                       <div className="flex items-center space-x-2">
@@ -225,7 +227,7 @@ export default function View() {
                       </div>
                     ) : (
                       <Button onClick={generateShareUrl} className="w-full" data-testid="button-generate-share">
-                        Generate Share Link
+                        {t('storybook.viewer.share.generateButton')}
                       </Button>
                     )}
                   </div>
@@ -241,7 +243,7 @@ export default function View() {
                   data-testid="button-download-epub"
                 >
                   <i className={`fas ${isDownloading ? 'fa-spinner fa-spin' : 'fa-book'} mr-2`}></i>
-                  {isDownloading ? 'Preparing...' : 'Download E-book'}
+                  {isDownloading ? t('storybook.viewer.download.buttonPreparing') : t('storybook.viewer.download.button')}
                 </Button>
               ) : (
                 <>
@@ -255,11 +257,11 @@ export default function View() {
                           data-testid="button-download-epub"
                         >
                           <i className="fas fa-book mr-2"></i>
-                          Download E-book
+                          {t('storybook.viewer.download.button')}
                         </Button>
                       </TooltipTrigger>
                       <TooltipContent>
-                        <p>Purchase to download</p>
+                        <p>{t('storybook.viewer.download.purchaseTooltip')}</p>
                       </TooltipContent>
                     </Tooltip>
                   </TooltipProvider>
@@ -271,7 +273,7 @@ export default function View() {
                     data-testid="button-buy-digital-viewer"
                   >
                     <ShoppingCart className="h-4 w-4 mr-2" />
-                    Buy Digital ($3.99)
+                    {t('storybook.viewer.buyButton')}
                   </Button>
                 </>
               )}
@@ -297,7 +299,7 @@ export default function View() {
               data-testid="button-create-another"
             >
               <i className="fas fa-plus mr-2"></i>
-              Create Another Story
+              {t('storybook.viewer.createAnother')}
             </Button>
           </div>
         </div>

@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
+import { useTranslation } from "react-i18next";
 import { loadStripe } from "@stripe/stripe-js";
 import { Elements, PaymentElement, useStripe, useElements } from "@stripe/react-stripe-js";
 import Navigation from "@/components/navigation";
@@ -21,6 +22,7 @@ interface CheckoutFormProps {
 }
 
 function CheckoutForm({ totalAmount, cartItems }: CheckoutFormProps) {
+  const { t } = useTranslation();
   const stripe = useStripe();
   const elements = useElements();
   const { toast } = useToast();
@@ -50,16 +52,16 @@ function CheckoutForm({ totalAmount, cartItems }: CheckoutFormProps) {
           // User can retry
           setIsProcessing(false);
           toast({
-            title: "Payment failed",
-            description: error.message || "An error occurred during payment",
+            title: t('checkout.toast.paymentFailed.title'),
+            description: error.message || t('checkout.toast.paymentFailed.description'),
             variant: "destructive",
           });
         } else {
           // Other errors
           setIsProcessing(false);
           toast({
-            title: "Payment error",
-            description: error.message || "An unexpected error occurred",
+            title: t('checkout.toast.paymentError.title'),
+            description: error.message || t('checkout.toast.paymentError.description'),
             variant: "destructive",
           });
         }
@@ -80,8 +82,8 @@ function CheckoutForm({ totalAmount, cartItems }: CheckoutFormProps) {
           
           // Show success message
           toast({
-            title: "Payment successful!",
-            description: "Your purchases are ready.",
+            title: t('checkout.toast.paymentSuccessful.title'),
+            description: t('checkout.toast.paymentSuccessful.description'),
           });
           
           // Redirect to purchases
@@ -91,8 +93,8 @@ function CheckoutForm({ totalAmount, cartItems }: CheckoutFormProps) {
           // Don't clear cart - let user retry or rely on webhook
           setIsProcessing(false);
           toast({
-            title: "Payment successful, processing order...",
-            description: "Your payment was received. We're processing your order.",
+            title: t('checkout.toast.processingOrder.title'),
+            description: t('checkout.toast.processingOrder.description'),
           });
           
           // Still redirect to purchases - webhook will create purchase
@@ -105,8 +107,8 @@ function CheckoutForm({ totalAmount, cartItems }: CheckoutFormProps) {
       // Network or unexpected errors - keep cart for retry
       setIsProcessing(false);
       toast({
-        title: "Payment error",
-        description: error instanceof Error ? error.message : "An unexpected error occurred",
+        title: t('checkout.toast.paymentError.title'),
+        description: error instanceof Error ? error.message : t('checkout.toast.paymentError.description'),
         variant: "destructive",
       });
     }
@@ -118,7 +120,7 @@ function CheckoutForm({ totalAmount, cartItems }: CheckoutFormProps) {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <CreditCard className="h-5 w-5" />
-            Payment Details
+            {t('checkout.payment.title')}
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -135,12 +137,12 @@ function CheckoutForm({ totalAmount, cartItems }: CheckoutFormProps) {
         {isProcessing ? (
           <>
             <Loader2 className="h-5 w-5 mr-2 animate-spin" />
-            Processing...
+            {t('checkout.payment.processingButton')}
           </>
         ) : (
           <>
             <CreditCard className="h-5 w-5 mr-2" />
-            Pay ${(totalAmount / 100).toFixed(2)}
+            {t('checkout.payment.submitButton', { amount: (totalAmount / 100).toFixed(2) })}
           </>
         )}
       </Button>
@@ -149,6 +151,7 @@ function CheckoutForm({ totalAmount, cartItems }: CheckoutFormProps) {
 }
 
 export default function Checkout() {
+  const { t } = useTranslation();
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const { isAuthenticated, isLoading: authLoading } = useAuth();
@@ -161,13 +164,13 @@ export default function Checkout() {
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
       toast({
-        title: "Authentication required",
-        description: "Please log in to checkout",
+        title: t('checkout.toast.authRequired.title'),
+        description: t('checkout.toast.authRequired.description'),
         variant: "destructive",
       });
       window.location.href = '/api/login';
     }
-  }, [authLoading, isAuthenticated, toast]);
+  }, [authLoading, isAuthenticated, toast, t]);
 
   // Load cart and create payment intent
   useEffect(() => {
@@ -177,8 +180,8 @@ export default function Checkout() {
       // Handle empty cart
       if (cart.length === 0) {
         toast({
-          title: "Cart is empty",
-          description: "Add items to your cart before checking out",
+          title: t('checkout.toast.cartEmpty.title'),
+          description: t('checkout.toast.cartEmpty.description'),
           variant: "destructive",
         });
         setLocation('/cart');
@@ -204,7 +207,7 @@ export default function Checkout() {
         const errorMessage = error instanceof Error ? error.message : 'Failed to initialize checkout';
         setPaymentIntentError(errorMessage);
         toast({
-          title: "Checkout initialization failed",
+          title: t('checkout.toast.initializationFailed.title'),
           description: errorMessage,
           variant: "destructive",
         });
@@ -216,7 +219,7 @@ export default function Checkout() {
     if (isAuthenticated && !authLoading) {
       initializeCheckout();
     }
-  }, [isAuthenticated, authLoading, setLocation, toast]);
+  }, [isAuthenticated, authLoading, setLocation, toast, t]);
 
   const totalPrice = cartItems.reduce((sum, item) => sum + item.price, 0);
 
@@ -229,7 +232,7 @@ export default function Checkout() {
           <div className="flex flex-col items-center justify-center py-16">
             <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
             <p className="text-lg text-muted-foreground">
-              {authLoading ? "Authenticating..." : "Preparing checkout..."}
+              {authLoading ? t('checkout.states.authenticating') : t('checkout.states.preparingCheckout')}
             </p>
           </div>
         </div>
@@ -245,13 +248,13 @@ export default function Checkout() {
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
           <div className="text-center py-16">
             <h2 className="text-2xl font-semibold mb-4 text-destructive">
-              Checkout Error
+              {t('checkout.error.title')}
             </h2>
             <p className="text-muted-foreground mb-8 max-w-md mx-auto">
               {paymentIntentError}
             </p>
             <Button onClick={() => setLocation('/cart')} data-testid="button-back-to-cart">
-              Back to Cart
+              {t('checkout.error.backButton')}
             </Button>
           </div>
         </div>
@@ -267,7 +270,7 @@ export default function Checkout() {
         <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
           <div className="flex flex-col items-center justify-center py-16">
             <Loader2 className="h-12 w-12 animate-spin text-primary mb-4" />
-            <p className="text-lg text-muted-foreground">Loading...</p>
+            <p className="text-lg text-muted-foreground">{t('checkout.states.loading')}</p>
           </div>
         </div>
       </div>
@@ -288,10 +291,10 @@ export default function Checkout() {
       <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
         <div className="mb-8">
           <h1 className="text-3xl sm:text-4xl font-bold font-display gradient-text mb-2" data-testid="text-checkout-title">
-            Checkout
+            {t('checkout.title')}
           </h1>
           <p className="text-muted-foreground">
-            Complete your purchase securely
+            {t('checkout.subtitle')}
           </p>
         </div>
 
@@ -302,7 +305,7 @@ export default function Checkout() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <ShoppingCart className="h-5 w-5" />
-                  Order Summary
+                  {t('checkout.orderSummary.title')}
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -323,11 +326,11 @@ export default function Checkout() {
                               variant={item.type === 'digital' ? 'default' : 'secondary'}
                               data-testid={`badge-item-type-${item.storybookId}-${item.type}`}
                             >
-                              {item.type === 'digital' ? 'E-book' : 'Print Edition'}
+                              {item.type === 'digital' ? t('checkout.orderSummary.ebook') : t('checkout.orderSummary.printEdition')}
                             </Badge>
                             {item.type === 'print' && (
                               <p className="text-xs text-muted-foreground mt-1" data-testid={`text-free-ebook-${item.storybookId}`}>
-                                (includes free e-book)
+                                {t('checkout.orderSummary.includesFreeEbook')}
                               </p>
                             )}
                           </div>
@@ -343,7 +346,7 @@ export default function Checkout() {
                 <div className="border-t border-border my-4" />
 
                 <div className="flex items-center justify-between pt-2">
-                  <span className="text-lg font-semibold">Total</span>
+                  <span className="text-lg font-semibold">{t('checkout.orderSummary.total')}</span>
                   <span className="text-2xl font-bold gradient-text" data-testid="text-checkout-total">
                     ${(totalPrice / 100).toFixed(2)}
                   </span>

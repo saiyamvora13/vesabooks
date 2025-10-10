@@ -1,0 +1,505 @@
+{
+  "common": {
+    "appName": "StoryBook AI",
+    "buttons": {
+      "submit": "Soumettre",
+      "cancel": "Annuler",
+      "delete": "Supprimer",
+      "deleting": "Suppression...",
+      "view": "Voir",
+      "create": "Créer",
+      "tryAgain": "Réessayer",
+      "backToCart": "Retour au panier",
+      "getStarted": "Commencer",
+      "watchDemo": "Voir la démo",
+      "loading": "Chargement..."
+    },
+    "labels": {
+      "email": "Email",
+      "password": "Mot de passe",
+      "firstName": "Prénom (Optionnel)",
+      "lastName": "Nom (Optionnel)"
+    },
+    "placeholders": {
+      "email": "votre@email.com",
+      "password": "Entrez votre mot de passe",
+      "passwordMinLength": "Au moins 8 caractères",
+      "firstName": "Prénom",
+      "lastName": "Nom"
+    },
+    "validation": {
+      "emailInvalid": "Veuillez entrer une adresse email valide",
+      "passwordRequired": "Le mot de passe est requis",
+      "passwordMinLength": "Le mot de passe doit contenir au moins 8 caractères",
+      "passwordsNoMatch": "Les mots de passe ne correspondent pas",
+      "promptMinLength": "L'idée d'histoire doit contenir au moins 10 caractères",
+      "maxImagesExceeded": "Maximum 5 images autorisées"
+    },
+    "states": {
+      "loading": "Chargement...",
+      "authenticating": "Authentification...",
+      "preparing": "Préparation...",
+      "processing": "Traitement...",
+      "verifying": "Vérification du lien de réinitialisation..."
+    }
+  },
+  "navigation": {
+    "home": "Accueil",
+    "create": "Créer",
+    "createStory": "Créer une Histoire",
+    "myLibrary": "Ma Bibliothèque",
+    "myPurchases": "Mes Achats",
+    "cart": "Panier",
+    "logIn": "Connexion",
+    "signUp": "S'inscrire",
+    "logOut": "Déconnexion",
+    "getStarted": "Commencer"
+  },
+  "home": {
+    "hero": {
+      "badge": "Propulsé par Google Gemini AI",
+      "title": "Créez des Livres d'Histoires <gradient>Magiques</gradient> en Minutes",
+      "subtitle": "Transformez vos idées en magnifiques livres illustrés pour enfants grâce à l'IA. Aucune compétence en design requise—juste votre imagination !",
+      "createStory": "Créer Votre Histoire",
+      "watchDemo": "Voir la Démo",
+      "stats": {
+        "storiesCreated": "Histoires Créées",
+        "activeUsers": "Utilisateurs Actifs",
+        "rating": "Nouveau ⭐",
+        "reviewPrompt": "Soyez notre premier critique !"
+      }
+    },
+    "features": {
+      "title": "Comment Ça Marche",
+      "subtitle": "Créez votre livre personnalisé en trois étapes simples",
+      "step1": {
+        "title": "Décrivez Votre Histoire",
+        "description": "Parlez-nous de votre idée d'histoire—personnages, thèmes et aventures. Soyez aussi créatif que vous le souhaitez !"
+      },
+      "step2": {
+        "title": "Ajoutez de l'Inspiration",
+        "description": "Ajoutez 1 à 5 photos pour l'inspiration visuelle. L'IA les utilisera pour créer un style artistique unique."
+      },
+      "step3": {
+        "title": "Obtenez Votre Livre",
+        "description": "Regardez la magie opérer ! Votre livre illustré sera prêt en seulement 2-3 minutes."
+      }
+    },
+    "examples": {
+      "title": "Livres en Vedette",
+      "subtitle": "Inspirez-vous des histoires créées par notre communauté",
+      "imageAlt": "couverture du livre"
+    }
+  },
+  "auth": {
+    "login": {
+      "title": "Bon Retour",
+      "subtitle": "Continuez votre voyage de narration",
+      "button": "Se Connecter",
+      "buttonLoading": "Connexion...",
+      "forgotPassword": "Mot de passe oublié ?",
+      "noAccount": "Vous n'avez pas de compte ?",
+      "signUpLink": "S'inscrire",
+      "toast": {
+        "success": {
+          "title": "Bon retour !",
+          "description": "Redirection vers votre bibliothèque..."
+        },
+        "error": {
+          "title": "Échec de la connexion"
+        }
+      }
+    },
+    "signup": {
+      "title": "Créer un Compte",
+      "subtitle": "Commencez à créer des livres d'histoires magiques",
+      "button": "S'Inscrire",
+      "buttonLoading": "Création du compte...",
+      "haveAccount": "Vous avez déjà un compte ?",
+      "logInLink": "Se connecter",
+      "toast": {
+        "success": {
+          "title": "Compte créé !",
+          "description": "Bienvenue ! Redirection vers votre bibliothèque..."
+        },
+        "error": {
+          "title": "Échec de l'inscription"
+        }
+      }
+    },
+    "forgotPassword": {
+      "title": "Mot de Passe Oublié ?",
+      "subtitle": "Entrez votre adresse email et nous vous enverrons un lien pour réinitialiser votre mot de passe",
+      "button": "Envoyer le Lien",
+      "buttonLoading": "Envoi...",
+      "rememberPassword": "Vous vous souvenez de votre mot de passe ?",
+      "logInLink": "Se connecter",
+      "toast": {
+        "success": {
+          "title": "Vérifiez votre email",
+          "description": "Vérifiez votre email pour le lien de réinitialisation"
+        },
+        "error": {
+          "title": "Demande échouée"
+        }
+      }
+    },
+    "resetPassword": {
+      "title": "Réinitialiser Votre Mot de Passe",
+      "subtitle": "Entrez votre nouveau mot de passe ci-dessous",
+      "invalidTitle": "Lien de Réinitialisation Invalide",
+      "invalidMessage": "Aucun jeton de réinitialisation trouvé. Veuillez demander une nouvelle réinitialisation.",
+      "expiredTitle": "Lien invalide ou expiré",
+      "expiredMessage": "Ce lien de réinitialisation est invalide ou a expiré. Veuillez en demander un nouveau.",
+      "backButton": "Retour à Mot de Passe Oublié",
+      "labels": {
+        "newPassword": "Nouveau Mot de Passe",
+        "confirmPassword": "Confirmer le Mot de Passe"
+      },
+      "placeholders": {
+        "newPassword": "Au moins 8 caractères",
+        "confirmPassword": "Re-saisissez votre mot de passe"
+      },
+      "button": "Réinitialiser le Mot de Passe",
+      "buttonLoading": "Réinitialisation...",
+      "toast": {
+        "success": {
+          "title": "Réinitialisation réussie !",
+          "description": "Redirection vers la connexion..."
+        },
+        "error": {
+          "title": "Échec de la réinitialisation"
+        }
+      }
+    }
+  },
+  "storybook": {
+    "create": {
+      "title": "Créez Votre Livre d'Histoires",
+      "subtitle": "Partagez votre idée d'histoire pour commencer. Ajoutez des images d'inspiration si vous le souhaitez !",
+      "storyIdea": {
+        "label": "Idée d'Histoire",
+        "placeholder": "Exemple : Une histoire sur ma fille Maya qui aime les dinosaures et la crème glacée. Elle part à l'aventure pour trouver le plus grand sundae au monde...",
+        "helpText": "Soyez aussi créatif et détaillé que vous le souhaitez ! Incluez les noms des personnages, les thèmes et les idées d'intrigue."
+      },
+      "images": {
+        "label": "Images d'Inspiration (Optionnel)",
+        "count": "0-5 images"
+      },
+      "styleGuide": {
+        "button": "Guide de Style",
+        "title": "Guide de Style d'Image",
+        "description": "Utilisez ces mots-clés dans votre histoire pour contrôler le style visuel des images. Si vous ne spécifiez pas de style, nous utiliserons des illustrations colorées de livres pour enfants par défaut.",
+        "categories": {
+          "realistic": {
+            "title": "Réaliste et Photographique",
+            "example": "Créez une histoire <strong>photographique réaliste</strong> sur l'exploration spatiale",
+            "keywords": ["réaliste", "photoréaliste", "photo-réaliste", "photographie"]
+          },
+          "cartoon": {
+            "title": "Dessin Animé et Animation",
+            "example": "Créez une aventure <strong>style anime</strong> avec des guerriers samouraïs",
+            "keywords": ["dessin animé", "animé", "anime", "manga"]
+          },
+          "traditional": {
+            "title": "Styles d'Art Traditionnel",
+            "example": "Créez un conte de fées <strong>aquarelle</strong> sur un jardin magique",
+            "keywords": ["peinture à l'huile", "aquarelle", "croquis", "dessin", "crayon", "impressionniste"]
+          },
+          "digital": {
+            "title": "Numérique et 3D",
+            "example": "Créez une histoire <strong>rendue en 3D</strong> sur des robots jouets",
+            "keywords": ["3D", "CGI", "rendu", "render"]
+          },
+          "timePeriod": {
+            "title": "Période et Ère",
+            "example": "Créez une histoire de détective <strong>vintage</strong> des années 50",
+            "keywords": ["vintage", "rétro", "moderne", "contemporain"]
+          },
+          "artistic": {
+            "title": "Artistique et Abstrait",
+            "example": "Créez une histoire <strong>surréaliste</strong> onirique sur des îles flottantes",
+            "keywords": ["abstrait", "surréaliste", "minimaliste", "détaillé", "hyper-réaliste"]
+          },
+          "mood": {
+            "title": "Ambiance et Éclairage",
+            "example": "Créez une histoire mystère <strong>noir en noir et blanc</strong>",
+            "keywords": ["noir", "noir et blanc", "monochrome", "cinématographique", "éclairage dramatique"]
+          }
+        },
+        "tips": {
+          "title": "Conseils Pro",
+          "items": [
+            "✨ Mélangez les styles pour des résultats uniques : \"style aquarelle rendu 3D\"",
+            "🎯 Soyez précis : \"éclairage cinématographique dramatique\" fonctionne mieux que juste \"cinématographique\"",
+            "🎨 Aucun style spécifié ? Nous créerons des illustrations vibrantes de livres pour enfants par défaut",
+            "💡 Le mot-clé doit juste apparaître n'importe où dans votre idée"
+          ]
+        }
+      },
+      "generateButton": "Générer Mon Livre",
+      "generatingButton": "Démarrage de la génération...",
+      "toast": {
+        "started": {
+          "title": "Génération démarrée !",
+          "description": "Votre livre magique est en cours de création..."
+        },
+        "unauthorized": {
+          "title": "Non autorisé",
+          "description": "Veuillez vous connecter pour créer un livre."
+        },
+        "failed": {
+          "title": "Génération échouée"
+        }
+      }
+    },
+    "library": {
+      "title": "Mes Livres d'Histoires",
+      "count": "{{count}} livre créé",
+      "count_plural": "{{count}} livres créés",
+      "createNew": "Créer Nouveau",
+      "createFirst": "Créez Votre Premier Livre",
+      "pleaseLogin": {
+        "title": "Veuillez Vous Connecter",
+        "description": "Vous devez être connecté pour voir votre bibliothèque.",
+        "button": "Se Connecter"
+      },
+      "error": {
+        "title": "Échec du chargement des livres",
+        "description": "Une erreur inattendue s'est produite. Veuillez réessayer."
+      },
+      "empty": {
+        "title": "Aucun livre pour le moment",
+        "description": "Commencez à créer des livres magiques avec l'IA. Votre imagination est la seule limite !"
+      },
+      "purchase": {
+        "digitalPurchased": "Digital Acheté",
+        "printPurchased": "Imprimé Acheté",
+        "buyEbook": "Acheter e-book ($3.99)",
+        "buyPrint": "Acheter Imprimé ($24.99)",
+        "freeEbookIncluded": "+ E-book gratuit inclus",
+        "removeFromCart": "Retirer du Panier",
+        "addedToCart": {
+          "title": "Ajouté au panier",
+          "description": "{{title}} - Édition {{type}}"
+        },
+        "removedFromCart": {
+          "title": "Retiré du panier",
+          "description": "{{title}} - Édition {{type}}"
+        }
+      },
+      "delete": {
+        "title": "Supprimer le Livre ?",
+        "description": "Cela supprimera définitivement '{{title}}' et toutes ses images. Cette action ne peut pas être annulée.",
+        "confirmButton": "Supprimer",
+        "confirmButtonLoading": "Suppression...",
+        "toast": {
+          "success": {
+            "title": "Livre supprimé",
+            "description": "Votre livre a été supprimé définitivement."
+          },
+          "error": {
+            "title": "Échec de la suppression",
+            "description": "Quelque chose s'est mal passé. Veuillez réessayer."
+          }
+        }
+      }
+    },
+    "viewer": {
+      "loadingMessage": "Chargement de votre livre...",
+      "notFound": {
+        "title": "Livre Non Trouvé",
+        "description": "Le livre que vous recherchez n'existe pas ou a été supprimé.",
+        "button": "Créer un Nouveau Livre"
+      },
+      "created": "Créé le {{date}}",
+      "share": {
+        "button": "Partager",
+        "title": "Partagez Votre Livre",
+        "description": "Toute personne avec ce lien peut voir votre histoire",
+        "generateButton": "Générer le Lien",
+        "copyButton": "Copier",
+        "toast": {
+          "success": {
+            "title": "Lien copié !",
+            "description": "Le lien a été copié dans le presse-papiers"
+          },
+          "error": {
+            "title": "Échec de la génération du lien",
+            "description": "Veuillez réessayer"
+          }
+        }
+      },
+      "download": {
+        "button": "Télécharger E-book",
+        "buttonPreparing": "Préparation...",
+        "purchaseTooltip": "Acheter pour télécharger",
+        "toast": {
+          "preparing": {
+            "title": "Préparation de votre e-book...",
+            "description": "Cela peut prendre quelques secondes pour les gros fichiers"
+          },
+          "success": {
+            "title": "E-book téléchargé !",
+            "description": "Votre livre a été téléchargé en fichier EPUB"
+          },
+          "error": {
+            "title": "Échec du téléchargement",
+            "description": "Veuillez réessayer"
+          },
+          "purchaseRequired": {
+            "title": "Achat requis",
+            "description": "Veuillez acheter la version numérique pour télécharger"
+          }
+        }
+      },
+      "buyButton": "Acheter Digital ($3.99)",
+      "createAnother": "Créer une Autre Histoire"
+    }
+  },
+  "cart": {
+    "title": "Panier",
+    "count": "{{count}} article dans votre panier",
+    "count_plural": "{{count}} articles dans votre panier",
+    "empty": {
+      "title": "Votre panier est vide",
+      "description": "Parcourez notre bibliothèque et ajoutez de superbes livres à votre panier !",
+      "button": "Voir la Bibliothèque"
+    },
+    "item": {
+      "ebookEdition": "Édition E-book",
+      "printEdition": "Édition Imprimée",
+      "downloadableEpub": "EPUB Téléchargeable",
+      "professionallyPrinted": "Impression professionnelle",
+      "includesFreeEbook": "✨ Inclut e-book gratuit"
+    },
+    "total": "Total",
+    "clearCart": "Vider le Panier",
+    "proceedToCheckout": "Passer à la Caisse",
+    "toast": {
+      "removed": {
+        "title": "Article retiré",
+        "description": "L'article a été retiré de votre panier"
+      },
+      "cleared": {
+        "title": "Panier vidé",
+        "description": "Tous les articles ont été retirés"
+      },
+      "authRequired": {
+        "title": "Authentification requise",
+        "description": "Veuillez vous connecter pour payer"
+      },
+      "cartEmpty": {
+        "title": "Panier vide",
+        "description": "Ajoutez des articles avant de payer"
+      },
+      "cancelled": {
+        "title": "Paiement annulé",
+        "description": "Vos articles sont toujours dans le panier"
+      },
+      "success": {
+        "title": "Achat réussi !",
+        "description": "Vos articles ont été achetés"
+      }
+    }
+  },
+  "checkout": {
+    "title": "Paiement",
+    "subtitle": "Finalisez votre achat en toute sécurité",
+    "orderSummary": {
+      "title": "Résumé de la Commande",
+      "ebook": "E-book",
+      "printEdition": "Édition Imprimée",
+      "includesFreeEbook": "(inclut e-book gratuit)",
+      "total": "Total"
+    },
+    "payment": {
+      "title": "Détails du Paiement",
+      "submitButton": "Payer ${{amount}}",
+      "processingButton": "Traitement..."
+    },
+    "states": {
+      "authenticating": "Authentification...",
+      "preparingCheckout": "Préparation du paiement...",
+      "loading": "Chargement..."
+    },
+    "error": {
+      "title": "Erreur de Paiement",
+      "backButton": "Retour au Panier"
+    },
+    "toast": {
+      "paymentFailed": {
+        "title": "Paiement échoué",
+        "description": "Une erreur s'est produite lors du paiement"
+      },
+      "paymentError": {
+        "title": "Erreur de paiement",
+        "description": "Une erreur inattendue s'est produite"
+      },
+      "paymentSuccessful": {
+        "title": "Paiement réussi !",
+        "description": "Vos achats sont prêts."
+      },
+      "processingOrder": {
+        "title": "Paiement réussi, traitement de la commande...",
+        "description": "Votre paiement a été reçu. Nous traitons votre commande."
+      },
+      "initializationFailed": {
+        "title": "Échec de l'initialisation du paiement"
+      },
+      "authRequired": {
+        "title": "Authentification requise",
+        "description": "Veuillez vous connecter pour payer"
+      },
+      "cartEmpty": {
+        "title": "Panier vide",
+        "description": "Ajoutez des articles avant de payer"
+      }
+    }
+  },
+  "purchases": {
+    "title": "Mes Achats",
+    "subtitle": "Voir et télécharger vos livres achetés",
+    "empty": {
+      "title": "Mes Achats",
+      "description": "Vous n'avez encore acheté aucun livre",
+      "button": "Voir la Bibliothèque"
+    },
+    "viewBook": "Voir le Livre",
+    "item": {
+      "digitalEdition": "Édition Numérique",
+      "printEdition": "Édition Imprimée",
+      "purchasedOn": "Acheté le {{date}}",
+      "downloadEbook": "Télécharger E-book",
+      "preparing": "Préparation...",
+      "printOrderSent": "Commande d'impression envoyée par email"
+    },
+    "status": {
+      "completed": "Terminé",
+      "pending": "En attente",
+      "failed": "Échoué"
+    },
+    "toast": {
+      "paymentSuccess": {
+        "title": "Paiement réussi !",
+        "description": "Vos achats sont prêts."
+      },
+      "preparingEbook": {
+        "title": "Préparation de votre e-book...",
+        "description": "Cela peut prendre quelques secondes pour les gros fichiers"
+      },
+      "ebookDownloaded": {
+        "title": "E-book téléchargé !",
+        "description": "Votre livre a été téléchargé en fichier EPUB"
+      },
+      "downloadFailed": {
+        "title": "Échec du téléchargement",
+        "description": "Veuillez réessayer"
+      }
+    }
+  },
+  "notFound": {
+    "title": "404 Page Non Trouvée",
+    "description": "Avez-vous oublié d'ajouter la page au routeur ?"
+  }
+}

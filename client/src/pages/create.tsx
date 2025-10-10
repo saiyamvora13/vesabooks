@@ -1,9 +1,10 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useLocation } from "wouter";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useMutation } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent } from "@/components/ui/card";
@@ -24,24 +25,26 @@ import {
 } from "@/components/ui/dialog";
 import { Info } from "lucide-react";
 
-const createStorySchema = z.object({
-  prompt: z.string().min(10, "Story prompt must be at least 10 characters"),
-  images: z.array(z.instanceof(File)).min(0).max(5, "Maximum 5 images allowed"),
-});
-
-type CreateStoryForm = z.infer<typeof createStorySchema>;
-
 interface GenerationResponse {
   sessionId: string;
 }
 
 export default function Create() {
+  const { t, i18n } = useTranslation();
   const [, setLocation] = useLocation();
   const [isGenerating, setIsGenerating] = useState(false);
   const [sessionId, setSessionId] = useState<string | null>(null);
-  const [lastFormData, setLastFormData] = useState<CreateStoryForm | null>(null);
   const [retryCount, setRetryCount] = useState(0);
   const { toast } = useToast();
+
+  const createStorySchema = useMemo(() => z.object({
+    prompt: z.string().min(10, t('common.validation.promptMinLength')),
+    images: z.array(z.instanceof(File)).min(0).max(5, t('common.validation.maxImagesExceeded')),
+  }), [i18n.language]);
+
+  type CreateStoryForm = z.infer<typeof createStorySchema>;
+
+  const [lastFormData, setLastFormData] = useState<CreateStoryForm | null>(null);
 
   const form = useForm<CreateStoryForm>({
     resolver: zodResolver(createStorySchema),
@@ -76,16 +79,16 @@ export default function Create() {
       setSessionId(data.sessionId);
       setIsGenerating(true);
       toast({
-        title: "Story generation started!",
-        description: "Your magical storybook is being created...",
+        title: t('storybook.create.toast.started.title'),
+        description: t('storybook.create.toast.started.description'),
       });
     },
     onError: (error) => {
       // Replit Auth: Handle unauthorized error - redirect to login
       if (isUnauthorizedError(error as Error)) {
         toast({
-          title: "Unauthorized",
-          description: "Please log in to create a storybook.",
+          title: t('storybook.create.toast.unauthorized.title'),
+          description: t('storybook.create.toast.unauthorized.description'),
           variant: "destructive",
         });
         setTimeout(() => {
@@ -95,7 +98,7 @@ export default function Create() {
       }
       
       toast({
-        title: "Generation failed",
+        title: t('storybook.create.toast.failed.title'),
         description: error.message,
         variant: "destructive",
       });
@@ -147,9 +150,9 @@ export default function Create() {
       <section className="py-8 sm:py-12 lg:py-20">
         <div className="max-w-5xl mx-auto px-3 sm:px-4 lg:px-8">
           <div className="text-center mb-8 sm:mb-12">
-            <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold mb-3 sm:mb-4">Create Your Storybook</h2>
+            <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold mb-3 sm:mb-4">{t('storybook.create.title')}</h2>
             <p className="text-base sm:text-lg text-muted-foreground px-4">
-              Share your story idea to get started. Add inspiration images if you'd like!
+              {t('storybook.create.subtitle')}
             </p>
           </div>
 
@@ -166,7 +169,7 @@ export default function Create() {
                         <div className="flex items-center justify-between mb-2">
                           <FormLabel className="text-sm font-semibold flex items-center">
                             <i className="fas fa-lightbulb text-primary mr-2"></i>
-                            Story Idea
+                            {t('storybook.create.storyIdea.label')}
                           </FormLabel>
                           <Dialog>
                             <DialogTrigger asChild>
@@ -178,18 +181,17 @@ export default function Create() {
                                 data-testid="button-style-guide"
                               >
                                 <Info className="w-4 h-4" />
-                                Style Guide
+                                {t('storybook.create.styleGuide.button')}
                               </Button>
                             </DialogTrigger>
                             <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
                               <DialogHeader>
                                 <DialogTitle className="flex items-center gap-2 text-2xl">
                                   <i className="fas fa-palette text-primary"></i>
-                                  Image Style Guide
+                                  {t('storybook.create.styleGuide.title')}
                                 </DialogTitle>
                                 <DialogDescription>
-                                  Use these keywords in your story prompt to control the visual style of your storybook images.
-                                  If you don't specify a style, we'll default to a colorful children's book illustration.
+                                  {t('storybook.create.styleGuide.description')}
                                 </DialogDescription>
                               </DialogHeader>
                               
@@ -198,139 +200,124 @@ export default function Create() {
                                 <div>
                                   <h3 className="font-semibold text-lg mb-3 flex items-center gap-2">
                                     <span className="text-2xl">📸</span>
-                                    Realistic & Photographic
+                                    {t('storybook.create.styleGuide.categories.realistic.title')}
                                   </h3>
                                   <div className="flex flex-wrap gap-2">
-                                    {['realistic', 'photorealistic', 'photo-realistic', 'photograph'].map(style => (
+                                    {t('storybook.create.styleGuide.categories.realistic.keywords', { returnObjects: true }).map((style: string) => (
                                       <span key={style} className="px-3 py-1 bg-primary/10 text-primary rounded-full text-sm">
                                         {style}
                                       </span>
                                     ))}
                                   </div>
-                                  <p className="text-sm text-muted-foreground mt-2">
-                                    Example: "Create a <strong>realistic photographic</strong> story about space exploration"
-                                  </p>
+                                  <p className="text-sm text-muted-foreground mt-2" dangerouslySetInnerHTML={{ __html: `Example: ${t('storybook.create.styleGuide.categories.realistic.example')}` }} />
                                 </div>
 
                                 {/* Cartoon & Animation */}
                                 <div>
                                   <h3 className="font-semibold text-lg mb-3 flex items-center gap-2">
                                     <span className="text-2xl">🎨</span>
-                                    Cartoon & Animation
+                                    {t('storybook.create.styleGuide.categories.cartoon.title')}
                                   </h3>
                                   <div className="flex flex-wrap gap-2">
-                                    {['cartoon', 'animated', 'anime', 'manga'].map(style => (
+                                    {t('storybook.create.styleGuide.categories.cartoon.keywords', { returnObjects: true }).map((style: string) => (
                                       <span key={style} className="px-3 py-1 bg-secondary/10 text-secondary rounded-full text-sm">
                                         {style}
                                       </span>
                                     ))}
                                   </div>
-                                  <p className="text-sm text-muted-foreground mt-2">
-                                    Example: "Create an <strong>anime-style</strong> adventure with samurai warriors"
-                                  </p>
+                                  <p className="text-sm text-muted-foreground mt-2" dangerouslySetInnerHTML={{ __html: `Example: ${t('storybook.create.styleGuide.categories.cartoon.example')}` }} />
                                 </div>
 
                                 {/* Traditional Art */}
                                 <div>
                                   <h3 className="font-semibold text-lg mb-3 flex items-center gap-2">
                                     <span className="text-2xl">🖌️</span>
-                                    Traditional Art Styles
+                                    {t('storybook.create.styleGuide.categories.traditional.title')}
                                   </h3>
                                   <div className="flex flex-wrap gap-2">
-                                    {['oil painting', 'watercolor', 'sketch', 'drawing', 'pencil', 'impressionist'].map(style => (
+                                    {t('storybook.create.styleGuide.categories.traditional.keywords', { returnObjects: true }).map((style: string) => (
                                       <span key={style} className="px-3 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-full text-sm">
                                         {style}
                                       </span>
                                     ))}
                                   </div>
-                                  <p className="text-sm text-muted-foreground mt-2">
-                                    Example: "Create a <strong>watercolor</strong> fairy tale about a magical garden"
-                                  </p>
+                                  <p className="text-sm text-muted-foreground mt-2" dangerouslySetInnerHTML={{ __html: `Example: ${t('storybook.create.styleGuide.categories.traditional.example')}` }} />
                                 </div>
 
                                 {/* Digital & 3D */}
                                 <div>
                                   <h3 className="font-semibold text-lg mb-3 flex items-center gap-2">
                                     <span className="text-2xl">💻</span>
-                                    Digital & 3D
+                                    {t('storybook.create.styleGuide.categories.digital.title')}
                                   </h3>
                                   <div className="flex flex-wrap gap-2">
-                                    {['3D', 'CGI', 'rendered', 'render'].map(style => (
+                                    {t('storybook.create.styleGuide.categories.digital.keywords', { returnObjects: true }).map((style: string) => (
                                       <span key={style} className="px-3 py-1 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 rounded-full text-sm">
                                         {style}
                                       </span>
                                     ))}
                                   </div>
-                                  <p className="text-sm text-muted-foreground mt-2">
-                                    Example: "Create a <strong>3D rendered</strong> story about toy robots"
-                                  </p>
+                                  <p className="text-sm text-muted-foreground mt-2" dangerouslySetInnerHTML={{ __html: `Example: ${t('storybook.create.styleGuide.categories.digital.example')}` }} />
                                 </div>
 
                                 {/* Time Period Styles */}
                                 <div>
                                   <h3 className="font-semibold text-lg mb-3 flex items-center gap-2">
                                     <span className="text-2xl">⏰</span>
-                                    Time Period & Era
+                                    {t('storybook.create.styleGuide.categories.timePeriod.title')}
                                   </h3>
                                   <div className="flex flex-wrap gap-2">
-                                    {['vintage', 'retro', 'modern', 'contemporary'].map(style => (
+                                    {t('storybook.create.styleGuide.categories.timePeriod.keywords', { returnObjects: true }).map((style: string) => (
                                       <span key={style} className="px-3 py-1 bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 rounded-full text-sm">
                                         {style}
                                       </span>
                                     ))}
                                   </div>
-                                  <p className="text-sm text-muted-foreground mt-2">
-                                    Example: "Create a <strong>vintage</strong> 1950s detective story"
-                                  </p>
+                                  <p className="text-sm text-muted-foreground mt-2" dangerouslySetInnerHTML={{ __html: `Example: ${t('storybook.create.styleGuide.categories.timePeriod.example')}` }} />
                                 </div>
 
                                 {/* Artistic & Abstract */}
                                 <div>
                                   <h3 className="font-semibold text-lg mb-3 flex items-center gap-2">
                                     <span className="text-2xl">🎭</span>
-                                    Artistic & Abstract
+                                    {t('storybook.create.styleGuide.categories.artistic.title')}
                                   </h3>
                                   <div className="flex flex-wrap gap-2">
-                                    {['abstract', 'surreal', 'minimalist', 'detailed', 'hyper-realistic'].map(style => (
+                                    {t('storybook.create.styleGuide.categories.artistic.keywords', { returnObjects: true }).map((style: string) => (
                                       <span key={style} className="px-3 py-1 bg-pink-100 dark:bg-pink-900/30 text-pink-700 dark:text-pink-300 rounded-full text-sm">
                                         {style}
                                       </span>
                                     ))}
                                   </div>
-                                  <p className="text-sm text-muted-foreground mt-2">
-                                    Example: "Create a <strong>surreal</strong> dreamlike story about floating islands"
-                                  </p>
+                                  <p className="text-sm text-muted-foreground mt-2" dangerouslySetInnerHTML={{ __html: `Example: ${t('storybook.create.styleGuide.categories.artistic.example')}` }} />
                                 </div>
 
                                 {/* Mood & Lighting */}
                                 <div>
                                   <h3 className="font-semibold text-lg mb-3 flex items-center gap-2">
                                     <span className="text-2xl">🌓</span>
-                                    Mood & Lighting
+                                    {t('storybook.create.styleGuide.categories.mood.title')}
                                   </h3>
                                   <div className="flex flex-wrap gap-2">
-                                    {['noir', 'black and white', 'monochrome', 'cinematic', 'dramatic lighting'].map(style => (
+                                    {t('storybook.create.styleGuide.categories.mood.keywords', { returnObjects: true }).map((style: string) => (
                                       <span key={style} className="px-3 py-1 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-full text-sm">
                                         {style}
                                       </span>
                                     ))}
                                   </div>
-                                  <p className="text-sm text-muted-foreground mt-2">
-                                    Example: "Create a <strong>noir black and white</strong> mystery story"
-                                  </p>
+                                  <p className="text-sm text-muted-foreground mt-2" dangerouslySetInnerHTML={{ __html: `Example: ${t('storybook.create.styleGuide.categories.mood.example')}` }} />
                                 </div>
 
                                 {/* Tips */}
                                 <div className="bg-muted/50 p-4 rounded-lg">
                                   <h3 className="font-semibold text-lg mb-2 flex items-center gap-2">
                                     <i className="fas fa-lightbulb text-primary"></i>
-                                    Pro Tips
+                                    {t('storybook.create.styleGuide.tips.title')}
                                   </h3>
                                   <ul className="space-y-2 text-sm text-muted-foreground">
-                                    <li>✨ Mix styles for unique results: "3D rendered watercolor style"</li>
-                                    <li>🎯 Be specific: "cinematic dramatic lighting" works better than just "cinematic"</li>
-                                    <li>🎨 No style specified? We'll create vibrant children's book illustrations by default</li>
-                                    <li>💡 The keyword just needs to appear anywhere in your prompt to work</li>
+                                    {t('storybook.create.styleGuide.tips.items', { returnObjects: true }).map((tip: string, index: number) => (
+                                      <li key={index}>{tip}</li>
+                                    ))}
                                   </ul>
                                 </div>
                               </div>
@@ -341,14 +328,14 @@ export default function Create() {
                           <Textarea
                             {...field}
                             rows={6}
-                            placeholder="Example: A story about my daughter Maya who loves dinosaurs and ice cream. She goes on an adventure to find the world's biggest ice cream sundae..."
+                            placeholder={t('storybook.create.storyIdea.placeholder')}
                             className="resize-none rounded-2xl"
                             data-testid="input-story-prompt"
                           />
                         </FormControl>
                         <div className="text-sm text-muted-foreground">
                           <i className="fas fa-info-circle mr-1"></i>
-                          Be as creative and detailed as you want! Include character names, themes, and plot ideas.
+                          {t('storybook.create.storyIdea.helpText')}
                         </div>
                         <FormMessage />
                       </FormItem>
@@ -363,8 +350,8 @@ export default function Create() {
                       <FormItem>
                         <FormLabel className="text-sm font-semibold flex items-center">
                           <i className="fas fa-image text-secondary mr-2"></i>
-                          Inspiration Images (Optional)
-                          <span className="ml-auto text-muted-foreground font-normal">0-5 images</span>
+                          {t('storybook.create.images.label')}
+                          <span className="ml-auto text-muted-foreground font-normal">{t('storybook.create.images.count')}</span>
                         </FormLabel>
                         <FormControl>
                           <FileUpload
@@ -390,12 +377,12 @@ export default function Create() {
                     {createStoryMutation.isPending ? (
                       <>
                         <i className="fas fa-spinner fa-spin mr-2"></i>
-                        Starting Generation...
+                        {t('storybook.create.generatingButton')}
                       </>
                     ) : (
                       <>
                         <i className="fas fa-magic mr-2"></i>
-                        Generate My Storybook
+                        {t('storybook.create.generateButton')}
                       </>
                     )}
                   </Button>

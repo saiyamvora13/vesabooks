@@ -1,4 +1,5 @@
 import { Card, CardContent } from "@/components/ui/card";
+import { useTranslation } from "react-i18next";
 
 const featuredBooks = [
   {
@@ -28,13 +29,15 @@ const featuredBooks = [
 ];
 
 export default function ExamplesSection() {
+  const { t } = useTranslation();
+  
   return (
     <section className="py-20">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="text-center mb-12">
-          <h2 className="text-3xl sm:text-4xl font-bold mb-4">Featured Storybooks</h2>
+          <h2 className="text-3xl sm:text-4xl font-bold mb-4">{t('home.examples.title')}</h2>
           <p className="text-lg text-muted-foreground">
-            Get inspired by stories created by our community
+            {t('home.examples.subtitle')}
           </p>
         </div>
 
@@ -43,7 +46,7 @@ export default function ExamplesSection() {
             <Card key={index} className="story-card rounded-3xl overflow-hidden shadow-lg">
               <img 
                 src={book.image} 
-                alt={`${book.title} storybook cover`} 
+                alt={t('home.examples.imageAlt')} 
                 className="w-full h-48 object-cover" 
               />
               <CardContent className="p-6">

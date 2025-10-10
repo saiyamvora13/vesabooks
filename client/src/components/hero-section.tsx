@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { useQuery } from "@tanstack/react-query";
 import { useState, useEffect } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useTranslation, Trans } from "react-i18next";
 
 interface Metrics {
   storiesCreated: number;
@@ -41,6 +42,7 @@ function AnimatedCounter({ value, duration = 1000 }: { value: number; duration?:
 }
 
 export default function HeroSection() {
+  const { t } = useTranslation();
   const { data: metrics, isLoading } = useQuery<Metrics>({
     queryKey: ['/api/metrics'],
     staleTime: 60000, // 60 seconds cache
@@ -60,15 +62,18 @@ export default function HeroSection() {
           <div className="text-center lg:text-left">
             <div className="inline-flex items-center space-x-2 px-3 sm:px-4 py-1.5 sm:py-2 bg-primary/10 rounded-full mb-4 sm:mb-6">
               <i className="fas fa-sparkles text-primary text-sm"></i>
-              <span className="text-xs sm:text-sm font-medium text-primary">Powered by Google Gemini AI</span>
+              <span className="text-xs sm:text-sm font-medium text-primary">{t('home.hero.badge')}</span>
             </div>
             
             <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold mb-4 sm:mb-6 leading-tight">
-              Create <span className="gradient-text">Magical</span> Storybooks in Minutes
+              <Trans 
+                i18nKey="home.hero.title"
+                components={{ gradient: <span className="gradient-text" /> }}
+              />
             </h1>
             
             <p className="text-base sm:text-lg text-muted-foreground mb-6 sm:mb-8 max-w-xl mx-auto lg:mx-0">
-              Transform your ideas into beautifully illustrated children's storybooks using AI. No design skills required—just your imagination!
+              {t('home.hero.subtitle')}
             </p>
 
             {/* CTA Buttons */}
@@ -80,7 +85,7 @@ export default function HeroSection() {
                   data-testid="button-create-story-hero"
                 >
                   <i className="fas fa-magic mr-2"></i>
-                  Create Your Story
+                  {t('home.hero.createStory')}
                 </Button>
               </Link>
               <Button 
@@ -90,7 +95,7 @@ export default function HeroSection() {
                 data-testid="button-watch-demo"
               >
                 <i className="fas fa-play-circle mr-2"></i>
-                Watch Demo
+                {t('home.hero.watchDemo')}
               </Button>
             </div>
 
@@ -104,7 +109,7 @@ export default function HeroSection() {
                     <AnimatedCounter value={metrics?.storiesCreated || 0} />
                   )}
                 </div>
-                <div className="text-xs sm:text-sm text-muted-foreground">Stories Created</div>
+                <div className="text-xs sm:text-sm text-muted-foreground">{t('home.hero.stats.storiesCreated')}</div>
               </div>
               <div>
                 <div className="text-2xl sm:text-3xl font-bold text-primary" data-testid="metric-users">
@@ -114,13 +119,13 @@ export default function HeroSection() {
                     <AnimatedCounter value={metrics?.activeUsers || 0} />
                   )}
                 </div>
-                <div className="text-xs sm:text-sm text-muted-foreground">Active Users</div>
+                <div className="text-xs sm:text-sm text-muted-foreground">{t('home.hero.stats.activeUsers')}</div>
               </div>
               <div>
                 <div className="text-2xl sm:text-3xl font-bold text-primary" data-testid="metric-rating">
-                  New ⭐
+                  {t('home.hero.stats.rating')}
                 </div>
-                <div className="text-xs sm:text-sm text-muted-foreground">Be our first reviewer!</div>
+                <div className="text-xs sm:text-sm text-muted-foreground">{t('home.hero.stats.reviewPrompt')}</div>
               </div>
             </div>
           </div>

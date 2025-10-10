@@ -1,5 +1,6 @@
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Link } from "wouter";
+import { useTranslation } from "react-i18next";
 import { useAuth } from "@/hooks/useAuth";
 import Navigation from "@/components/navigation";
 import { Button } from "@/components/ui/button";
@@ -33,6 +34,7 @@ interface Storybook {
 }
 
 function StorybookPurchaseButtons({ storybook }: { storybook: Storybook }) {
+  const { t } = useTranslation();
   const { toast } = useToast();
   const [cartUpdated, setCartUpdated] = useState(0);
 
@@ -73,8 +75,11 @@ function StorybookPurchaseButtons({ storybook }: { storybook: Storybook }) {
       price,
     });
     toast({
-      title: "Added to cart",
-      description: `${storybook.title} - ${type === 'digital' ? 'Digital' : 'Print'} Edition`,
+      title: t('storybook.library.purchase.addedToCart.title'),
+      description: t('storybook.library.purchase.addedToCart.description', { 
+        title: storybook.title, 
+        type: type === 'digital' ? 'Digital' : 'Print' 
+      }),
     });
     window.dispatchEvent(new Event('cartUpdated'));
     setCartUpdated(prev => prev + 1);
@@ -83,8 +88,11 @@ function StorybookPurchaseButtons({ storybook }: { storybook: Storybook }) {
   const handleRemoveFromCart = (type: 'digital' | 'print') => {
     removeFromCart(storybook.id, type);
     toast({
-      title: "Removed from cart",
-      description: `${storybook.title} - ${type === 'digital' ? 'Digital' : 'Print'} Edition`,
+      title: t('storybook.library.purchase.removedFromCart.title'),
+      description: t('storybook.library.purchase.removedFromCart.description', { 
+        title: storybook.title, 
+        type: type === 'digital' ? 'Digital' : 'Print' 
+      }),
     });
     window.dispatchEvent(new Event('cartUpdated'));
     setCartUpdated(prev => prev + 1);
@@ -98,7 +106,7 @@ function StorybookPurchaseButtons({ storybook }: { storybook: Storybook }) {
       {digitalPurchase?.owned ? (
         <Badge variant="secondary" className="w-full justify-center py-1">
           <Check className="h-3 w-3 mr-1" />
-          Digital Purchased
+          {t('storybook.library.purchase.digitalPurchased')}
         </Badge>
       ) : (
         <Button
@@ -111,12 +119,12 @@ function StorybookPurchaseButtons({ storybook }: { storybook: Storybook }) {
           {inCartDigital ? (
             <>
               <X className="h-4 w-4 mr-1" />
-              Remove from Cart
+              {t('storybook.library.purchase.removeFromCart')}
             </>
           ) : (
             <>
               <ShoppingCart className="h-4 w-4 mr-1" />
-              Buy e-book ($3.99)
+              {t('storybook.library.purchase.buyEbook')}
             </>
           )}
         </Button>
@@ -125,7 +133,7 @@ function StorybookPurchaseButtons({ storybook }: { storybook: Storybook }) {
       {printPurchase?.owned ? (
         <Badge variant="secondary" className="w-full justify-center py-1">
           <Check className="h-3 w-3 mr-1" />
-          Print Purchased
+          {t('storybook.library.purchase.printPurchased')}
         </Badge>
       ) : (
         <Button
@@ -138,15 +146,15 @@ function StorybookPurchaseButtons({ storybook }: { storybook: Storybook }) {
           {inCartPrint ? (
             <>
               <X className="h-4 w-4 mr-1" />
-              Remove from Cart
+              {t('storybook.library.purchase.removeFromCart')}
             </>
           ) : (
             <div className="flex flex-col items-center gap-0.5">
               <div className="flex items-center gap-1.5">
                 <ShoppingCart className="h-4 w-4" />
-                <span>Buy Print ($24.99)</span>
+                <span>{t('storybook.library.purchase.buyPrint')}</span>
               </div>
-              <span className="text-xs text-muted-foreground">+ Free e-book included</span>
+              <span className="text-xs text-muted-foreground">{t('storybook.library.purchase.freeEbookIncluded')}</span>
             </div>
           )}
         </Button>
@@ -156,6 +164,7 @@ function StorybookPurchaseButtons({ storybook }: { storybook: Storybook }) {
 }
 
 export default function Library() {
+  const { t } = useTranslation();
   const { user, isAuthenticated, isLoading: authLoading } = useAuth();
   const { toast } = useToast();
   const [deletingBookId, setDeletingBookId] = useState<string | null>(null);
@@ -172,15 +181,15 @@ export default function Library() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/storybooks"] });
       toast({
-        title: "Storybook deleted",
-        description: "Your storybook has been permanently deleted.",
+        title: t('storybook.library.delete.toast.success.title'),
+        description: t('storybook.library.delete.toast.success.description'),
       });
       setDeletingBookId(null);
     },
     onError: (error: Error) => {
       toast({
-        title: "Failed to delete",
-        description: error.message || "Something went wrong. Please try again.",
+        title: t('storybook.library.delete.toast.error.title'),
+        description: error.message || t('storybook.library.delete.toast.error.description'),
         variant: "destructive",
       });
     },
@@ -194,7 +203,7 @@ export default function Library() {
           <div className="flex items-center justify-center h-64">
             <div className="text-center">
               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
-              <p className="mt-4 text-muted-foreground">Loading...</p>
+              <p className="mt-4 text-muted-foreground">{t('common.states.loading')}</p>
             </div>
           </div>
         </div>
@@ -209,12 +218,12 @@ export default function Library() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
           <div className="text-center py-20">
             <BookOpen className="mx-auto h-16 w-16 text-muted-foreground mb-6" />
-            <h2 className="text-3xl font-bold mb-4">Please Log In</h2>
+            <h2 className="text-3xl font-bold mb-4">{t('storybook.library.pleaseLogin.title')}</h2>
             <p className="text-muted-foreground mb-8 max-w-md mx-auto">
-              You need to be logged in to view your storybook library.
+              {t('storybook.library.pleaseLogin.description')}
             </p>
             <Button onClick={() => window.location.href = '/api/login'} data-testid="button-login">
-              Log In
+              {t('storybook.library.pleaseLogin.button')}
             </Button>
           </div>
         </div>
@@ -230,17 +239,17 @@ export default function Library() {
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6 sm:mb-8">
           <div>
             <h1 className="text-3xl sm:text-4xl font-bold font-display gradient-text mb-2" data-testid="text-library-title">
-              My Storybooks
+              {t('storybook.library.title')}
             </h1>
             <p className="text-sm sm:text-base text-muted-foreground" data-testid="text-storybook-count">
-              {storybooks?.length || 0} storybook{storybooks?.length === 1 ? '' : 's'} created
+              {t('storybook.library.count', { count: storybooks?.length || 0 })}
             </p>
           </div>
           
           <Link href="/create">
             <Button className="gradient-bg hover:opacity-90 !text-[hsl(258,90%,20%)] w-full sm:w-auto" data-testid="button-create-new">
               <Plus className="mr-2 h-4 w-4" />
-              Create New
+              {t('storybook.library.createNew')}
             </Button>
           </Link>
         </div>
@@ -249,13 +258,13 @@ export default function Library() {
           <div className="text-center py-20">
             <BookOpen className="mx-auto h-16 w-16 text-destructive mb-6" />
             <h2 className="text-2xl font-semibold mb-4" data-testid="text-error-title">
-              Failed to load storybooks
+              {t('storybook.library.error.title')}
             </h2>
             <p className="text-muted-foreground mb-8 max-w-md mx-auto" data-testid="text-error-message">
-              {error instanceof Error ? error.message : 'An unexpected error occurred. Please try again later.'}
+              {error instanceof Error ? error.message : t('storybook.library.error.description')}
             </p>
             <Button onClick={() => window.location.reload()} variant="outline" data-testid="button-retry">
-              Try Again
+              {t('common.buttons.tryAgain')}
             </Button>
           </div>
         ) : isLoading ? (
@@ -325,7 +334,7 @@ export default function Library() {
                 <CardFooter className="flex items-center justify-between gap-2 pt-3">
                   <Link href={`/view/${storybook.id}`} className="flex-1">
                     <Button variant="outline" size="sm" className="w-full" data-testid={`button-view-${storybook.id}`}>
-                      View
+                      {t('common.buttons.view')}
                     </Button>
                   </Link>
                   <Button
@@ -347,15 +356,15 @@ export default function Library() {
           <div className="text-center py-20">
             <BookOpen className="mx-auto h-16 w-16 text-muted-foreground mb-6" />
             <h2 className="text-2xl font-semibold mb-4" data-testid="text-empty-state">
-              No storybooks yet
+              {t('storybook.library.empty.title')}
             </h2>
             <p className="text-muted-foreground mb-8 max-w-md mx-auto">
-              Start creating magical storybooks with AI. Your imagination is the only limit!
+              {t('storybook.library.empty.description')}
             </p>
             <Link href="/create">
               <Button className="gradient-bg hover:opacity-90 !text-[hsl(258,90%,20%)]" data-testid="button-create-first">
                 <Plus className="mr-2 h-4 w-4" />
-                Create Your First Storybook
+                {t('storybook.library.createFirst')}
               </Button>
             </Link>
           </div>
@@ -365,9 +374,9 @@ export default function Library() {
       <AlertDialog open={!!deletingBookId} onOpenChange={(open) => !open && setDeletingBookId(null)}>
         <AlertDialogContent data-testid="dialog-delete-confirm">
           <AlertDialogHeader>
-            <AlertDialogTitle data-testid="dialog-title">Delete Storybook?</AlertDialogTitle>
+            <AlertDialogTitle data-testid="dialog-title">{t('storybook.library.delete.title')}</AlertDialogTitle>
             <AlertDialogDescription data-testid="dialog-description">
-              This will permanently delete '{storybooks?.find(b => b.id === deletingBookId)?.title}' and all its images. This action cannot be undone.
+              {t('storybook.library.delete.description', { title: storybooks?.find(b => b.id === deletingBookId)?.title })}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -375,7 +384,7 @@ export default function Library() {
               disabled={deleteMutation.isPending}
               data-testid="button-cancel-delete"
             >
-              Cancel
+              {t('common.buttons.cancel')}
             </AlertDialogCancel>
             <AlertDialogAction
               onClick={() => deletingBookId && deleteMutation.mutate(deletingBookId)}
@@ -383,7 +392,7 @@ export default function Library() {
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               data-testid="button-confirm-delete"
             >
-              {deleteMutation.isPending ? "Deleting..." : "Delete"}
+              {deleteMutation.isPending ? t('storybook.library.delete.confirmButtonLoading') : t('storybook.library.delete.confirmButton')}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

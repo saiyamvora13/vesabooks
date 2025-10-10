@@ -1,3 +1,4 @@
+import { useEffect, useState, useMemo } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -10,22 +11,23 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { Link } from "wouter";
-import { useEffect, useState } from "react";
-
-const resetPasswordSchema = z.object({
-  newPassword: z.string().min(8, "Password must be at least 8 characters"),
-  confirmPassword: z.string().min(8, "Password must be at least 8 characters"),
-}).refine((data) => data.newPassword === data.confirmPassword, {
-  message: "Passwords don't match",
-  path: ["confirmPassword"],
-});
-
-type ResetPasswordForm = z.infer<typeof resetPasswordSchema>;
+import { useTranslation } from 'react-i18next';
 
 export default function ResetPassword() {
+  const { t, i18n } = useTranslation();
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const [token, setToken] = useState<string | null>(null);
+
+  const resetPasswordSchema = useMemo(() => z.object({
+    newPassword: z.string().min(8, t('common.validation.passwordMinLength')),
+    confirmPassword: z.string().min(8, t('common.validation.passwordMinLength')),
+  }).refine((data) => data.newPassword === data.confirmPassword, {
+    message: t('common.validation.passwordsNoMatch'),
+    path: ["confirmPassword"],
+  }), [i18n.language]);
+
+  type ResetPasswordForm = z.infer<typeof resetPasswordSchema>;
 
   useEffect(() => {
     const urlToken = new URLSearchParams(window.location.search).get('token');
@@ -55,8 +57,8 @@ export default function ResetPassword() {
     },
     onSuccess: () => {
       toast({
-        title: "Password reset successful!",
-        description: "Redirecting to login...",
+        title: t('auth.resetPassword.toast.success.title'),
+        description: t('auth.resetPassword.toast.success.description'),
       });
       setTimeout(() => {
         setLocation("/login");
@@ -64,7 +66,7 @@ export default function ResetPassword() {
     },
     onError: (error: Error) => {
       toast({
-        title: "Reset failed",
+        title: t('auth.resetPassword.toast.error.title'),
         description: error.message,
         variant: "destructive",
       });
@@ -81,13 +83,13 @@ export default function ResetPassword() {
         <Card className="w-full max-w-md rounded-2xl shadow-xl">
           <CardContent className="p-8">
             <div className="text-center">
-              <h1 className="text-3xl font-bold mb-4">Invalid Reset Link</h1>
+              <h1 className="text-3xl font-bold mb-4">{t('auth.resetPassword.invalidTitle')}</h1>
               <p className="text-muted-foreground mb-6">
-                No reset token found. Please request a new password reset.
+                {t('auth.resetPassword.invalidMessage')}
               </p>
               <Link href="/forgot-password">
                 <Button className="rounded-lg font-semibold" data-testid="button-back-forgot">
-                  Back to Forgot Password
+                  {t('auth.resetPassword.backButton')}
                 </Button>
               </Link>
             </div>
@@ -103,7 +105,7 @@ export default function ResetPassword() {
         <Card className="w-full max-w-md rounded-2xl shadow-xl">
           <CardContent className="p-8">
             <div className="text-center">
-              <p className="text-muted-foreground">Verifying reset link...</p>
+              <p className="text-muted-foreground">{t('common.states.verifying')}</p>
             </div>
           </CardContent>
         </Card>
@@ -118,14 +120,14 @@ export default function ResetPassword() {
           <CardContent className="p-8">
             <div className="text-center">
               <h1 className="text-3xl font-bold mb-4" data-testid="text-error">
-                Invalid or expired reset link
+                {t('auth.resetPassword.expiredTitle')}
               </h1>
               <p className="text-muted-foreground mb-6">
-                This password reset link is invalid or has expired. Please request a new one.
+                {t('auth.resetPassword.expiredMessage')}
               </p>
               <Link href="/forgot-password">
                 <Button className="rounded-lg font-semibold" data-testid="button-back-forgot">
-                  Back to Forgot Password
+                  {t('auth.resetPassword.backButton')}
                 </Button>
               </Link>
             </div>
@@ -140,9 +142,9 @@ export default function ResetPassword() {
       <Card className="w-full max-w-md rounded-2xl shadow-xl">
         <CardContent className="p-8">
           <div className="text-center mb-8">
-            <h1 className="text-3xl font-bold mb-2">Reset Your Password</h1>
+            <h1 className="text-3xl font-bold mb-2">{t('auth.resetPassword.title')}</h1>
             <p className="text-muted-foreground">
-              Enter your new password below
+              {t('auth.resetPassword.subtitle')}
             </p>
           </div>
 
@@ -153,12 +155,12 @@ export default function ResetPassword() {
                 name="newPassword"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>New Password</FormLabel>
+                    <FormLabel>{t('auth.resetPassword.labels.newPassword')}</FormLabel>
                     <FormControl>
                       <Input
                         {...field}
                         type="password"
-                        placeholder="At least 8 characters"
+                        placeholder={t('auth.resetPassword.placeholders.newPassword')}
                         className="rounded-lg"
                         data-testid="input-new-password"
                       />
@@ -173,12 +175,12 @@ export default function ResetPassword() {
                 name="confirmPassword"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Confirm Password</FormLabel>
+                    <FormLabel>{t('auth.resetPassword.labels.confirmPassword')}</FormLabel>
                     <FormControl>
                       <Input
                         {...field}
                         type="password"
-                        placeholder="Re-enter your password"
+                        placeholder={t('auth.resetPassword.placeholders.confirmPassword')}
                         className="rounded-lg"
                         data-testid="input-confirm-password"
                       />
@@ -194,7 +196,7 @@ export default function ResetPassword() {
                 disabled={resetPasswordMutation.isPending}
                 data-testid="button-submit"
               >
-                {resetPasswordMutation.isPending ? "Resetting..." : "Reset Password"}
+                {resetPasswordMutation.isPending ? t('auth.resetPassword.buttonLoading') : t('auth.resetPassword.button')}
               </Button>
             </form>
           </Form>

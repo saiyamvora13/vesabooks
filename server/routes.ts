@@ -201,10 +201,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const expiresAt = new Date(Date.now() + 60 * 60 * 1000);
         await storage.createPasswordResetToken(user.id, resetToken, expiresAt);
 
+        // Detect language from Accept-Language header
+        const language = req.headers['accept-language']?.split(',')[0]?.substring(0, 2) || 'en';
+
         // Send password reset email
         const { sendPasswordResetEmail } = await import('./services/resend-email');
         const userName = user.firstName || user.email || 'User';
-        await sendPasswordResetEmail(user.email!, resetToken, userName);
+        await sendPasswordResetEmail(user.email!, resetToken, userName, language);
       }
 
       // Always return success message (security best practice)
@@ -623,6 +626,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
+      // Detect language from Accept-Language header
+      const language = req.headers['accept-language']?.split(',')[0]?.substring(0, 2) || 'en';
+
       // Handle print orders - send PDFs via email
       const printOrders = items.filter((item: any) => item.type === 'print');
 
@@ -639,7 +645,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 const pdfBuffer = await generateStorybookPDF(storybook);
 
                 const { sendPrintOrderEmail } = await import("./services/resend-email");
-                await sendPrintOrderEmail(user.email, storybook, pdfBuffer);
+                await sendPrintOrderEmail(user.email, storybook, pdfBuffer, language);
 
                 console.log(`Print order email sent for storybook ${storybook.id} to ${user.email}`);
               }
@@ -657,7 +663,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (user && user.email) {
           const userName = `${user.firstName || ''} ${user.lastName || ''}`.trim() || 'Customer';
           const { sendInvoiceEmail } = await import("./services/resend-email");
-          await sendInvoiceEmail(user.email, userName, createdPurchases, paymentIntent.id);
+          await sendInvoiceEmail(user.email, userName, createdPurchases, paymentIntent.id, language);
           
           console.log(`Invoice email sent for payment intent ${paymentIntent.id} to ${user.email}`);
         }
@@ -894,6 +900,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Handle print orders - send PDFs via email
         const printOrders = items.filter((item: any) => item.type === 'print');
         
+        // Default to English for webhooks (no user context available)
+        const language = 'en';
+        
         if (printOrders.length > 0) {
           // Get user email
           const user = await storage.getUser(userId);
@@ -912,7 +921,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                   
                   // Send email with PDF attachment
                   const { sendPrintOrderEmail } = await import("./services/resend-email");
-                  await sendPrintOrderEmail(user.email, storybook, pdfBuffer);
+                  await sendPrintOrderEmail(user.email, storybook, pdfBuffer, language);
                   
                   console.log(`Print order email sent for storybook ${storybook.id} to ${user.email}`);
                 }
@@ -931,7 +940,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           if (user && user.email && createdPurchases.length > 0) {
             const userName = `${user.firstName || ''} ${user.lastName || ''}`.trim() || 'Customer';
             const { sendInvoiceEmail } = await import("./services/resend-email");
-            await sendInvoiceEmail(user.email, userName, createdPurchases, session.payment_intent as string);
+            await sendInvoiceEmail(user.email, userName, createdPurchases, session.payment_intent as string, language);
             
             console.log(`Invoice email sent for payment intent ${session.payment_intent} to ${user.email}`);
           }
@@ -1007,6 +1016,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Handle print orders - send PDFs via email
         const printOrders = items.filter((item: any) => item.type === 'print');
         
+        // Default to English for webhooks (no user context available)
+        const language = 'en';
+        
         if (printOrders.length > 0) {
           // Get user email
           const user = await storage.getUser(userId);
@@ -1025,7 +1037,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                   
                   // Send email with PDF attachment
                   const { sendPrintOrderEmail } = await import("./services/resend-email");
-                  await sendPrintOrderEmail(user.email, storybook, pdfBuffer);
+                  await sendPrintOrderEmail(user.email, storybook, pdfBuffer, language);
                   
                   console.log(`Print order email sent for storybook ${storybook.id} to ${user.email}`);
                 }
@@ -1044,7 +1056,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           if (user && user.email && createdPurchases.length > 0) {
             const userName = `${user.firstName || ''} ${user.lastName || ''}`.trim() || 'Customer';
             const { sendInvoiceEmail } = await import("./services/resend-email");
-            await sendInvoiceEmail(user.email, userName, createdPurchases, paymentIntent.id);
+            await sendInvoiceEmail(user.email, userName, createdPurchases, paymentIntent.id, language);
             
             console.log(`Invoice email sent for payment intent ${paymentIntent.id} to ${user.email}`);
           }

@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -10,19 +11,21 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { Link } from "wouter";
-
-const signupSchema = z.object({
-  email: z.string().email("Please enter a valid email address"),
-  password: z.string().min(8, "Password must be at least 8 characters"),
-  firstName: z.string().optional(),
-  lastName: z.string().optional(),
-});
-
-type SignupForm = z.infer<typeof signupSchema>;
+import { useTranslation } from 'react-i18next';
 
 export default function Signup() {
+  const { t, i18n } = useTranslation();
   const [, setLocation] = useLocation();
   const { toast } = useToast();
+
+  const signupSchema = useMemo(() => z.object({
+    email: z.string().email(t('common.validation.emailInvalid')),
+    password: z.string().min(8, t('common.validation.passwordMinLength')),
+    firstName: z.string().optional(),
+    lastName: z.string().optional(),
+  }), [i18n.language]);
+
+  type SignupForm = z.infer<typeof signupSchema>;
 
   const form = useForm<SignupForm>({
     resolver: zodResolver(signupSchema),
@@ -41,8 +44,8 @@ export default function Signup() {
     },
     onSuccess: () => {
       toast({
-        title: "Account created!",
-        description: "Welcome! Redirecting to your library...",
+        title: t('auth.signup.toast.success.title'),
+        description: t('auth.signup.toast.success.description'),
       });
       setTimeout(() => {
         setLocation("/library");
@@ -50,7 +53,7 @@ export default function Signup() {
     },
     onError: (error: Error) => {
       toast({
-        title: "Signup failed",
+        title: t('auth.signup.toast.error.title'),
         description: error.message,
         variant: "destructive",
       });
@@ -66,9 +69,9 @@ export default function Signup() {
       <Card className="w-full max-w-md rounded-2xl shadow-xl">
         <CardContent className="p-8">
           <div className="text-center mb-8">
-            <h1 className="text-3xl font-bold mb-2">Create Account</h1>
+            <h1 className="text-3xl font-bold mb-2">{t('auth.signup.title')}</h1>
             <p className="text-muted-foreground">
-              Start creating magical storybooks
+              {t('auth.signup.subtitle')}
             </p>
           </div>
 
@@ -79,12 +82,12 @@ export default function Signup() {
                 name="email"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Email</FormLabel>
+                    <FormLabel>{t('common.labels.email')}</FormLabel>
                     <FormControl>
                       <Input
                         {...field}
                         type="email"
-                        placeholder="your@email.com"
+                        placeholder={t('common.placeholders.email')}
                         className="rounded-lg"
                         data-testid="input-email"
                       />
@@ -99,12 +102,12 @@ export default function Signup() {
                 name="password"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Password</FormLabel>
+                    <FormLabel>{t('common.labels.password')}</FormLabel>
                     <FormControl>
                       <Input
                         {...field}
                         type="password"
-                        placeholder="At least 8 characters"
+                        placeholder={t('common.placeholders.passwordMinLength')}
                         className="rounded-lg"
                         data-testid="input-password"
                       />
@@ -119,12 +122,12 @@ export default function Signup() {
                 name="firstName"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>First Name (Optional)</FormLabel>
+                    <FormLabel>{t('common.labels.firstName')}</FormLabel>
                     <FormControl>
                       <Input
                         {...field}
                         type="text"
-                        placeholder="First name"
+                        placeholder={t('common.placeholders.firstName')}
                         className="rounded-lg"
                         data-testid="input-firstname"
                       />
@@ -139,12 +142,12 @@ export default function Signup() {
                 name="lastName"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Last Name (Optional)</FormLabel>
+                    <FormLabel>{t('common.labels.lastName')}</FormLabel>
                     <FormControl>
                       <Input
                         {...field}
                         type="text"
-                        placeholder="Last name"
+                        placeholder={t('common.placeholders.lastName')}
                         className="rounded-lg"
                         data-testid="input-lastname"
                       />
@@ -160,17 +163,17 @@ export default function Signup() {
                 disabled={signupMutation.isPending}
                 data-testid="button-signup"
               >
-                {signupMutation.isPending ? "Creating account..." : "Sign Up"}
+                {signupMutation.isPending ? t('auth.signup.buttonLoading') : t('auth.signup.button')}
               </Button>
 
               <div className="text-center text-sm text-muted-foreground">
-                Already have an account?{" "}
+                {t('auth.signup.haveAccount')}{" "}
                 <Link 
                   href="/login" 
                   className="text-primary font-semibold hover:underline"
                   data-testid="link-login"
                 >
-                  Log in
+                  {t('auth.signup.logInLink')}
                 </Link>
               </div>
             </form>

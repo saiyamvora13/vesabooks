@@ -16,8 +16,11 @@ import {
 import { LogOut, Menu, X, ShoppingCart, ShoppingBag } from "lucide-react";
 import { getCartCount } from "@/lib/cartUtils";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import LanguageSwitcher from "@/components/LanguageSwitcher";
+import { useTranslation } from "react-i18next";
 
 export default function Navigation() {
+  const { t } = useTranslation();
   const [location, setLocation] = useLocation();
   const { user, isAuthenticated, isLoading } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -67,24 +70,24 @@ export default function Navigation() {
           <div className="hidden md:flex items-center space-x-8">
             <Link href="/">
               <span className={`text-foreground/70 hover:text-foreground transition-colors cursor-pointer font-medium ${location === '/' ? 'text-primary' : ''}`}>
-                Home
+                {t('navigation.home')}
               </span>
             </Link>
             <Link href="/create">
               <span className={`text-foreground/70 hover:text-foreground transition-colors cursor-pointer font-medium ${location === '/create' ? 'text-primary' : ''}`}>
-                Create
+                {t('navigation.create')}
               </span>
             </Link>
             {isAuthenticated && (
               <>
                 <Link href="/library">
                   <span className={`text-foreground/70 hover:text-foreground transition-colors cursor-pointer font-medium ${location === '/library' ? 'text-primary' : ''}`} data-testid="link-library">
-                    My Library
+                    {t('navigation.myLibrary')}
                   </span>
                 </Link>
                 <Link href="/purchases">
                   <span className={`text-foreground/70 hover:text-foreground transition-colors cursor-pointer font-medium ${location === '/purchases' ? 'text-primary' : ''}`} data-testid="link-purchases">
-                    My Purchases
+                    {t('navigation.myPurchases')}
                   </span>
                 </Link>
               </>
@@ -107,6 +110,7 @@ export default function Navigation() {
 
           {/* Desktop CTA Buttons */}
           <div className="hidden md:flex items-center space-x-4">
+            <LanguageSwitcher />
             {!isLoading && !isAuthenticated && (
               <>
                 <Link href="/login">
@@ -115,7 +119,7 @@ export default function Navigation() {
                     className="px-4 py-2 text-sm font-medium rounded-full"
                     data-testid="button-login"
                   >
-                    Log In
+                    {t('navigation.logIn')}
                   </Button>
                 </Link>
                 <Link href="/signup">
@@ -124,7 +128,7 @@ export default function Navigation() {
                     className="px-4 py-2 text-sm font-medium rounded-full"
                     data-testid="button-signup"
                   >
-                    Sign Up
+                    {t('navigation.signUp')}
                   </Button>
                 </Link>
               </>
@@ -160,7 +164,7 @@ export default function Navigation() {
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={() => logoutMutation.mutate()} data-testid="button-logout">
                     <LogOut className="mr-2 h-4 w-4" />
-                    <span>Log out</span>
+                    <span>{t('navigation.logOut')}</span>
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
@@ -171,7 +175,7 @@ export default function Navigation() {
                 className="px-4 py-2 text-sm font-medium rounded-full gradient-bg !text-[hsl(258,90%,20%)] hover:opacity-90 transition-opacity"
                 data-testid="button-get-started"
               >
-                Get Started
+                {t('navigation.getStarted')}
               </Button>
             </Link>
           </div>
@@ -204,25 +208,25 @@ export default function Navigation() {
             <div className="flex flex-col space-y-4">
               <Link href="/" onClick={() => setMobileMenuOpen(false)}>
                 <div className={`text-base px-3 py-2 rounded-lg ${location === '/' ? 'bg-primary/10 text-primary font-medium' : 'text-foreground/70 font-medium'}`}>
-                  Home
+                  {t('navigation.home')}
                 </div>
               </Link>
               <Link href="/create" onClick={() => setMobileMenuOpen(false)}>
                 <div className={`text-base px-3 py-2 rounded-lg ${location === '/create' ? 'bg-primary/10 text-primary font-medium' : 'text-foreground/70 font-medium'}`}>
-                  Create Story
+                  {t('navigation.createStory')}
                 </div>
               </Link>
               {isAuthenticated && (
                 <>
                   <Link href="/library" onClick={() => setMobileMenuOpen(false)}>
                     <div className={`text-base px-3 py-2 rounded-lg ${location === '/library' ? 'bg-primary/10 text-primary font-medium' : 'text-foreground/70 font-medium'}`} data-testid="link-library-mobile">
-                      My Library
+                      {t('navigation.myLibrary')}
                     </div>
                   </Link>
                   <Link href="/purchases" onClick={() => setMobileMenuOpen(false)}>
                     <div className={`text-base px-3 py-2 rounded-lg flex items-center ${location === '/purchases' ? 'bg-primary/10 text-primary font-medium' : 'text-foreground/70 font-medium'}`} data-testid="link-purchases">
                       <ShoppingBag className="h-5 w-5 mr-2" />
-                      My Purchases
+                      {t('navigation.myPurchases')}
                     </div>
                   </Link>
                 </>
@@ -231,7 +235,7 @@ export default function Navigation() {
                 <div className={`text-base px-3 py-2 rounded-lg flex items-center justify-between ${location === '/cart' ? 'bg-primary/10 text-primary font-medium' : 'text-foreground/70 font-medium'}`} data-testid="link-cart-mobile">
                   <span className="flex items-center">
                     <ShoppingCart className="h-5 w-5 mr-2" />
-                    Cart
+                    {t('navigation.cart')}
                   </span>
                   {cartCount > 0 && (
                     <Badge variant="destructive" className="ml-2" data-testid="badge-cart-count-mobile">
@@ -242,6 +246,7 @@ export default function Navigation() {
               </Link>
               
               <div className="pt-4 border-t border-border space-y-3">
+                <LanguageSwitcher />
                 {!isLoading && !isAuthenticated ? (
                   <>
                     <Link href="/login" onClick={() => setMobileMenuOpen(false)}>
@@ -250,7 +255,7 @@ export default function Navigation() {
                         className="w-full rounded-full"
                         data-testid="button-login-mobile"
                       >
-                        Log In
+                        {t('navigation.logIn')}
                       </Button>
                     </Link>
                     <Link href="/signup" onClick={() => setMobileMenuOpen(false)}>
@@ -259,7 +264,7 @@ export default function Navigation() {
                         className="w-full rounded-full"
                         data-testid="button-signup-mobile"
                       >
-                        Sign Up
+                        {t('navigation.signUp')}
                       </Button>
                     </Link>
                   </>
@@ -271,13 +276,13 @@ export default function Navigation() {
                     data-testid="button-logout-mobile"
                   >
                     <LogOut className="mr-2 h-4 w-4" />
-                    Log Out
+                    {t('navigation.logOut')}
                   </Button>
                 )}
                 
                 <Link href="/create" onClick={() => setMobileMenuOpen(false)}>
                   <Button className="w-full rounded-full gradient-bg !text-[hsl(258,90%,20%)]">
-                    Get Started
+                    {t('navigation.getStarted')}
                   </Button>
                 </Link>
               </div>
