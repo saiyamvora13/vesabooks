@@ -1,11 +1,17 @@
 import { type Storybook, type InsertStorybook, type StoryGenerationProgress, storybooks, users, type User, type UpsertUser, type Purchase, type InsertPurchase, purchases } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, count, countDistinct, isNull, and } from "drizzle-orm";
+import { normalizeEmail } from "./auth";
 
 export interface IStorage {
   // Replit Auth: User operations (mandatory)
   getUser(id: string): Promise<User | undefined>;
   upsertUser(user: UpsertUser): Promise<User>;
+  getUserByEmail(email: string): Promise<User | undefined>;
+  getUserByGoogleId(googleId: string): Promise<User | undefined>;
+  getUserByFacebookId(facebookId: string): Promise<User | undefined>;
+  getUserByAppleId(appleId: string): Promise<User | undefined>;
+  createUser(userData: UpsertUser): Promise<User>;
   
   // Storybook operations
   createStorybook(storybook: InsertStorybook): Promise<Storybook>;
@@ -47,18 +53,23 @@ export class DatabaseStorage implements IStorage {
   }
 
   async upsertUser(userData: UpsertUser): Promise<User> {
+    const normalizedUserData = {
+      ...userData,
+      email: userData.email ? normalizeEmail(userData.email) : userData.email,
+    };
+
     try {
       // Try to insert or update based on ID (primary key)
       const [user] = await db
         .insert(users)
-        .values(userData)
+        .values(normalizedUserData)
         .onConflictDoUpdate({
           target: users.id,
           set: {
-            email: userData.email,
-            firstName: userData.firstName,
-            lastName: userData.lastName,
-            profileImageUrl: userData.profileImageUrl,
+            email: normalizedUserData.email,
+            firstName: normalizedUserData.firstName,
+            lastName: normalizedUserData.lastName,
+            profileImageUrl: normalizedUserData.profileImageUrl,
             updatedAt: new Date(),
           },
         })
@@ -73,18 +84,52 @@ export class DatabaseStorage implements IStorage {
         const [user] = await db
           .update(users)
           .set({
-            firstName: userData.firstName,
-            lastName: userData.lastName,
-            profileImageUrl: userData.profileImageUrl,
+            firstName: normalizedUserData.firstName,
+            lastName: normalizedUserData.lastName,
+            profileImageUrl: normalizedUserData.profileImageUrl,
             updatedAt: new Date(),
           })
-          .where(eq(users.email, userData.email!))
+          .where(eq(users.email, normalizedUserData.email!))
           .returning();
         
         return user;
       }
       throw error;
     }
+  }
+
+  async getUserByEmail(email: string): Promise<User | undefined> {
+    const normalizedEmail = normalizeEmail(email);
+    const [user] = await db.select().from(users).where(eq(users.email, normalizedEmail));
+    return user || undefined;
+  }
+
+  async getUserByGoogleId(googleId: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.googleId, googleId));
+    return user || undefined;
+  }
+
+  async getUserByFacebookId(facebookId: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.facebookId, facebookId));
+    return user || undefined;
+  }
+
+  async getUserByAppleId(appleId: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.appleId, appleId));
+    return user || undefined;
+  }
+
+  async createUser(userData: UpsertUser): Promise<User> {
+    const normalizedUserData = {
+      ...userData,
+      email: userData.email ? normalizeEmail(userData.email) : userData.email,
+    };
+
+    const [user] = await db
+      .insert(users)
+      .values(normalizedUserData)
+      .returning();
+    return user;
   }
 
   // Storybook operations

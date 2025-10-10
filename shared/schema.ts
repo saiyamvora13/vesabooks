@@ -15,9 +15,10 @@ export const sessions = pgTable(
 );
 
 // Replit Auth: User storage table (mandatory)
+// Note: Email uniqueness is enforced by case-insensitive index: users_email_lower_unique
 export const users = pgTable("users", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  email: varchar("email").unique(),
+  email: varchar("email"),
   firstName: varchar("first_name"),
   lastName: varchar("last_name"),
   profileImageUrl: varchar("profile_image_url"),
