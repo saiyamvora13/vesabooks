@@ -361,6 +361,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get example storybooks for homepage showcase (public)
+  app.get("/api/storybooks/examples", async (req, res) => {
+    try {
+      const examples = await storage.getExampleStorybooks(3);
+      res.json(examples);
+    } catch (error) {
+      console.error("Get example storybooks error:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
   // Get storybook by ID
   app.get("/api/storybooks/:id", async (req, res) => {
     try {

@@ -19,6 +19,7 @@ export interface IStorage {
   getStorybookByShareUrl(shareUrl: string): Promise<Storybook | undefined>;
   getUserStorybooks(userId: string): Promise<Storybook[]>;
   getAllStorybooks(): Promise<Storybook[]>;
+  getExampleStorybooks(limit: number): Promise<Storybook[]>;
   updateStorybookShareUrl(id: string, shareUrl: string): Promise<void>;
   updateStorybookImages(id: string, coverImageUrl: string, pages: Storybook['pages']): Promise<void>;
   deleteStorybook(id: string): Promise<void>;
@@ -187,6 +188,16 @@ export class DatabaseStorage implements IStorage {
       .from(storybooks)
       .orderBy(desc(storybooks.createdAt));
     return allStorybooks;
+  }
+
+  async getExampleStorybooks(limit: number): Promise<Storybook[]> {
+    const examples = await db
+      .select()
+      .from(storybooks)
+      .where(isNull(storybooks.deletedAt))
+      .orderBy(desc(storybooks.createdAt))
+      .limit(limit);
+    return examples;
   }
 
   async updateStorybookImages(id: string, coverImageUrl: string, pages: Storybook['pages']): Promise<void> {

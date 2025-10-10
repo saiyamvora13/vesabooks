@@ -10,6 +10,16 @@ interface Metrics {
   activeUsers: number;
 }
 
+interface Storybook {
+  id: string;
+  title: string;
+  pages: Array<{
+    pageNumber: number;
+    text: string;
+    imageUrl: string;
+  }>;
+}
+
 function AnimatedCounter({ value, duration = 1000 }: { value: number; duration?: number }) {
   const [count, setCount] = useState(0);
 
@@ -46,6 +56,11 @@ export default function HeroSection() {
   const { data: metrics, isLoading } = useQuery<Metrics>({
     queryKey: ['/api/metrics'],
     staleTime: 60000, // 60 seconds cache
+  });
+
+  const { data: exampleBooks, isLoading: booksLoading } = useQuery<Storybook[]>({
+    queryKey: ['/api/storybooks/examples'],
+    staleTime: 300000, // 5 minutes cache
   });
 
   return (
@@ -121,38 +136,83 @@ export default function HeroSection() {
             </div>
           </div>
 
-          {/* Hero Image */}
+          {/* Example Storybooks Showcase */}
           <div className="relative mt-8 lg:mt-0">
-            <img 
-              src="https://images.unsplash.com/photo-1503454537195-1dcabb73ffb9?ixlib=rb-4.0.3&auto=format&fit=crop&w=800&h=600" 
-              alt="Children reading storybook" 
-              className="rounded-2xl sm:rounded-3xl shadow-2xl w-full" 
-            />
-            
-            {/* Floating cards */}
-            <div className="absolute -top-4 -left-4 bg-card p-4 rounded-2xl shadow-xl animate-bounce-subtle hidden lg:block">
-              <div className="flex items-center space-x-3">
-                <div className="w-12 h-12 gradient-bg rounded-xl flex items-center justify-center">
-                  <i className="fas fa-wand-magic-sparkles text-[hsl(258,90%,20%)]"></i>
-                </div>
-                <div>
-                  <div className="text-sm font-semibold">AI Generated</div>
-                  <div className="text-xs text-muted-foreground">In 2-3 minutes</div>
-                </div>
+            {booksLoading ? (
+              <div className="grid grid-cols-2 gap-4">
+                <Skeleton className="h-64 w-full rounded-2xl" />
+                <Skeleton className="h-64 w-full rounded-2xl" />
               </div>
-            </div>
+            ) : exampleBooks && exampleBooks.length > 0 ? (
+              <div className="relative">
+                {/* Main featured book (larger) */}
+                <div className="relative z-10">
+                  <img 
+                    src={exampleBooks[0].pages[0].imageUrl} 
+                    alt={exampleBooks[0].title}
+                    className="rounded-2xl sm:rounded-3xl shadow-2xl w-full object-cover aspect-[4/5]" 
+                  />
+                  <div className="absolute bottom-4 left-4 right-4 bg-card/95 backdrop-blur-sm p-3 rounded-xl shadow-lg">
+                    <div className="text-sm font-semibold truncate">{exampleBooks[0].title}</div>
+                    <div className="text-xs text-muted-foreground">AI Generated Storybook</div>
+                  </div>
+                </div>
 
-            <div className="absolute -bottom-4 -right-4 bg-card p-4 rounded-2xl shadow-xl hidden lg:block">
-              <div className="flex items-center space-x-3">
-                <div className="w-12 h-12 bg-gradient-to-br from-accent to-primary rounded-xl flex items-center justify-center">
-                  <i className="fas fa-palette text-[hsl(258,90%,20%)]"></i>
+                {/* Second book (overlapping, smaller) */}
+                {exampleBooks[1] && (
+                  <div className="absolute -right-4 top-8 w-1/2 z-0 hidden lg:block transform rotate-6 hover:rotate-0 transition-transform">
+                    <img 
+                      src={exampleBooks[1].pages[0].imageUrl} 
+                      alt={exampleBooks[1].title}
+                      className="rounded-xl shadow-xl w-full object-cover aspect-[4/5]" 
+                    />
+                  </div>
+                )}
+
+                {/* Third book (overlapping, smaller) */}
+                {exampleBooks[2] && (
+                  <div className="absolute -left-4 bottom-8 w-1/2 z-0 hidden lg:block transform -rotate-6 hover:rotate-0 transition-transform">
+                    <img 
+                      src={exampleBooks[2].pages[0].imageUrl} 
+                      alt={exampleBooks[2].title}
+                      className="rounded-xl shadow-xl w-full object-cover aspect-[4/5]" 
+                    />
+                  </div>
+                )}
+
+                {/* Floating cards */}
+                <div className="absolute -top-4 -left-4 bg-card p-4 rounded-2xl shadow-xl animate-bounce-subtle hidden xl:block z-20">
+                  <div className="flex items-center space-x-3">
+                    <div className="w-12 h-12 gradient-bg rounded-xl flex items-center justify-center">
+                      <i className="fas fa-wand-magic-sparkles text-[hsl(258,90%,20%)]"></i>
+                    </div>
+                    <div>
+                      <div className="text-sm font-semibold">AI Generated</div>
+                      <div className="text-xs text-muted-foreground">In 2-3 minutes</div>
+                    </div>
+                  </div>
                 </div>
-                <div>
-                  <div className="text-sm font-semibold">Custom Art</div>
-                  <div className="text-xs text-muted-foreground">Your style</div>
+
+                <div className="absolute -bottom-4 -right-4 bg-card p-4 rounded-2xl shadow-xl hidden xl:block z-20">
+                  <div className="flex items-center space-x-3">
+                    <div className="w-12 h-12 bg-gradient-to-br from-accent to-primary rounded-xl flex items-center justify-center">
+                      <i className="fas fa-palette text-[hsl(258,90%,20%)]"></i>
+                    </div>
+                    <div>
+                      <div className="text-sm font-semibold">Custom Art</div>
+                      <div className="text-xs text-muted-foreground">Your style</div>
+                    </div>
+                  </div>
                 </div>
               </div>
-            </div>
+            ) : (
+              <div className="rounded-2xl sm:rounded-3xl shadow-2xl w-full aspect-[4/5] bg-gradient-to-br from-primary/20 to-secondary/20 flex items-center justify-center">
+                <div className="text-center p-8">
+                  <i className="fas fa-book-open text-6xl text-primary mb-4"></i>
+                  <p className="text-muted-foreground">Create your first storybook!</p>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>
