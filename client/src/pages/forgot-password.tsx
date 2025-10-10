@@ -2,7 +2,6 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useMutation } from "@tanstack/react-query";
-import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
@@ -11,50 +10,45 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { Link } from "wouter";
 
-const loginSchema = z.object({
+const forgotPasswordSchema = z.object({
   email: z.string().email("Please enter a valid email address"),
-  password: z.string().min(1, "Password is required"),
 });
 
-type LoginForm = z.infer<typeof loginSchema>;
+type ForgotPasswordForm = z.infer<typeof forgotPasswordSchema>;
 
-export default function Login() {
-  const [, setLocation] = useLocation();
+export default function ForgotPassword() {
   const { toast } = useToast();
 
-  const form = useForm<LoginForm>({
-    resolver: zodResolver(loginSchema),
+  const form = useForm<ForgotPasswordForm>({
+    resolver: zodResolver(forgotPasswordSchema),
     defaultValues: {
       email: "",
-      password: "",
     },
   });
 
-  const loginMutation = useMutation({
-    mutationFn: async (data: LoginForm) => {
-      const response = await apiRequest("POST", "/api/auth/login", data);
+  const forgotPasswordMutation = useMutation({
+    mutationFn: async (data: ForgotPasswordForm) => {
+      const response = await apiRequest("POST", "/api/auth/forgot-password", data);
       return response.json();
     },
     onSuccess: () => {
       toast({
-        title: "Welcome back!",
-        description: "Redirecting to your library...",
+        title: "Check your email",
+        description: "Check your email for a password reset link",
       });
-      setTimeout(() => {
-        setLocation("/library");
-      }, 500);
+      form.reset();
     },
     onError: (error: Error) => {
       toast({
-        title: "Login failed",
+        title: "Request failed",
         description: error.message,
         variant: "destructive",
       });
     },
   });
 
-  const onSubmit = (data: LoginForm) => {
-    loginMutation.mutate(data);
+  const onSubmit = (data: ForgotPasswordForm) => {
+    forgotPasswordMutation.mutate(data);
   };
 
   return (
@@ -62,9 +56,9 @@ export default function Login() {
       <Card className="w-full max-w-md rounded-2xl shadow-xl">
         <CardContent className="p-8">
           <div className="text-center mb-8">
-            <h1 className="text-3xl font-bold mb-2">Welcome Back</h1>
+            <h1 className="text-3xl font-bold mb-2">Forgot Password?</h1>
             <p className="text-muted-foreground">
-              Continue your storytelling journey
+              Enter your email address and we'll send you a link to reset your password
             </p>
           </div>
 
@@ -90,53 +84,23 @@ export default function Login() {
                 )}
               />
 
-              <FormField
-                control={form.control}
-                name="password"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Password</FormLabel>
-                    <FormControl>
-                      <Input
-                        {...field}
-                        type="password"
-                        placeholder="Enter your password"
-                        className="rounded-lg"
-                        data-testid="input-password"
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <div className="text-right">
-                <Link 
-                  href="/forgot-password" 
-                  className="text-sm text-primary hover:underline"
-                  data-testid="link-forgot-password"
-                >
-                  Forgot Password?
-                </Link>
-              </div>
-
               <Button
                 type="submit"
                 className="w-full rounded-lg font-semibold"
-                disabled={loginMutation.isPending}
-                data-testid="button-login"
+                disabled={forgotPasswordMutation.isPending}
+                data-testid="button-submit"
               >
-                {loginMutation.isPending ? "Logging in..." : "Log In"}
+                {forgotPasswordMutation.isPending ? "Sending..." : "Send Reset Link"}
               </Button>
 
               <div className="text-center text-sm text-muted-foreground">
-                Don't have an account?{" "}
+                Remember your password?{" "}
                 <Link 
-                  href="/signup" 
+                  href="/login" 
                   className="text-primary font-semibold hover:underline"
-                  data-testid="link-signup"
+                  data-testid="link-login"
                 >
-                  Sign up
+                  Log in
                 </Link>
               </div>
             </form>

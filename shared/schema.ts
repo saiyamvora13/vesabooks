@@ -99,3 +99,23 @@ export const insertPurchaseSchema = createInsertSchema(purchases).omit({
 
 export type InsertPurchase = z.infer<typeof insertPurchaseSchema>;
 export type Purchase = typeof purchases.$inferSelect;
+
+export const passwordResetTokens = pgTable("password_reset_tokens", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
+  token: varchar("token").notNull().unique(),
+  expiresAt: timestamp("expires_at").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("idx_password_reset_tokens_user").on(table.userId),
+  index("idx_password_reset_tokens_token").on(table.token),
+  index("idx_password_reset_tokens_expires").on(table.expiresAt),
+]);
+
+export const insertPasswordResetTokenSchema = createInsertSchema(passwordResetTokens).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertPasswordResetToken = z.infer<typeof insertPasswordResetTokenSchema>;
+export type PasswordResetToken = typeof passwordResetTokens.$inferSelect;

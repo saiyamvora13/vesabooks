@@ -4,7 +4,7 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { generateStoryFromPrompt, generateIllustration } from "./services/gemini";
 import { createStorybookSchema, type StoryGenerationProgress, type Purchase, type InsertPurchase, type User } from "@shared/schema";
-import { randomUUID } from "crypto";
+import { randomUUID, randomBytes } from "crypto";
 import * as fs from "fs";
 import * as path from "path";
 import multer from "multer";
@@ -174,6 +174,103 @@ export async function registerRoutes(app: Express): Promise<Server> {
     // Return user without password
     const { password: _, ...userWithoutPassword } = user;
     res.json(userWithoutPassword);
+  });
+
+  // POST /api/auth/forgot-password - Request password reset
+  app.post('/api/auth/forgot-password', async (req, res) => {
+    try {
+      const { email } = req.body;
+
+      if (!email) {
+        return res.status(400).json({ message: 'Email is required' });
+      }
+
+      // Normalize email
+      const normalizedEmail = normalizeEmail(email);
+
+      // Find user by email
+      const user = await storage.getUserByEmail(normalizedEmail);
+
+      // Always return success to prevent email enumeration
+      // Even if user doesn't exist, we return the same message
+      if (user) {
+        // Generate secure token
+        const resetToken = randomBytes(32).toString('hex');
+
+        // Create token with 1 hour expiration
+        const expiresAt = new Date(Date.now() + 60 * 60 * 1000);
+        await storage.createPasswordResetToken(user.id, resetToken, expiresAt);
+
+        // Send password reset email
+        const { sendPasswordResetEmail } = await import('./services/resend-email');
+        const userName = user.firstName || user.email || 'User';
+        await sendPasswordResetEmail(user.email!, resetToken, userName);
+      }
+
+      // Always return success message (security best practice)
+      res.json({ 
+        message: 'If an account exists with this email, you will receive a password reset link' 
+      });
+    } catch (error) {
+      console.error('Forgot password error:', error);
+      res.status(500).json({ message: 'Internal server error' });
+    }
+  });
+
+  // POST /api/auth/reset-password - Reset password with token
+  app.post('/api/auth/reset-password', async (req, res) => {
+    try {
+      const { token, newPassword } = req.body;
+
+      if (!token || !newPassword) {
+        return res.status(400).json({ message: 'Token and new password are required' });
+      }
+
+      // Validate password length
+      if (newPassword.length < 8) {
+        return res.status(400).json({ message: 'Password must be at least 8 characters long' });
+      }
+
+      // Get and validate token
+      const resetToken = await storage.getPasswordResetToken(token);
+
+      if (!resetToken) {
+        return res.status(400).json({ message: 'Invalid or expired reset token' });
+      }
+
+      // Hash new password
+      const hashedPassword = await hashPassword(newPassword);
+
+      // Update user password
+      await storage.updateUserPassword(resetToken.userId, hashedPassword);
+
+      // Delete used token (single-use)
+      await storage.deletePasswordResetToken(token);
+
+      res.json({ message: 'Password reset successful' });
+    } catch (error) {
+      console.error('Reset password error:', error);
+      res.status(500).json({ message: 'Internal server error' });
+    }
+  });
+
+  // GET /api/auth/verify-reset-token/:token - Verify reset token validity
+  app.get('/api/auth/verify-reset-token/:token', async (req, res) => {
+    try {
+      const { token } = req.params;
+
+      if (!token) {
+        return res.json({ valid: false });
+      }
+
+      // Check if token exists and is not expired
+      const resetToken = await storage.getPasswordResetToken(token);
+
+      res.json({ valid: !!resetToken });
+    } catch (error) {
+      console.error('Verify reset token error:', error);
+      res.json({ valid: false });
+    }
   });
 
   // Get metrics (public - no auth required)

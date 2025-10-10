@@ -1,6 +1,6 @@
-import { type Storybook, type InsertStorybook, type StoryGenerationProgress, storybooks, users, type User, type UpsertUser, type Purchase, type InsertPurchase, purchases } from "@shared/schema";
+import { type Storybook, type InsertStorybook, type StoryGenerationProgress, storybooks, users, type User, type UpsertUser, type Purchase, type InsertPurchase, purchases, passwordResetTokens, type PasswordResetToken } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc, count, countDistinct, isNull, and } from "drizzle-orm";
+import { eq, desc, count, countDistinct, isNull, and, lt } from "drizzle-orm";
 import { normalizeEmail } from "./auth";
 
 export interface IStorage {
@@ -36,6 +36,13 @@ export interface IStorage {
   getUserPurchases(userId: string): Promise<Purchase[]>;
   getStorybookPurchase(userId: string, storybookId: string, type: 'digital' | 'print'): Promise<Purchase | null>;
   updatePurchaseStatus(id: string, status: string, stripePaymentIntentId?: string): Promise<Purchase>;
+  
+  // Password reset operations
+  createPasswordResetToken(userId: string, token: string, expiresAt: Date): Promise<PasswordResetToken>;
+  getPasswordResetToken(token: string): Promise<PasswordResetToken | null>;
+  deletePasswordResetToken(token: string): Promise<void>;
+  deleteExpiredPasswordResetTokens(): Promise<void>;
+  updateUserPassword(userId: string, hashedPassword: string): Promise<void>;
 }
 
 // Database storage for persistent data
@@ -78,7 +85,8 @@ export class DatabaseStorage implements IStorage {
       return user;
     } catch (error: any) {
       // Handle email conflict (different ID but same email)
-      if (error.message?.includes('users_email_unique')) {
+      // Check for both old constraint name and new case-insensitive constraint name
+      if (error.message?.includes('users_email_unique') || error.message?.includes('users_email_lower_unique')) {
         // Email already exists with different ID - update that user's profile
         // This preserves existing storybooks and foreign key relationships
         const [user] = await db
@@ -271,6 +279,65 @@ export class DatabaseStorage implements IStorage {
       .where(eq(purchases.id, id))
       .returning();
     return updatedPurchase;
+  }
+
+  // Password reset operations
+  async createPasswordResetToken(userId: string, token: string, expiresAt: Date): Promise<PasswordResetToken> {
+    const [resetToken] = await db
+      .insert(passwordResetTokens)
+      .values({
+        userId,
+        token,
+        expiresAt,
+      })
+      .returning();
+    return resetToken;
+  }
+
+  async getPasswordResetToken(token: string): Promise<PasswordResetToken | null> {
+    const now = new Date();
+    const [resetToken] = await db
+      .select()
+      .from(passwordResetTokens)
+      .where(
+        and(
+          eq(passwordResetTokens.token, token)
+        )
+      );
+    
+    // Check if token exists and is not expired
+    if (!resetToken || resetToken.expiresAt < now) {
+      return null;
+    }
+    
+    return resetToken;
+  }
+
+  async deletePasswordResetToken(token: string): Promise<void> {
+    await db
+      .delete(passwordResetTokens)
+      .where(eq(passwordResetTokens.token, token));
+  }
+
+  async deleteExpiredPasswordResetTokens(): Promise<void> {
+    const now = new Date();
+    const expiredTokens = await db
+      .select()
+      .from(passwordResetTokens)
+      .where(lt(passwordResetTokens.expiresAt, now));
+    
+    if (expiredTokens.length > 0) {
+      await db
+        .delete(passwordResetTokens)
+        .where(lt(passwordResetTokens.expiresAt, now));
+    }
+  }
+
+  async updateUserPassword(userId: string, hashedPassword: string): Promise<void> {
+    await db
+      .update(users)
+      .set({ password: hashedPassword, updatedAt: new Date() })
+      .where(eq(users.id, userId));
   }
 }
 

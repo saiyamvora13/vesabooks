@@ -218,3 +218,65 @@ export async function sendInvoiceEmail(
     html: htmlBody,
   });
 }
+
+export async function sendPasswordResetEmail(
+  userEmail: string,
+  resetToken: string,
+  userName: string
+): Promise<void> {
+  const { client, fromEmail } = await getUncachableResendClient();
+  
+  const resetLink = `https://${process.env.REPLIT_DOMAINS?.split(',')[0]}/reset-password?token=${resetToken}`;
+  
+  const htmlBody = `
+    <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 650px; margin: 0 auto; padding: 20px; background-color: #ffffff;">
+      <div style="background-color: hsl(258, 90%, 20%); color: #ffffff; padding: 30px; text-align: center; border-radius: 8px 8px 0 0;">
+        <h1 style="margin: 0; font-size: 32px; font-weight: 600;">Reset Your Password</h1>
+      </div>
+      
+      <div style="background-color: #f9f7f3; padding: 30px; border-radius: 0 0 8px 8px;">
+        <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
+          Hi ${userName},
+        </p>
+        
+        <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
+          We received a request to reset your password for your AI Storybook Builder account. Click the button below to reset your password:
+        </p>
+        
+        <div style="text-align: center; margin: 30px 0;">
+          <a href="${resetLink}" style="background-color: hsl(258, 90%, 20%); color: #ffffff; padding: 14px 28px; text-decoration: none; border-radius: 6px; font-size: 16px; font-weight: 600; display: inline-block;">
+            Reset Password
+          </a>
+        </div>
+        
+        <p style="color: #6b7280; font-size: 14px; line-height: 1.6; margin: 20px 0 0 0;">
+          This link will expire in <strong>1 hour</strong> for security reasons.
+        </p>
+        
+        <p style="color: #6b7280; font-size: 14px; line-height: 1.6; margin: 20px 0 0 0;">
+          If you didn't request a password reset, please ignore this email or contact support if you have concerns.
+        </p>
+      </div>
+      
+      <div style="margin-top: 30px; padding: 20px; text-align: center; border-top: 1px solid #e5e7eb;">
+        <p style="margin: 0; color: #374151; font-size: 14px;">
+          Best regards,<br>
+          <strong>AI Storyteller Team</strong>
+        </p>
+      </div>
+      
+      <div style="margin-top: 20px; padding: 15px; text-align: center;">
+        <p style="margin: 0; color: #9ca3af; font-size: 12px;">
+          This is an automated email. Please do not reply to this email.
+        </p>
+      </div>
+    </div>
+  `;
+
+  await client.emails.send({
+    from: fromEmail,
+    to: userEmail,
+    subject: 'Reset Your Password - AI Storybook Builder',
+    html: htmlBody,
+  });
+}
