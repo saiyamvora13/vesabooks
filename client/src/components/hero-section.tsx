@@ -76,8 +76,8 @@ export default function HeroSection() {
               {t('home.hero.subtitle')}
             </p>
 
-            {/* CTA Buttons */}
-            <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 justify-center lg:justify-start">
+            {/* CTA Button */}
+            <div className="flex justify-center lg:justify-start">
               <Link href="/create">
                 <Button 
                   size="lg" 
@@ -88,15 +88,6 @@ export default function HeroSection() {
                   {t('home.hero.createStory')}
                 </Button>
               </Link>
-              <Button 
-                variant="outline"
-                size="lg"
-                className="px-8 py-4 rounded-full font-semibold text-lg border-2 hover:border-primary transition-colors"
-                data-testid="button-watch-demo"
-              >
-                <i className="fas fa-play-circle mr-2"></i>
-                {t('home.hero.watchDemo')}
-              </Button>
             </div>
 
             {/* Stats */}
