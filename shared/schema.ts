@@ -39,6 +39,7 @@ export const storybooks = pgTable("storybooks", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   userId: varchar("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
   title: text("title").notNull(),
+  author: text("author"),
   prompt: text("prompt").notNull(),
   pages: json("pages").$type<Array<{
     pageNumber: number;
@@ -48,6 +49,7 @@ export const storybooks = pgTable("storybooks", {
   }>>().notNull(),
   inspirationImages: json("inspiration_images").$type<string[]>().notNull().default([]),
   coverImageUrl: text("cover_image_url"),
+  backCoverImageUrl: text("back_cover_image_url"),
   mainCharacterDescription: text("main_character_description"),
   storyArc: text("story_arc"),
   createdAt: timestamp("created_at").defaultNow(),
@@ -66,6 +68,7 @@ export const insertStorybookSchema = createInsertSchema(storybooks).omit({
 
 export const createStorybookSchema = z.object({
   prompt: z.string().min(10, "Story prompt must be at least 10 characters"),
+  author: z.string().optional(),
   inspirationImages: z.array(z.string()).min(0).max(5, "Maximum 5 images allowed"),
 });
 
