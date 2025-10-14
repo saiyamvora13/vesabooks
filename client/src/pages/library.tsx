@@ -66,8 +66,26 @@ function StorybookPurchaseButtons({ storybook }: { storybook: Storybook }) {
     },
   });
 
+  // Fetch pricing settings from public endpoint
+  const { data: pricingSettings } = useQuery<{ digital_price: string; print_price: string }>({
+    queryKey: ['/api/settings/pricing'],
+  });
+
+  // Get prices from settings with fallback defaults
+  const digitalPrice = pricingSettings?.digital_price 
+    ? parseInt(pricingSettings.digital_price) 
+    : 399;
+  const printPrice = pricingSettings?.print_price 
+    ? parseInt(pricingSettings.print_price) 
+    : 2499;
+
   const handleAddToCart = (type: 'digital' | 'print') => {
-    const price = type === 'digital' ? 399 : 2499;
+    // Apply discount if user owns digital and is buying print
+    let price = type === 'digital' ? digitalPrice : printPrice;
+    if (type === 'print' && digitalPurchase?.owned) {
+      price = Math.max(0, printPrice - digitalPrice);
+    }
+    
     addToCart({
       storybookId: storybook.id,
       type,
@@ -165,9 +183,20 @@ function StorybookPurchaseButtons({ storybook }: { storybook: Storybook }) {
             <div className="flex flex-col items-center gap-0.5">
               <div className="flex items-center gap-1.5">
                 <ShoppingCart className="h-4 w-4" />
-                <span>{t('storybook.library.purchase.buyPrint')}</span>
+                <span>
+                  {digitalPurchase?.owned 
+                    ? `${t('storybook.library.purchase.buyPrint')} - $${(Math.max(0, printPrice - digitalPrice) / 100).toFixed(2)}`
+                    : t('storybook.library.purchase.buyPrint')
+                  }
+                </span>
               </div>
-              <span className="text-xs text-muted-foreground">{t('storybook.library.purchase.freeEbookIncluded')}</span>
+              {digitalPurchase?.owned ? (
+                <span className="text-xs text-green-600 dark:text-green-400 font-medium">
+                  {t('purchases.upgrade.savings', { amount: (digitalPrice / 100).toFixed(2) })}
+                </span>
+              ) : (
+                <span className="text-xs text-muted-foreground">{t('storybook.library.purchase.freeEbookIncluded')}</span>
+              )}
             </div>
           )}
         </Button>

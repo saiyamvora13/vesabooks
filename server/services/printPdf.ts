@@ -295,6 +295,31 @@ export async function generatePrintReadyPDF(storybook: Storybook): Promise<Buffe
     });
   }
   
+  // Add end page (no page number)
+  const endPage = pdfDoc.addPage([PAGE_WIDTH, PAGE_HEIGHT]);
+  
+  // Create gradient-like background with soft colors
+  endPage.drawRectangle({
+    x: 0,
+    y: 0,
+    width: PAGE_WIDTH,
+    height: PAGE_HEIGHT,
+    color: rgb(0.976, 0.969, 0.953), // #f9f7f3
+  });
+  
+  // Draw "The End" text centered
+  const endText = "The End";
+  const endFontSize = 36;
+  const endTextWidth = boldFont.widthOfTextAtSize(endText, endFontSize);
+  
+  endPage.drawText(endText, {
+    x: PAGE_WIDTH / 2 - endTextWidth / 2,
+    y: PAGE_HEIGHT / 2,
+    size: endFontSize,
+    font: boldFont,
+    color: rgb(0.2, 0.25, 0.31), // Slate 800
+  });
+  
   const pdfBytes = await pdfDoc.save();
   return Buffer.from(pdfBytes);
 }

@@ -45,59 +45,6 @@ async function getUncachableResendClient() {
   };
 }
 
-export async function sendPrintOrderEmail(
-  userEmail: string,
-  storybook: Storybook,
-  pdfBuffer: Buffer,
-  language: string = 'en'
-): Promise<void> {
-  const { client, fromEmail } = await getUncachableResendClient();
-  
-  // Clean up storybook title for filename (remove special characters)
-  const cleanTitle = storybook.title.replace(/[^a-z0-9]/gi, '_').toLowerCase();
-  const filename = `${cleanTitle}.pdf`;
-  
-  const t = getEmailTranslations(language, 'printPurchase');
-  
-  const htmlBody = `
-    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-      <h1 style="color: #1e293b; margin-bottom: 20px;">${replacePlaceholders(t.printOrderTitle!, { title: storybook.title })}</h1>
-      
-      <p style="color: #475569; font-size: 16px; line-height: 1.6;">
-        ${t.printThankYou}
-      </p>
-      
-      <p style="color: #475569; font-size: 16px; line-height: 1.6;">
-        ${replacePlaceholders(t.printBody1!, { title: storybook.title })}
-      </p>
-      
-      <p style="color: #475569; font-size: 16px; line-height: 1.6;">
-        ${t.printNotification}
-      </p>
-      
-      <div style="margin-top: 30px; padding: 15px; background-color: #f5f1e8; border-radius: 8px;">
-        <p style="color: #334155; font-size: 14px; margin: 0;">
-          ${t.closing}<br>
-          <strong>${t.team}</strong>
-        </p>
-      </div>
-    </div>
-  `;
-
-  await client.emails.send({
-    from: fromEmail,
-    to: userEmail,
-    subject: replacePlaceholders(t.subject, { title: storybook.title }),
-    html: htmlBody,
-    attachments: [
-      {
-        filename: filename,
-        content: pdfBuffer,
-      }
-    ],
-  });
-}
-
 export async function sendInvoiceEmail(
   userEmail: string,
   userName: string,

@@ -57,18 +57,17 @@ export default function Purchases() {
     enabled: !!purchases && purchases.length > 0,
   });
 
-  // Fetch site settings for pricing
-  const { data: settings } = useQuery<any>({
-    queryKey: ['/api/admin/settings'],
-    enabled: isAuthenticated,
+  // Fetch pricing settings from public endpoint
+  const { data: pricingSettings } = useQuery<{ digital_price: string; print_price: string }>({
+    queryKey: ['/api/settings/pricing'],
   });
 
   // Get prices from settings with fallback defaults
-  const digitalPrice = settings?.find((s: any) => s.key === 'digital_price')?.value 
-    ? parseInt(settings.find((s: any) => s.key === 'digital_price').value) 
+  const digitalPrice = pricingSettings?.digital_price 
+    ? parseInt(pricingSettings.digital_price) 
     : 399;
-  const printPrice = settings?.find((s: any) => s.key === 'print_price')?.value 
-    ? parseInt(settings.find((s: any) => s.key === 'print_price').value) 
+  const printPrice = pricingSettings?.print_price 
+    ? parseInt(pricingSettings.print_price) 
     : 2499;
 
   // Handle success redirect from Stripe

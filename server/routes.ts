@@ -386,6 +386,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // GET /api/settings/pricing - Get public pricing settings (no auth required)
+  app.get('/api/settings/pricing', async (req, res) => {
+    try {
+      const digitalPriceSetting = await storage.getSetting('digital_price');
+      const printPriceSetting = await storage.getSetting('print_price');
+      
+      res.json({
+        digital_price: digitalPriceSetting?.value || '399',
+        print_price: printPriceSetting?.value || '2499',
+      });
+    } catch (error) {
+      console.error('Get pricing settings error:', error);
+      res.status(500).json({ message: 'Internal server error' });
+    }
+  });
+
   // PUT /api/admin/settings/:key - Update setting
   app.put('/api/admin/settings/:key', isAdmin, async (req, res) => {
     try {
@@ -992,33 +1008,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Detect language from Accept-Language header
       const language = req.headers['accept-language']?.split(',')[0]?.substring(0, 2) || 'en';
 
-      // Handle print orders - send PDFs via email
-      const printOrders = items.filter((item: any) => item.type === 'print');
-
-      if (printOrders.length > 0) {
-        const user = await storage.getUser(userId);
-
-        if (user && user.email) {
-          for (const printOrder of printOrders) {
-            try {
-              const storybook = await storage.getStorybook(printOrder.storybookId);
-
-              if (storybook) {
-                const { generateStorybookPDF } = await import("./services/pdf");
-                const pdfBuffer = await generateStorybookPDF(storybook);
-
-                const { sendPrintOrderEmail } = await import("./services/resend-email");
-                await sendPrintOrderEmail(user.email, storybook, pdfBuffer, language);
-
-                console.log(`Print order email sent for storybook ${storybook.id} to ${user.email}`);
-              }
-            } catch (emailError) {
-              console.error(`Failed to send print order email for storybook ${printOrder.storybookId}:`, emailError);
-            }
-          }
-        }
-      }
-
       // Send invoice email for all purchases
       try {
         const user = await storage.getUser(userId);
@@ -1350,41 +1339,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
         }
 
-        // Handle print orders - send PDFs via email
-        const printOrders = items.filter((item: any) => item.type === 'print');
-        
         // Default to English for webhooks (no user context available)
         const language = 'en';
-        
-        if (printOrders.length > 0) {
-          // Get user email
-          const user = await storage.getUser(userId);
-          
-          if (user && user.email) {
-            // Process each print order
-            for (const printOrder of printOrders) {
-              try {
-                // Get storybook details
-                const storybook = await storage.getStorybook(printOrder.storybookId);
-                
-                if (storybook) {
-                  // Generate PDF
-                  const { generateStorybookPDF } = await import("./services/pdf");
-                  const pdfBuffer = await generateStorybookPDF(storybook);
-                  
-                  // Send email with PDF attachment
-                  const { sendPrintOrderEmail } = await import("./services/resend-email");
-                  await sendPrintOrderEmail(user.email, storybook, pdfBuffer, language);
-                  
-                  console.log(`Print order email sent for storybook ${storybook.id} to ${user.email}`);
-                }
-              } catch (emailError) {
-                // Log error but don't fail the webhook
-                console.error(`Failed to send print order email for storybook ${printOrder.storybookId}:`, emailError);
-              }
-            }
-          }
-        }
 
         // Send invoice email for all purchases
         try {
@@ -1466,41 +1422,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
         }
 
-        // Handle print orders - send PDFs via email
-        const printOrders = items.filter((item: any) => item.type === 'print');
-        
         // Default to English for webhooks (no user context available)
         const language = 'en';
-        
-        if (printOrders.length > 0) {
-          // Get user email
-          const user = await storage.getUser(userId);
-          
-          if (user && user.email) {
-            // Process each print order
-            for (const printOrder of printOrders) {
-              try {
-                // Get storybook details
-                const storybook = await storage.getStorybook(printOrder.storybookId);
-                
-                if (storybook) {
-                  // Generate PDF
-                  const { generateStorybookPDF } = await import("./services/pdf");
-                  const pdfBuffer = await generateStorybookPDF(storybook);
-                  
-                  // Send email with PDF attachment
-                  const { sendPrintOrderEmail } = await import("./services/resend-email");
-                  await sendPrintOrderEmail(user.email, storybook, pdfBuffer, language);
-                  
-                  console.log(`Print order email sent for storybook ${storybook.id} to ${user.email}`);
-                }
-              } catch (emailError) {
-                // Log error but don't fail the webhook
-                console.error(`Failed to send print order email for storybook ${printOrder.storybookId}:`, emailError);
-              }
-            }
-          }
-        }
 
         // Send invoice email for all purchases
         try {
