@@ -1,6 +1,9 @@
 import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
+import fontkit from '@pdf-lib/fontkit';
 import type { Storybook } from "@shared/schema";
 import { ObjectStorageService } from "../objectStorage";
+import { readFileSync } from 'fs';
+import { join } from 'path';
 
 // Constants in points (72 points = 1 inch)
 const INCH_TO_POINTS = 72;
@@ -12,8 +15,14 @@ const PAGE_HEIGHT = TRIM_HEIGHT + (2 * BLEED); // 666 points
 const SAFE_MARGIN = 0.5 * INCH_TO_POINTS;      // 36 points from trim edge
 const SPINE_MARGIN = 0.75 * INCH_TO_POINTS;    // 54 points on spine side
 
+// Cache font bytes to avoid blocking event loop with repeated readFileSync
+let cachedComicNeueFontBytes: ArrayBuffer | null = null;
+
 export async function generatePrintReadyPDF(storybook: Storybook): Promise<Buffer> {
   const pdfDoc = await PDFDocument.create();
+  
+  // Register fontkit to enable custom font embedding
+  pdfDoc.registerFontkit(fontkit);
   
   // Set PDF metadata for print compliance
   pdfDoc.setTitle(storybook.title);
@@ -34,8 +43,14 @@ export async function generatePrintReadyPDF(storybook: Storybook): Promise<Buffe
   // This PDF is structured correctly for print with proper dimensions, bleed, and safe areas
   
   const objectStorageService = new ObjectStorageService();
-  const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
-  const boldFont = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+  
+  // Load kid-friendly Comic Neue font for ages 6-12 (cached for performance)
+  if (!cachedComicNeueFontBytes) {
+    const fontPath = join(process.cwd(), 'server', 'fonts', 'ComicNeue-Regular.ttf');
+    cachedComicNeueFontBytes = readFileSync(fontPath);
+  }
+  const font = await pdfDoc.embedFont(cachedComicNeueFontBytes);
+  const boldFont = await pdfDoc.embedFont(StandardFonts.HelveticaBold); // Keep bold for titles
   
   // Helper function to fetch and embed image
   async function embedImage(imageUrl: string): Promise<any> {
@@ -213,52 +228,68 @@ export async function generatePrintReadyPDF(storybook: Storybook): Promise<Buffe
     const textWidth = PAGE_WIDTH - BLEED - SPINE_MARGIN - BLEED - SAFE_MARGIN; // Width between margins
     const textHeight = PAGE_HEIGHT - 2 * BLEED - 2 * SAFE_MARGIN; // Height between top and bottom safe areas
     
-    // Format and draw text
-    const fontSize = 13;
-    const lineHeight = fontSize * 1.6; // 1.6x line spacing for readability
-    const words = page.text.split(' ');
-    const lines: string[] = [];
-    let currentLine = '';
-    
-    // Word wrap text
-    for (const word of words) {
-      const testLine = currentLine + (currentLine ? ' ' : '') + word;
-      const testWidth = font.widthOfTextAtSize(testLine, fontSize);
+    // Render text if page has content (skip for image-only pages)
+    const pageText = page.text || '';
+    if (pageText.trim()) {
+      // Format and draw text - kid-friendly sizing and centered vertically
+      const fontSize = 16; // Larger font for kids ages 6-12
+      const lineHeight = fontSize * 1.8; // More spacing for easier reading
+      const words = pageText.split(' ');
+      const lines: string[] = [];
+      let currentLine = '';
       
-      if (testWidth > textWidth && currentLine) {
+      // Word wrap text
+      for (const word of words) {
+        const testLine = currentLine + (currentLine ? ' ' : '') + word;
+        const testWidth = font.widthOfTextAtSize(testLine, fontSize);
+        
+        if (testWidth > textWidth && currentLine) {
+          lines.push(currentLine);
+          currentLine = word;
+        } else {
+          currentLine = testLine;
+        }
+      }
+      if (currentLine) {
         lines.push(currentLine);
-        currentLine = word;
-      } else {
-        currentLine = testLine;
+      }
+      
+      // Calculate total text height to center it vertically (only if it fits)
+      const totalTextHeight = lines.length * lineHeight;
+      const availableHeight = textHeight;
+      // Only center if text fits in available space; otherwise top-align to ensure all text renders
+      const verticalOffset = totalTextHeight <= availableHeight 
+        ? (availableHeight - totalTextHeight) / 2 
+        : 0;
+      
+      // Start drawing from centered position (or top if text is too long)
+      let currentY = textY - verticalOffset;
+      
+      // Draw each line of text
+      for (const line of lines) {
+        // Check if there's room for this line (baseline must be above safe margin)
+        if (currentY - fontSize < BLEED + SAFE_MARGIN) break;
+        
+        rightPage.drawText(line, {
+          x: textX,
+          y: currentY - fontSize,
+          size: fontSize,
+          font: font,
+          color: rgb(0.15, 0.2, 0.28), // Slightly softer color for kids
+        });
+        
+        currentY -= lineHeight;
       }
     }
-    if (currentLine) {
-      lines.push(currentLine);
-    }
     
-    // Draw each line of text
-    let currentY = textY;
-    for (const line of lines) {
-      if (currentY - lineHeight < BLEED + SAFE_MARGIN) break; // Stop if we reach bottom safe area
-      
-      rightPage.drawText(line, {
-        x: textX,
-        y: currentY - fontSize,
-        size: fontSize,
-        font: font,
-        color: rgb(0.2, 0.25, 0.33),
-      });
-      
-      currentY -= lineHeight;
-    }
-    
-    // Add page number at bottom (within safe area)
+    // Add page number at bottom (within safe area) - kid-friendly style
     const pageNumText = `${i + 1}`;
-    const pageNumX = PAGE_WIDTH - BLEED - SAFE_MARGIN - font.widthOfTextAtSize(pageNumText, 10);
+    const pageNumSize = 12; // Slightly larger for kids
+    const pageNumX = PAGE_WIDTH - BLEED - SAFE_MARGIN - font.widthOfTextAtSize(pageNumText, pageNumSize);
     rightPage.drawText(pageNumText, {
       x: pageNumX,
       y: BLEED + SAFE_MARGIN + 10, // Position within safe area, 10pts above safe margin
-      size: 10,
+      size: pageNumSize,
       font: font,
       color: rgb(0.5, 0.5, 0.5),
     });
