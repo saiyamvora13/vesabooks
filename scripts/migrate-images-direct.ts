@@ -13,7 +13,7 @@ const generatedDir = path.join(process.cwd(), 'generated');
 async function migrateImages() {
   console.log('🔍 Finding storybooks with PNG images...\n');
 
-  // Find storybooks with PNG images (limit to 2 for testing)
+  // Find all storybooks with PNG images
   const storybooksToMigrate = await db
     .select()
     .from(storybooks)
@@ -22,8 +22,7 @@ async function migrateImages() {
         like(storybooks.coverImageUrl, '%.png'),
         like(storybooks.backCoverImageUrl, '%.png')
       )
-    )
-    .limit(2);
+    );
 
   if (storybooksToMigrate.length === 0) {
     console.log('✅ No storybooks with PNG images found!');
