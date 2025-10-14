@@ -618,6 +618,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const uploadedNewFiles: string[] = [];
         
         try {
+          // Use storybook's creation date for organizing migrated images
+          const createdAt = storybook.createdAt || new Date();
+          
           // Migrate cover image
           if (storybook.coverImageUrl?.endsWith('.png')) {
             const oldFilename = storybook.coverImageUrl.split('/').pop()!;
@@ -629,8 +632,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
             const tempPath = path.join(generatedDir, newFilename);
             fs.writeFileSync(tempPath, optimizedBuffer);
             
-            newCoverUrl = await objectStorage.uploadFile(tempPath, newFilename);
-            uploadedNewFiles.push(newFilename);
+            newCoverUrl = await objectStorage.uploadFile(tempPath, newFilename, true, createdAt);
+            // Track the full path for potential rollback
+            const uploadedPath = newCoverUrl.replace('/api/storage/', '');
+            uploadedNewFiles.push(uploadedPath);
             fs.unlinkSync(tempPath);
             
             filesToDelete.push(oldFilename);
@@ -648,8 +653,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
             const tempPath = path.join(generatedDir, newFilename);
             fs.writeFileSync(tempPath, optimizedBuffer);
             
-            newBackCoverUrl = await objectStorage.uploadFile(tempPath, newFilename);
-            uploadedNewFiles.push(newFilename);
+            newBackCoverUrl = await objectStorage.uploadFile(tempPath, newFilename, true, createdAt);
+            const uploadedPath = newBackCoverUrl.replace('/api/storage/', '');
+            uploadedNewFiles.push(uploadedPath);
             fs.unlinkSync(tempPath);
             
             filesToDelete.push(oldFilename);
@@ -669,8 +675,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
               const tempPath = path.join(generatedDir, newFilename);
               fs.writeFileSync(tempPath, optimizedBuffer);
               
-              const newUrl = await objectStorage.uploadFile(tempPath, newFilename);
-              uploadedNewFiles.push(newFilename);
+              const newUrl = await objectStorage.uploadFile(tempPath, newFilename, true, createdAt);
+              const uploadedPath = newUrl.replace('/api/storage/', '');
+              uploadedNewFiles.push(uploadedPath);
               fs.unlinkSync(tempPath);
               
               filesToDelete.push(oldFilename);
@@ -1059,12 +1066,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Serve images from Object Storage
-  app.get("/api/storage/:filename", async (req, res) => {
+  app.get("/api/storage/*", async (req, res) => {
     try {
       const { ObjectStorageService } = await import("./objectStorage");
       const objectStorage = new ObjectStorageService();
       
-      const file = await objectStorage.searchPublicObject(req.params.filename);
+      // Extract path after /api/storage/
+      const filePath = req.path.replace('/api/storage/', '');
+      
+      if (!filePath) {
+        return res.status(400).json({ message: "No file path provided" });
+      }
+      
+      const file = await objectStorage.searchPublicObject(filePath);
       if (!file) {
         return res.status(404).json({ message: "Image not found" });
       }

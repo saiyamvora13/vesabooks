@@ -37,6 +37,14 @@ export class ObjectNotFoundError extends Error {
 export class ObjectStorageService {
   constructor() {}
 
+  // Generate date-based folder path (YYYY/MM/DD)
+  generateDatePath(date: Date = new Date()): string {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}/${month}/${day}`;
+  }
+
   // Gets the public object search paths.
   getPublicObjectSearchPaths(): Array<string> {
     const pathsStr = process.env.PUBLIC_OBJECT_SEARCH_PATHS || "";
@@ -109,12 +117,17 @@ export class ObjectStorageService {
     }
   }
 
-  // Upload a file to object storage
-  async uploadFile(localPath: string, destinationPath: string): Promise<string> {
+  // Upload a file to object storage with optional date-based organization
+  async uploadFile(localPath: string, destinationPath: string, useDate: boolean = true, date?: Date): Promise<string> {
     const searchPaths = this.getPublicObjectSearchPaths();
     const basePath = searchPaths[0]; // Use first search path as upload destination
     
-    const fullPath = `${basePath}/${destinationPath}`;
+    // Add date-based folder structure if enabled
+    const finalPath = useDate 
+      ? `${this.generateDatePath(date)}/${destinationPath}`
+      : destinationPath;
+    
+    const fullPath = `${basePath}/${finalPath}`;
     const { bucketName, objectName } = parseObjectPath(fullPath);
     
     const bucket = objectStorageClient.bucket(bucketName);
@@ -133,7 +146,7 @@ export class ObjectStorageService {
     });
     
     // Return the public URL path
-    return `/api/storage/${destinationPath}`;
+    return `/api/storage/${finalPath}`;
   }
 
   // Get file buffer from object storage
