@@ -211,24 +211,24 @@ export async function generatePrintReadyPDF(storybook: Storybook): Promise<Buffe
     const textAreaLeft = BLEED + SPINE_MARGIN; // Left margin from trim (spine side)
     const textAreaRight = PAGE_WIDTH - BLEED - SAFE_MARGIN; // Right margin from trim
     const textAreaTop = PAGE_HEIGHT - BLEED - SAFE_MARGIN; // Top margin from trim
-    const textAreaBottom = BLEED + SAFE_MARGIN + 40; // Bottom margin (extra space for page number)
-    const textAreaWidth = textAreaRight - textAreaLeft; // Width between margins
-    const textAreaHeight = textAreaTop - textAreaBottom; // Available height for text
+    const textAreaBottom = BLEED + SAFE_MARGIN + 30; // Bottom margin (extra space for page number)
+    const textWidth = textAreaRight - textAreaLeft; // Width between margins
+    const textHeight = textAreaTop - textAreaBottom; // Available height for text
     
     // Kid-friendly text formatting (ages 6-12)
-    const fontSize = 16; // Font size that ensures all text fits
-    const lineHeight = fontSize * 1.7; // Good line spacing for readability
-    const textFont = font; // Regular Helvetica font
+    const fontSize = 20; // Larger font for young readers
+    const lineHeight = fontSize * 1.8; // Extra line spacing for readability
+    const textFont = boldFont; // Bold font is more readable for kids
     const words = page.text.split(' ');
     const lines: string[] = [];
     let currentLine = '';
     
-    // Word wrap text to fit width
+    // Word wrap text
     for (const word of words) {
       const testLine = currentLine + (currentLine ? ' ' : '') + word;
       const testWidth = textFont.widthOfTextAtSize(testLine, fontSize);
       
-      if (testWidth > textAreaWidth && currentLine) {
+      if (testWidth > textWidth && currentLine) {
         lines.push(currentLine);
         currentLine = word;
       } else {
@@ -242,43 +242,33 @@ export async function generatePrintReadyPDF(storybook: Storybook): Promise<Buffe
     // Calculate total text block height
     const totalTextHeight = lines.length * lineHeight;
     
-    // Center text vertically if it fits, otherwise start from top
-    let startY: number;
-    if (totalTextHeight <= textAreaHeight) {
-      // Text fits - center it vertically
-      const textBlockCenterY = textAreaBottom + (textAreaHeight / 2);
-      startY = textBlockCenterY + (totalTextHeight / 2);
-    } else {
-      // Text too tall - start from top
-      startY = textAreaTop;
-    }
+    // Center text vertically in available space
+    let currentY = textAreaTop - ((textHeight - totalTextHeight) / 2);
     
-    // Draw each line of text (centered horizontally, vertically centered if space allows)
-    for (let i = 0; i < lines.length; i++) {
-      const line = lines[i];
-      const currentY = startY - (i * lineHeight);
-      
-      // Stop if we reach bottom safe area (don't cut off text)
-      if (currentY - fontSize < textAreaBottom) break;
+    // Draw each line of text (centered horizontally)
+    for (const line of lines) {
+      if (currentY - lineHeight < textAreaBottom) break; // Stop if we reach bottom safe area
       
       // Center each line horizontally
       const lineWidth = textFont.widthOfTextAtSize(line, fontSize);
-      const centerX = textAreaLeft + (textAreaWidth - lineWidth) / 2;
+      const centerX = textAreaLeft + (textWidth - lineWidth) / 2;
       
       rightPage.drawText(line, {
         x: centerX,
         y: currentY - fontSize,
         size: fontSize,
         font: textFont,
-        color: rgb(0.1, 0.1, 0.1), // Dark, readable color
+        color: rgb(0.15, 0.2, 0.3), // Darker, kid-friendly color
       });
+      
+      currentY -= lineHeight;
     }
     
     // Add page number at bottom center (within safe area)
     const pageNumText = `${i + 1}`;
     const pageNumFontSize = 14;
     const pageNumWidth = textFont.widthOfTextAtSize(pageNumText, pageNumFontSize);
-    const pageNumX = textAreaLeft + (textAreaWidth - pageNumWidth) / 2; // Center horizontally
+    const pageNumX = textAreaLeft + (textWidth - pageNumWidth) / 2; // Center horizontally
     rightPage.drawText(pageNumText, {
       x: pageNumX,
       y: BLEED + SAFE_MARGIN + 8, // Position within safe area
