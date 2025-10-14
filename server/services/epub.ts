@@ -79,7 +79,7 @@ export async function generateEpub(storybook: Storybook): Promise<Buffer> {
   const options = {
     title: storybook.title,
     author: "AI Storyteller",
-    cover: compositeCoverPath, // Composite cover image file path with title/author overlay
+    cover: compositeCoverPath ? `file://${compositeCoverPath}` : undefined, // Use file:// URL for cover image
     tocTitle: "", // Empty TOC title to hide Table of Contents
     tocInTOC: false, // Hide TOC from appearing in itself (EPUB2)
     appendChapterTitles: false, // Don't add chapter titles to content
