@@ -266,15 +266,54 @@ export async function generateCompositeCoverImage(
     const overlayHeight = Math.floor(height * 0.25); // 25% of image height
     const overlayY = height - overlayHeight;
     
-    // Position text in the bottom 20% area
-    const titleY = height - Math.floor(height * 0.15); // Title at 15% from bottom
-    const authorY = height - Math.floor(height * 0.08); // Author at 8% from bottom
+    // Helper function to split long titles into multiple lines
+    const wrapText = (text: string, maxCharsPerLine: number): string[] => {
+      const words = text.split(' ');
+      const lines: string[] = [];
+      let currentLine = '';
+      
+      for (const word of words) {
+        const testLine = currentLine ? `${currentLine} ${word}` : word;
+        if (testLine.length <= maxCharsPerLine) {
+          currentLine = testLine;
+        } else {
+          if (currentLine) lines.push(currentLine);
+          currentLine = word;
+        }
+      }
+      if (currentLine) lines.push(currentLine);
+      return lines;
+    };
+    
+    // Wrap title text based on width (approximately 15-20 chars per line for readability)
+    const maxCharsPerLine = Math.floor(width / 40); // Rough estimate based on width
+    const titleLines = wrapText(title, Math.max(maxCharsPerLine, 15));
+    
+    // Calculate font sizes based on title length and number of lines
+    const baseFontSize = titleLines.length > 2 ? 45 : 
+                        titleLines.length > 1 ? 55 : 
+                        title.length > 20 ? 60 : 70;
+    const authorFontSize = Math.floor(baseFontSize * 0.5);
+    
+    // Calculate line height and starting position for multi-line title
+    const lineHeight = baseFontSize * 1.2;
+    const totalTitleHeight = titleLines.length * lineHeight;
+    const startTitleY = overlayY + (overlayHeight - totalTitleHeight) / 2; // Center vertically in overlay
+    
+    // Build SVG text elements for each line of the title
+    const titleSvgElements = titleLines.map((line, index) => {
+      const y = startTitleY + (index + 1) * lineHeight;
+      return `<text x="50%" y="${y}" text-anchor="middle" font-family="Georgia, serif" font-size="${baseFontSize}" font-weight="bold" fill="#1e293b">${escapeXml(line)}</text>`;
+    }).join('\n      ');
+    
+    // Position author text below title
+    const authorY = startTitleY + totalTitleHeight + lineHeight * 0.8;
 
-    // Create SVG overlay with semi-transparent background and text
-    const svg = `<svg width="${width}" height="${height}">
+    // Create SVG overlay with semi-transparent background and wrapped text
+    const svg = `<svg width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg">
       <rect x="0" y="${overlayY}" width="${width}" height="${overlayHeight}" fill="rgba(255,255,255,0.95)"/>
-      <text x="50%" y="${titleY}" text-anchor="middle" font-size="80" font-weight="bold" fill="#1e293b">${escapeXml(title)}</text>
-      <text x="50%" y="${authorY}" text-anchor="middle" font-size="40" fill="#475569">By AI Storyteller</text>
+      ${titleSvgElements}
+      <text x="50%" y="${authorY}" text-anchor="middle" font-family="Georgia, serif" font-size="${authorFontSize}" fill="#475569">By AI Storyteller</text>
     </svg>`;
 
     // Create composite image
