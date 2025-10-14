@@ -135,10 +135,22 @@ function StorybookPurchaseButtons({ storybook }: { storybook: Storybook }) {
       )}
 
       {digitalPurchase?.owned ? (
-        <Badge variant="secondary" className="w-full justify-center py-1">
-          <Check className="h-3 w-3 mr-1" />
-          {t('storybook.library.purchase.digitalPurchased')}
-        </Badge>
+        <>
+          <Badge variant="secondary" className="w-full justify-center py-1">
+            <Check className="h-3 w-3 mr-1" />
+            {t('storybook.library.purchase.digitalPurchased')}
+          </Badge>
+          <Button
+            size="sm"
+            variant="outline"
+            className="w-full"
+            onClick={() => window.open(`/api/storybooks/${storybook.id}/download-print-pdf`)}
+            data-testid={`button-download-print-pdf-digital-${storybook.id}`}
+          >
+            <Download className="h-4 w-4 mr-1" />
+            Download Print PDF
+          </Button>
+        </>
       ) : (
         <Button
           size="sm"
@@ -186,7 +198,7 @@ function StorybookPurchaseButtons({ storybook }: { storybook: Storybook }) {
                 {digitalPurchase?.owned ? (
                   <span className="flex items-center gap-1">
                     <span>Buy Print</span>
-                    <span className="line-through text-muted-foreground">($${(printPrice / 100).toFixed(2)})</span>
+                    <span className="line-through text-muted-foreground">(${(printPrice / 100).toFixed(2)})</span>
                     <span>-</span>
                     <span className="font-semibold">${(Math.max(0, printPrice - digitalPrice) / 100).toFixed(2)}</span>
                   </span>
