@@ -315,14 +315,35 @@ export async function generateCompositeCoverImage(
     // Calculate font size based on longest line to ensure it fits width
     const fontSizeByWidth = Math.floor((safeWidth / longestLineLength) * 1.8);
     
-    // Use the smaller of the two to ensure text fits both horizontally and vertically
-    const baseFontSize = Math.min(fontSizeByLines, fontSizeByWidth, 70); // Cap at 70
-    const authorFontSize = Math.floor(baseFontSize * 0.5);
+    // Calculate font size based on height to ensure all lines fit vertically
+    // Reserve space for author text (approximately 2 line heights)
+    const availableHeightForTitle = overlayHeight * 0.7; // Use 70% for title, 30% for author and padding
+    const fontSizeByHeight = Math.floor(availableHeightForTitle / (titleLines.length * 1.2));
+    
+    // Use the smallest of all three constraints to ensure text fits in all dimensions
+    const baseFontSize = Math.min(fontSizeByLines, fontSizeByWidth, fontSizeByHeight, 70); // Cap at 70
+    
+    // Ensure minimum readable font size
+    const minFontSize = 25;
+    const finalBaseFontSize = Math.max(baseFontSize, minFontSize);
+    
+    // If font would be too small, adjust overlay height to accommodate text
+    let finalOverlayHeight = overlayHeight;
+    let finalOverlayY = overlayY;
+    
+    if (baseFontSize < minFontSize) {
+      // Calculate required height for minimum font size
+      const requiredHeight = (titleLines.length * minFontSize * 1.2) + (minFontSize * 2); // Title + author space
+      finalOverlayHeight = Math.min(requiredHeight * 1.3, height * 0.4); // Max 40% of image height
+      finalOverlayY = height - finalOverlayHeight;
+    }
+    
+    const authorFontSize = Math.floor(finalBaseFontSize * 0.5);
     
     // Calculate line height and starting position for multi-line title
-    const lineHeight = baseFontSize * 1.2;
+    const lineHeight = finalBaseFontSize * 1.2;
     const totalTitleHeight = titleLines.length * lineHeight;
-    const startTitleY = overlayY + (overlayHeight - totalTitleHeight) / 2; // Center vertically in overlay
+    const startTitleY = finalOverlayY + (finalOverlayHeight - totalTitleHeight) / 2 - (lineHeight * 0.3); // Center with slight upward adjustment
     
     // Build SVG text elements for each line of the title
     const titleSvgElements = titleLines.map((line, index) => {
@@ -335,7 +356,7 @@ export async function generateCompositeCoverImage(
 
     // Create SVG overlay with semi-transparent background and wrapped text
     const svg = `<svg width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg">
-      <rect x="0" y="${overlayY}" width="${width}" height="${overlayHeight}" fill="rgba(255,255,255,0.95)"/>
+      <rect x="0" y="${finalOverlayY}" width="${width}" height="${finalOverlayHeight}" fill="rgba(255,255,255,0.95)"/>
       ${titleSvgElements}
       <text x="50%" y="${authorY}" text-anchor="middle" font-family="Georgia, serif" font-size="${authorFontSize}" fill="#475569">By AI Storyteller</text>
     </svg>`;
