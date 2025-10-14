@@ -121,19 +121,6 @@ function StorybookPurchaseButtons({ storybook }: { storybook: Storybook }) {
 
   return (
     <div className="space-y-2 mt-3">
-      {printPurchase?.owned && (
-        <Button
-          size="sm"
-          variant="default"
-          className="w-full"
-          onClick={() => window.open(`/api/storybooks/${storybook.id}/download-print-pdf`)}
-          data-testid={`button-download-print-pdf-${storybook.id}`}
-        >
-          <Download className="h-4 w-4 mr-1" />
-          Download Print PDF
-        </Button>
-      )}
-
       {digitalPurchase?.owned ? (
         <>
           <Badge variant="secondary" className="w-full justify-center py-1">
@@ -145,7 +132,7 @@ function StorybookPurchaseButtons({ storybook }: { storybook: Storybook }) {
             variant="outline"
             className="w-full"
             onClick={() => window.open(`/api/storybooks/${storybook.id}/download-print-pdf`)}
-            data-testid={`button-download-print-pdf-digital-${storybook.id}`}
+            data-testid={`button-download-print-pdf-${storybook.id}`}
           >
             <Download className="h-4 w-4 mr-1" />
             Download Print PDF
