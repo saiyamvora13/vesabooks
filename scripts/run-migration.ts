@@ -1,5 +1,3 @@
-import fetch from 'node-fetch';
-
 async function runMigration() {
   const baseUrl = 'http://localhost:5000';
   
@@ -13,7 +11,7 @@ async function runMigration() {
     },
     body: JSON.stringify({
       email: 'admin@storybook.com',
-      password: 'admin123' // Default password - update if different
+      password: 'admin123'
     }),
   });
 
@@ -24,17 +22,26 @@ async function runMigration() {
     return;
   }
 
-  // Get session cookie
-  const cookies = loginResponse.headers.get('set-cookie');
+  // Get all cookies from the response
+  const setCookieHeader = loginResponse.headers.get('set-cookie');
+  if (!setCookieHeader) {
+    console.error('❌ No session cookie received');
+    return;
+  }
+
+  // Extract the session cookie (handle multiple cookies)
+  const cookies = setCookieHeader.split(',').map(c => c.split(';')[0]).join('; ');
   console.log('✅ Logged in successfully');
+  console.log('   Session cookie:', cookies.substring(0, 50) + '...');
 
   console.log('\n🔄 Running image migration...');
   
-  // Call migration endpoint
+  // Call migration endpoint with session cookie
   const migrationResponse = await fetch(`${baseUrl}/api/admin/migrate-images`, {
     method: 'POST',
     headers: {
-      'Cookie': cookies || '',
+      'Cookie': cookies,
+      'Content-Type': 'application/json',
     },
   });
 
