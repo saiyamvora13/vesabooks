@@ -7,7 +7,6 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { BookOpen, Calendar, Plus, Trash2, ShoppingCart, Check, X, Download, Loader2, CreditCard } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import {
@@ -24,7 +23,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useState, useEffect } from "react";
-import { addToCart, isInCart, removeFromCart, canAddDigitalToCart } from "@/lib/cartUtils";
+import { addToCart, isInCart, removeFromCart } from "@/lib/cartUtils";
 import { loadStripe } from "@stripe/stripe-js";
 import { Elements, PaymentElement, useStripe, useElements } from "@stripe/react-stripe-js";
 
@@ -360,6 +359,7 @@ function StorybookPurchaseButtons({ storybook }: { storybook: Storybook }) {
         type: type === 'digital' ? 'Digital' : 'Print' 
       }),
     });
+    window.dispatchEvent(new Event('cartUpdated'));
     setCartUpdated(prev => prev + 1);
   };
 
@@ -372,12 +372,12 @@ function StorybookPurchaseButtons({ storybook }: { storybook: Storybook }) {
         type: type === 'digital' ? 'Digital' : 'Print' 
       }),
     });
+    window.dispatchEvent(new Event('cartUpdated'));
     setCartUpdated(prev => prev + 1);
   };
 
   const inCartDigital = isInCart(storybook.id, 'digital');
   const inCartPrint = isInCart(storybook.id, 'print');
-  const canAddDigital = canAddDigitalToCart(storybook.id);
 
   // Calculate price with potential discount
   let printPurchasePrice = printPrice;
@@ -386,107 +386,75 @@ function StorybookPurchaseButtons({ storybook }: { storybook: Storybook }) {
   }
 
   return (
-    <TooltipProvider>
+    <>
       <div className="space-y-2 mt-3">
-        {/* Digital Section */}
-        <div className="space-y-1">
-          {digitalPurchase?.owned && (
+        {digitalPurchase?.owned ? (
+          <>
             <Badge variant="secondary" className="w-full justify-center py-1">
               <Check className="h-3 w-3 mr-1" />
               {t('storybook.library.purchase.digitalPurchased')}
             </Badge>
-          )}
-          
-          {inCartDigital ? (
             <Button
               size="sm"
               variant="outline"
               className="w-full"
-              onClick={() => handleRemoveFromCart('digital')}
-              data-testid={`button-remove-digital-${storybook.id}`}
+              onClick={() => window.open(`/api/storybooks/${storybook.id}/download-print-pdf`)}
+              data-testid={`button-download-print-pdf-${storybook.id}`}
             >
-              <X className="h-4 w-4 mr-1" />
-              Remove Ebook from Cart
+              <Download className="h-4 w-4 mr-1" />
+              Download Print PDF
             </Button>
-          ) : (
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <div className="w-full">
-                  <Button
-                    size="sm"
-                    variant="default"
-                    className="w-full gradient-bg hover:opacity-90 !text-[hsl(258,90%,20%)]"
-                    onClick={() => handleAddToCart('digital')}
-                    disabled={!canAddDigital}
-                    data-testid={`button-add-digital-${storybook.id}`}
-                  >
-                    <ShoppingCart className="h-4 w-4 mr-1" />
-                    Add Ebook to Cart (${(digitalPrice / 100).toFixed(2)})
-                  </Button>
-                </div>
-              </TooltipTrigger>
-              {!canAddDigital && (
-                <TooltipContent>
-                  Print copy already in cart (includes ebook)
-                </TooltipContent>
-              )}
-            </Tooltip>
-          )}
-        </div>
+          </>
+        ) : (
+          <Button
+            size="sm"
+            variant="default"
+            className="w-full gradient-bg hover:opacity-90 !text-[hsl(258,90%,20%)]"
+            onClick={() => setCheckoutDialog({ open: true, type: 'digital' })}
+            data-testid={`button-buy-digital-${storybook.id}`}
+          >
+            <ShoppingCart className="h-4 w-4 mr-1" />
+            {t('storybook.library.purchase.buyEbook')}
+          </Button>
+        )}
 
-        {/* Print Section */}
-        <div className="space-y-1">
-          {printPurchase?.owned && (
-            <Badge variant="secondary" className="w-full justify-center py-1">
-              <Check className="h-3 w-3 mr-1" />
-              {t('storybook.library.purchase.printPurchased')}
-            </Badge>
-          )}
-          
-          {inCartPrint ? (
-            <Button
-              size="sm"
-              variant="outline"
-              className="w-full"
-              onClick={() => handleRemoveFromCart('print')}
-              data-testid={`button-remove-print-${storybook.id}`}
-            >
-              <X className="h-4 w-4 mr-1" />
-              Remove Print from Cart
-            </Button>
-          ) : (
-            <Button
-              size="sm"
-              variant="outline"
-              className="w-full h-auto py-2"
-              onClick={() => handleAddToCart('print')}
-              data-testid={`button-add-print-${storybook.id}`}
-            >
-              <div className="flex flex-col items-center gap-0.5">
-                <div className="flex items-center gap-1.5">
-                  <ShoppingCart className="h-4 w-4" />
-                  {digitalPurchase?.owned ? (
-                    <span className="flex items-center gap-1">
-                      <span>Add Print to Cart</span>
-                      <span className="line-through text-muted-foreground">(${(printPrice / 100).toFixed(2)})</span>
-                      <span>-</span>
-                      <span className="font-semibold">${(printPurchasePrice / 100).toFixed(2)}</span>
-                    </span>
-                  ) : (
-                    <span>Add Print to Cart (${(printPrice / 100).toFixed(2)})</span>
-                  )}
-                </div>
+        {printPurchase?.owned ? (
+          <Badge variant="secondary" className="w-full justify-center py-1">
+            <Check className="h-3 w-3 mr-1" />
+            {t('storybook.library.purchase.printPurchased')}
+          </Badge>
+        ) : (
+          <Button
+            size="sm"
+            variant="outline"
+            className="w-full h-auto py-2"
+            onClick={() => setCheckoutDialog({ open: true, type: 'print' })}
+            data-testid={`button-buy-print-${storybook.id}`}
+          >
+            <div className="flex flex-col items-center gap-0.5">
+              <div className="flex items-center gap-1.5">
+                <ShoppingCart className="h-4 w-4" />
                 {digitalPurchase?.owned ? (
-                  <span className="text-xs text-green-600 dark:text-green-400 font-medium">
-                    {t('purchases.upgrade.savings', { amount: (digitalPrice / 100).toFixed(2) })}
+                  <span className="flex items-center gap-1">
+                    <span>Buy Print</span>
+                    <span className="line-through text-muted-foreground">(${(printPrice / 100).toFixed(2)})</span>
+                    <span>-</span>
+                    <span className="font-semibold">${(printPurchasePrice / 100).toFixed(2)}</span>
                   </span>
                 ) : (
-                  <span className="text-xs text-muted-foreground">{t('storybook.library.purchase.freeEbookIncluded')}</span>
+                  <span>{t('storybook.library.purchase.buyPrint')}</span>
                 )}
               </div>
-            </Button>
-          )}
-        </div>
+              {digitalPurchase?.owned ? (
+                <span className="text-xs text-green-600 dark:text-green-400 font-medium">
+                  {t('purchases.upgrade.savings', { amount: (digitalPrice / 100).toFixed(2) })}
+                </span>
+              ) : (
+                <span className="text-xs text-muted-foreground">{t('storybook.library.purchase.freeEbookIncluded')}</span>
+              )}
+            </div>
+          </Button>
+        )}
       </div>
 
       {checkoutDialog.open && checkoutDialog.type && (
@@ -498,7 +466,7 @@ function StorybookPurchaseButtons({ storybook }: { storybook: Storybook }) {
           price={checkoutDialog.type === 'digital' ? digitalPrice : printPurchasePrice}
         />
       )}
-    </TooltipProvider>
+    </>
   );
 }
 

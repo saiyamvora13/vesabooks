@@ -20,29 +20,13 @@ export function getCart(): CartItem[] {
 export function addToCart(item: CartItem): void {
   try {
     const cart = getCart();
-    
-    // If adding print, remove digital for same book (print includes digital)
-    let updatedCart = cart;
-    if (item.type === 'print') {
-      updatedCart = cart.filter(
-        (cartItem) => !(cartItem.storybookId === item.storybookId && cartItem.type === 'digital')
-      );
-    }
-    
-    // If adding digital, check if print already exists
-    if (item.type === 'digital' && hasPrintInCart(item.storybookId)) {
-      console.log('Cannot add digital when print is already in cart');
-      return;
-    }
-    
-    const existingItemIndex = updatedCart.findIndex(
+    const existingItemIndex = cart.findIndex(
       (cartItem) => cartItem.storybookId === item.storybookId && cartItem.type === item.type
     );
 
     if (existingItemIndex === -1) {
-      updatedCart.push(item);
-      localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(updatedCart));
-      window.dispatchEvent(new Event('cartUpdated'));
+      cart.push(item);
+      localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(cart));
     }
   } catch (error) {
     console.error('Error adding to cart:', error);
@@ -56,7 +40,6 @@ export function removeFromCart(storybookId: string, type: 'digital' | 'print'): 
       (item) => !(item.storybookId === storybookId && item.type === type)
     );
     localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(updatedCart));
-    window.dispatchEvent(new Event('cartUpdated'));
   } catch (error) {
     console.error('Error removing from cart:', error);
   }
@@ -65,7 +48,6 @@ export function removeFromCart(storybookId: string, type: 'digital' | 'print'): 
 export function clearCart(): void {
   try {
     localStorage.removeItem(CART_STORAGE_KEY);
-    window.dispatchEvent(new Event('cartUpdated'));
   } catch (error) {
     console.error('Error clearing cart:', error);
   }
@@ -74,15 +56,6 @@ export function clearCart(): void {
 export function isInCart(storybookId: string, type: 'digital' | 'print'): boolean {
   const cart = getCart();
   return cart.some((item) => item.storybookId === storybookId && item.type === type);
-}
-
-export function hasPrintInCart(storybookId: string): boolean {
-  const cart = getCart();
-  return cart.some((item) => item.storybookId === storybookId && item.type === 'print');
-}
-
-export function canAddDigitalToCart(storybookId: string): boolean {
-  return !hasPrintInCart(storybookId);
 }
 
 export function getCartCount(): number {
