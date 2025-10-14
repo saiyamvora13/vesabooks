@@ -183,12 +183,15 @@ function StorybookPurchaseButtons({ storybook }: { storybook: Storybook }) {
             <div className="flex flex-col items-center gap-0.5">
               <div className="flex items-center gap-1.5">
                 <ShoppingCart className="h-4 w-4" />
-                <span>
-                  {digitalPurchase?.owned 
-                    ? `${t('storybook.library.purchase.buyPrint')} - $${(Math.max(0, printPrice - digitalPrice) / 100).toFixed(2)}`
-                    : t('storybook.library.purchase.buyPrint')
-                  }
-                </span>
+                {digitalPurchase?.owned ? (
+                  <span className="flex items-center gap-1.5">
+                    <span>{t('storybook.library.purchase.buyPrint')}</span>
+                    <span className="line-through text-muted-foreground">${(printPrice / 100).toFixed(2)}</span>
+                    <span className="font-semibold">${(Math.max(0, printPrice - digitalPrice) / 100).toFixed(2)}</span>
+                  </span>
+                ) : (
+                  <span>{t('storybook.library.purchase.buyPrint')}</span>
+                )}
               </div>
               {digitalPurchase?.owned ? (
                 <span className="text-xs text-green-600 dark:text-green-400 font-medium">
