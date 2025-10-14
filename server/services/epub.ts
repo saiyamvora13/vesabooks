@@ -7,6 +7,28 @@ import * as path from "path";
 import * as os from "os";
 import { randomUUID } from "crypto";
 
+// Helper function to convert image buffer to base64 data URL
+async function getImageDataUrl(imageUrl: string): Promise<string> {
+  try {
+    const filename = imageUrl.split('/').pop();
+    if (!filename) {
+      throw new Error('Invalid image URL');
+    }
+
+    const objectStorageService = new ObjectStorageService();
+    const imageBuffer = await objectStorageService.getFileBuffer(filename);
+    
+    // Convert to base64
+    const base64 = imageBuffer.toString('base64');
+    const mimeType = filename.endsWith('.png') ? 'image/png' : 'image/jpeg';
+    
+    return `data:${mimeType};base64,${base64}`;
+  } catch (error) {
+    console.error('Error fetching image for data URL:', error);
+    throw error;
+  }
+}
+
 export async function generateEpub(storybook: Storybook): Promise<Buffer> {
   // Use dynamic import for CommonJS module
   const epubModule = await import("epub-gen-memory");
@@ -14,9 +36,6 @@ export async function generateEpub(storybook: Storybook): Promise<Buffer> {
   
   // Prepare content array for EPUB
   const content: Chapter[] = [];
-
-  // Use localhost HTTP URLs - epub-gen-memory will fetch and package images automatically
-  const baseUrl = "http://localhost:5000";
 
   // Generate composite cover image with title/author overlay for external cover
   const coverImageUrl = storybook.coverImageUrl || storybook.pages[0]?.imageUrl;
@@ -32,14 +51,14 @@ export async function generateEpub(storybook: Storybook): Promise<Buffer> {
       fs.writeFileSync(compositeCoverPath, compositeBuffer);
     }
     
-    // Add internal cover page with title and author overlay
-    const coverUrl = `${baseUrl}${coverImageUrl}`;
+    // Add internal cover page with title and author overlay using base64 data URL
+    const coverDataUrl = await getImageDataUrl(coverImageUrl);
     content.push({
       content: `<div class="cover-page">
-  <img src="${coverUrl}" alt="Cover" class="cover-image" />
+  <img src="${coverDataUrl}" alt="Cover" class="cover-image" />
   <div class="cover-overlay"></div>
   <div class="cover-text">
-    <h1>${storybook.title}</h1>
+    <h1>${escapeHtml(storybook.title)}</h1>
     <p>By AI Storyteller</p>
   </div>
 </div>`,
@@ -48,20 +67,31 @@ export async function generateEpub(storybook: Storybook): Promise<Buffer> {
     });
   }
 
-  // Add each story page - responsive layout: image left, text right (stacks on small screens)
+  // Add each story page with base64 data URLs - mobile-first responsive layout
   for (const page of storybook.pages) {
-    const pageImageUrl = `${baseUrl}${page.imageUrl}`;
+    const pageDataUrl = await getImageDataUrl(page.imageUrl);
     
     content.push({
       content: `<div class="story-page">
   <div class="page-image">
-    <img src="${pageImageUrl}" alt="Illustration for page ${page.pageNumber}" />
+    <img src="${pageDataUrl}" alt="Illustration for page ${page.pageNumber}" />
   </div>
   <div class="page-text">
-    <p>${page.text}</p>
+    <p>${escapeHtml(page.text)}</p>
   </div>
 </div>`,
-      excludeFromToc: true, // Exclude from Table of Contents
+      excludeFromToc: true,
+    });
+  }
+
+  // Add back cover if it exists
+  if (storybook.backCoverImageUrl) {
+    const backCoverDataUrl = await getImageDataUrl(storybook.backCoverImageUrl);
+    content.push({
+      content: `<div class="back-cover-page">
+  <img src="${backCoverDataUrl}" alt="Back Cover" class="back-cover-image" />
+</div>`,
+      excludeFromToc: true,
     });
   }
 
@@ -132,25 +162,30 @@ export async function generateEpub(storybook: Storybook): Promise<Buffer> {
         margin: 0;
       }
       
-      /* Story page styles - two-page spread: image left, text right */
+      /* Story page styles - mobile-first: image first, text below */
       .story-page {
         display: flex;
-        flex-wrap: wrap;
-        align-items: flex-start;
+        flex-direction: column;
         page-break-after: always;
         min-height: 100vh;
       }
       
-      .page-image {
-        flex: 1;
-        min-width: 300px;
-        max-width: 50%;
+      /* On larger screens: image left, text right */
+      @media (min-width: 768px) {
+        .story-page {
+          flex-direction: row;
+          align-items: flex-start;
+        }
       }
       
-      @media (max-width: 600px) {
+      .page-image {
+        width: 100%;
+      }
+      
+      @media (min-width: 768px) {
         .page-image {
-          max-width: 100%;
-          width: 100%;
+          flex: 1;
+          max-width: 50%;
         }
       }
       
@@ -161,18 +196,17 @@ export async function generateEpub(storybook: Storybook): Promise<Buffer> {
       }
       
       .page-text {
-        flex: 1;
-        min-width: 300px;
-        padding: 2rem;
+        width: 100%;
+        padding: 1.5rem;
         display: flex;
         align-items: center;
         justify-content: center;
       }
       
-      @media (max-width: 600px) {
+      @media (min-width: 768px) {
         .page-text {
-          width: 100%;
-          padding: 1.5rem;
+          flex: 1;
+          padding: 2rem;
         }
       }
       
@@ -186,6 +220,21 @@ export async function generateEpub(storybook: Storybook): Promise<Buffer> {
         color: #334155;
         text-align: left;
         box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      }
+      
+      /* Back cover page */
+      .back-cover-page {
+        margin: 0;
+        padding: 0;
+        page-break-after: always;
+        height: 100vh;
+      }
+      
+      .back-cover-image {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        display: block;
       }
     `,
   };
@@ -271,4 +320,13 @@ function escapeXml(text: string): string {
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&apos;');
+}
+
+function escapeHtml(text: string): string {
+  return text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
 }
