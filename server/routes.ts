@@ -822,6 +822,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Download print-ready PDF
+  app.get('/api/storybooks/:id/download-print-pdf', isAuthenticated, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const userId = req.user.id || req.user.claims?.sub;
+      const storybook = await storage.getStorybook(id);
+
+      if (!storybook) {
+        return res.status(404).json({ message: 'Storybook not found' });
+      }
+
+      // Check if user owns the storybook or has purchased the print version
+      const ownedByUser = storybook.userId === userId;
+      const printPurchase = await storage.getStorybookPurchase(userId, id, 'print');
+      
+      if (!ownedByUser && !printPurchase) {
+        return res.status(403).json({ message: 'You do not have access to download this print PDF' });
+      }
+
+      const { generatePrintReadyPDF } = await import('./services/printPdf');
+      const pdfBuffer = await generatePrintReadyPDF(storybook);
+
+      const filename = `${storybook.title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}-print.pdf`;
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+      res.setHeader('Content-Length', pdfBuffer.length);
+      
+      res.send(pdfBuffer);
+    } catch (error) {
+      console.error('Error generating print PDF:', error);
+      res.status(500).json({ message: 'Failed to generate PDF' });
+    }
+  });
+
   // Serve images from Object Storage
   app.get("/api/storage/:filename", async (req, res) => {
     try {

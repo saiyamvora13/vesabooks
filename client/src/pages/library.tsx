@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
-import { BookOpen, Calendar, Plus, Trash2, ShoppingCart, Check, X } from "lucide-react";
+import { BookOpen, Calendar, Plus, Trash2, ShoppingCart, Check, X, Download } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import {
   AlertDialog,
@@ -103,6 +103,19 @@ function StorybookPurchaseButtons({ storybook }: { storybook: Storybook }) {
 
   return (
     <div className="space-y-2 mt-3">
+      {printPurchase?.owned && (
+        <Button
+          size="sm"
+          variant="default"
+          className="w-full"
+          onClick={() => window.open(`/api/storybooks/${storybook.id}/download-print-pdf`)}
+          data-testid={`button-download-print-pdf-${storybook.id}`}
+        >
+          <Download className="h-4 w-4 mr-1" />
+          Download Print PDF
+        </Button>
+      )}
+
       {digitalPurchase?.owned ? (
         <Badge variant="secondary" className="w-full justify-center py-1">
           <Check className="h-3 w-3 mr-1" />
