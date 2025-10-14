@@ -102,7 +102,14 @@ CRITICAL STORY STRUCTURE REQUIREMENTS:
 
 2. CONTINUITY - Each page must flow naturally from the previous one. Avoid random disconnected scenes.
 
-3. CHARACTER CONSISTENCY - Create a VERY DETAILED physical description of the main character in 'mainCharacterDescription'. For imagePrompts, focus ONLY on describing the scene, action, setting, and environment. Do NOT repeat the character description in imagePrompts - it will be added automatically.
+3. CHARACTER CONSISTENCY - This is CRITICAL for visual consistency across all ${pagesPerBook}+ illustrations:
+   - In 'mainCharacterDescription': Create an EXTREMELY DETAILED description of PERMANENT, UNCHANGING features
+   - Front-load the most important visual details first (hair, eyes, clothing)
+   - Specify EXACT clothing colors, patterns, and items that will NOT change throughout the story
+   - Include unique identifying marks (freckles, birthmarks, scars, gaps in teeth, etc.)
+   - The character must wear the SAME OUTFIT on every single page
+   - For imagePrompts: Focus ONLY on scene details (setting, action, background, other characters/objects)
+   - NEVER repeat the character description in imagePrompts - it will be prepended automatically
 
 4. STORY ELEMENTS - Include: clear protagonist, conflict/problem, rising action, climax, and resolution.
 
@@ -114,7 +121,14 @@ CRITICAL STORY STRUCTURE REQUIREMENTS:
 
 2. CONTINUITY - Each page must connect to the previous one. No random jumps. Use transitions like "Then...", "Next...", "Suddenly...".
 
-3. CHARACTER CONSISTENCY - Create a VERY DETAILED physical description of the main character in 'mainCharacterDescription' (hair, clothes, features, etc.). For imagePrompts, focus ONLY on what's happening in each scene - the setting, action, and other elements. Do NOT include the character description in imagePrompts - it will be added automatically.
+3. CHARACTER CONSISTENCY - This is CRITICAL for visual consistency across all ${pagesPerBook}+ illustrations:
+   - In 'mainCharacterDescription': Create an EXTREMELY DETAILED description of PERMANENT, UNCHANGING features
+   - Front-load the most important visual details first (hair color/style, eye color, clothing)
+   - Specify EXACT clothing with precise colors, patterns, and items that will NEVER change throughout the entire story
+   - Include unique identifying marks (freckles, birthmarks, scars, gaps in teeth, distinctive features)
+   - The character must wear the SAME OUTFIT on every single page - no outfit changes allowed
+   - For imagePrompts: Focus ONLY on what's happening in the scene (setting, action, background, other characters/objects)
+   - NEVER include the character's appearance in imagePrompts - it will be prepended automatically
 
 4. STORY ELEMENTS - Include: lovable protagonist, clear problem, attempts to solve it, moment of success, happy ending with lesson.
 
