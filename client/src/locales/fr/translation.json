@@ -473,8 +473,21 @@
       "printEdition": "Édition Imprimée",
       "purchasedOn": "Acheté le {{date}}",
       "downloadEbook": "Télécharger E-book",
+      "downloadPrintPdf": "Télécharger le PDF d'Impression",
       "preparing": "Préparation...",
       "printOrderSent": "Commande d'impression envoyée par email"
+    },
+    "upgrade": {
+      "title": "Passer à l'Imprimé",
+      "badge": "Offre Spéciale",
+      "description": "Obtenez l'édition imprimée physique de ce livre",
+      "discountedPrice": "Seulement ${price}",
+      "originalPrice": "Prix régulier: ${price}",
+      "savings": "Économisez ${amount}",
+      "button": "Passer à l'Imprimé",
+      "inCart": "Dans le Panier",
+      "addedToCart": "Version imprimée ajoutée au panier!",
+      "upgradeSuccess": "Version imprimée prête dans votre panier"
     },
     "status": {
       "completed": "Terminé",
@@ -493,6 +506,14 @@
       "ebookDownloaded": {
         "title": "E-book téléchargé !",
         "description": "Votre livre a été téléchargé en fichier EPUB"
+      },
+      "preparingPrintPdf": {
+        "title": "Préparation de votre PDF d'impression...",
+        "description": "Cela peut prendre quelques secondes pour les gros fichiers"
+      },
+      "printPdfDownloaded": {
+        "title": "PDF d'impression téléchargé avec succès!",
+        "description": "Votre PDF d'impression a été téléchargé"
       },
       "downloadFailed": {
         "title": "Échec du téléchargement",

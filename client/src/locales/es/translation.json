@@ -473,8 +473,21 @@
       "printEdition": "Edición Impresa",
       "purchasedOn": "Comprado el {{date}}",
       "downloadEbook": "Descargar E-book",
+      "downloadPrintPdf": "Descargar PDF de Impresión",
       "preparing": "Preparando...",
       "printOrderSent": "Pedido de impresión enviado por correo"
+    },
+    "upgrade": {
+      "title": "Actualizar a Impreso",
+      "badge": "Oferta Especial",
+      "description": "Obtén la edición impresa física de este libro",
+      "discountedPrice": "Solo ${price}",
+      "originalPrice": "Precio regular: ${price}",
+      "savings": "Ahorra ${amount}",
+      "button": "Actualizar a Impreso",
+      "inCart": "En Carrito",
+      "addedToCart": "¡Versión impresa agregada al carrito!",
+      "upgradeSuccess": "Versión impresa lista en tu carrito"
     },
     "status": {
       "completed": "Completado",
@@ -493,6 +506,14 @@
       "ebookDownloaded": {
         "title": "¡E-book descargado!",
         "description": "Tu libro ha sido descargado como archivo EPUB"
+      },
+      "preparingPrintPdf": {
+        "title": "Preparando tu PDF de impresión...",
+        "description": "Esto puede tomar unos segundos para archivos grandes"
+      },
+      "printPdfDownloaded": {
+        "title": "¡PDF de impresión descargado exitosamente!",
+        "description": "Tu PDF de impresión ha sido descargado"
       },
       "downloadFailed": {
         "title": "Error al descargar",

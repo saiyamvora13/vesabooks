@@ -473,8 +473,21 @@
       "printEdition": "Print Ausgabe",
       "purchasedOn": "Gekauft am {{date}}",
       "downloadEbook": "E-Book Herunterladen",
+      "downloadPrintPdf": "Druck-PDF herunterladen",
       "preparing": "Vorbereitung...",
       "printOrderSent": "Druckauftrag per E-Mail gesendet"
+    },
+    "upgrade": {
+      "title": "Auf Druck upgraden",
+      "badge": "Sonderangebot",
+      "description": "Erhalten Sie die physische Druckausgabe dieses Buches",
+      "discountedPrice": "Nur ${price}",
+      "originalPrice": "Regulärer Preis: ${price}",
+      "savings": "Sparen Sie ${amount}",
+      "button": "Auf Druck upgraden",
+      "inCart": "Im Warenkorb",
+      "addedToCart": "Druckversion zum Warenkorb hinzugefügt!",
+      "upgradeSuccess": "Druckversion in Ihrem Warenkorb bereit"
     },
     "status": {
       "completed": "Abgeschlossen",
@@ -493,6 +506,14 @@
       "ebookDownloaded": {
         "title": "E-Book heruntergeladen!",
         "description": "Ihr Buch wurde als EPUB-Datei heruntergeladen"
+      },
+      "preparingPrintPdf": {
+        "title": "Ihr Druck-PDF wird vorbereitet...",
+        "description": "Dies kann bei großen Dateien einige Sekunden dauern"
+      },
+      "printPdfDownloaded": {
+        "title": "Druck-PDF erfolgreich heruntergeladen!",
+        "description": "Ihr Druck-PDF wurde heruntergeladen"
       },
       "downloadFailed": {
         "title": "Fehler beim Herunterladen",

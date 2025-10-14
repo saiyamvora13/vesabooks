@@ -473,8 +473,21 @@
       "printEdition": "印刷版",
       "purchasedOn": "购买于{{date}}",
       "downloadEbook": "下载电子书",
+      "downloadPrintPdf": "下载印刷PDF",
       "preparing": "准备中...",
       "printOrderSent": "印刷订单已通过电子邮件发送"
+    },
+    "upgrade": {
+      "title": "升级至印刷版",
+      "badge": "特别优惠",
+      "description": "获取此故事书的实体印刷版",
+      "discountedPrice": "仅需 ${price}",
+      "originalPrice": "常规价格: ${price}",
+      "savings": "节省 ${amount}",
+      "button": "升级至印刷版",
+      "inCart": "已在购物车",
+      "addedToCart": "印刷版已添加到购物车！",
+      "upgradeSuccess": "印刷版已在您的购物车中"
     },
     "status": {
       "completed": "已完成",
@@ -493,6 +506,14 @@
       "ebookDownloaded": {
         "title": "电子书已下载！",
         "description": "您的故事书已下载为EPUB文件"
+      },
+      "preparingPrintPdf": {
+        "title": "正在准备您的印刷PDF...",
+        "description": "大文件可能需要几秒钟"
+      },
+      "printPdfDownloaded": {
+        "title": "印刷PDF下载成功！",
+        "description": "您的印刷PDF已下载"
       },
       "downloadFailed": {
         "title": "下载失败",
