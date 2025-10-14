@@ -216,7 +216,7 @@ export async function generatePrintReadyPDF(storybook: Storybook): Promise<Buffe
     const textAreaHeight = textAreaTop - textAreaBottom; // Available height for text
     
     // Kid-friendly text formatting (ages 6-12)
-    const fontSize = 22; // Readable font size for young readers
+    const fontSize = 16; // Font size that ensures all text fits
     const lineHeight = fontSize * 1.7; // Good line spacing for readability
     const textFont = font; // Regular Helvetica font
     const words = page.text.split(' ');
