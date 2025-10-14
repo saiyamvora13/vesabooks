@@ -177,6 +177,32 @@ export class ObjectStorageService {
       // Don't throw - handle gracefully to allow cleanup to continue
     }
   }
+
+  // List all files in object storage with their metadata
+  async listAllFiles(): Promise<Array<{ name: string; size: number; contentType: string; created: Date }>> {
+    const searchPaths = this.getPublicObjectSearchPaths();
+    const allFiles: Array<{ name: string; size: number; contentType: string; created: Date }> = [];
+
+    for (const searchPath of searchPaths) {
+      const { bucketName } = parseObjectPath(searchPath);
+      const bucket = objectStorageClient.bucket(bucketName);
+      
+      // List all files in the bucket
+      const [files] = await bucket.getFiles();
+      
+      for (const file of files) {
+        const [metadata] = await file.getMetadata();
+        allFiles.push({
+          name: file.name,
+          size: typeof metadata.size === 'number' ? metadata.size : parseInt(metadata.size || '0'),
+          contentType: metadata.contentType || 'unknown',
+          created: new Date(metadata.timeCreated || Date.now()),
+        });
+      }
+    }
+
+    return allFiles;
+  }
 }
 
 function parseObjectPath(path: string): {

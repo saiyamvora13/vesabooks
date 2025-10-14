@@ -577,6 +577,65 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // GET /api/admin/storage-analysis - Analyze object storage files
+  app.get('/api/admin/storage-analysis', isAdmin, async (req, res) => {
+    try {
+      const { ObjectStorageService } = await import("./objectStorage");
+      const objectStorage = new ObjectStorageService();
+      
+      const allFiles = await objectStorage.listAllFiles();
+      
+      // Analyze files
+      const largeFiles = allFiles.filter(f => f.size > 1.5 * 1024 * 1024); // Over 1.5MB
+      const pngFiles = allFiles.filter(f => f.name.endsWith('.png'));
+      const jpgFiles = allFiles.filter(f => f.name.endsWith('.jpg') || f.name.endsWith('.jpeg'));
+      
+      // Find potential duplicates (same base name but different extensions)
+      const duplicates: Array<{ png: string; jpg: string }> = [];
+      for (const png of pngFiles) {
+        const baseName = png.name.replace('.png', '');
+        const matchingJpg = jpgFiles.find(jpg => 
+          jpg.name.replace(/\.(jpg|jpeg)$/, '') === baseName ||
+          jpg.name.includes(baseName.split('/').pop() || '')
+        );
+        if (matchingJpg) {
+          duplicates.push({ png: png.name, jpg: matchingJpg.name });
+        }
+      }
+      
+      const totalSize = allFiles.reduce((sum, f) => sum + f.size, 0);
+      const pngSize = pngFiles.reduce((sum, f) => sum + f.size, 0);
+      const jpgSize = jpgFiles.reduce((sum, f) => sum + f.size, 0);
+      
+      res.json({
+        summary: {
+          totalFiles: allFiles.length,
+          totalSize: totalSize,
+          totalSizeMB: (totalSize / (1024 * 1024)).toFixed(2),
+          pngCount: pngFiles.length,
+          pngSizeMB: (pngSize / (1024 * 1024)).toFixed(2),
+          jpgCount: jpgFiles.length,
+          jpgSizeMB: (jpgSize / (1024 * 1024)).toFixed(2),
+          largeFilesCount: largeFiles.length,
+          potentialDuplicates: duplicates.length,
+        },
+        largeFiles: largeFiles.map(f => ({
+          name: f.name,
+          sizeMB: (f.size / (1024 * 1024)).toFixed(2),
+          contentType: f.contentType,
+        })),
+        duplicates: duplicates,
+        pngFiles: pngFiles.map(f => ({
+          name: f.name,
+          sizeMB: (f.size / (1024 * 1024)).toFixed(2),
+        })),
+      });
+    } catch (error) {
+      console.error('Storage analysis error:', error);
+      res.status(500).json({ message: 'Internal server error', error: String(error) });
+    }
+  });
+
   // POST /api/admin/migrate-images - Migrate PNG images to optimized JPEG (test on 2 books)
   app.post('/api/admin/migrate-images', isAdmin, async (req, res) => {
     try {
