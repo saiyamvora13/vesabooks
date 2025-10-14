@@ -15,6 +15,12 @@ import Login from "@/pages/login";
 import ForgotPassword from "@/pages/forgot-password";
 import ResetPassword from "@/pages/reset-password";
 import NotFound from "@/pages/not-found";
+import AdminLogin from "@/pages/admin-login";
+import AdminDashboard from "@/pages/admin/dashboard";
+import AdminSettings from "@/pages/admin/settings";
+import AdminHeroManagement from "@/pages/admin/hero-management";
+import AdminFeatured from "@/pages/admin/featured";
+import AdminAuditLogs from "@/pages/admin/audit-logs";
 
 function Router() {
   return (
@@ -31,6 +37,15 @@ function Router() {
       <Route path="/purchases" component={Purchases} />
       <Route path="/view/:id" component={View} />
       <Route path="/shared/:shareUrl" component={View} />
+      
+      {/* Admin Routes */}
+      <Route path="/admin/login" component={AdminLogin} />
+      <Route path="/admin/dashboard" component={AdminDashboard} />
+      <Route path="/admin/settings" component={AdminSettings} />
+      <Route path="/admin/hero" component={AdminHeroManagement} />
+      <Route path="/admin/featured" component={AdminFeatured} />
+      <Route path="/admin/audit-logs" component={AdminAuditLogs} />
+      
       <Route component={NotFound} />
     </Switch>
   );

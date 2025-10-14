@@ -3,13 +3,14 @@ import express from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { generateStoryFromPrompt, generateIllustration } from "./services/gemini";
-import { createStorybookSchema, type StoryGenerationProgress, type Purchase, type InsertPurchase, type User } from "@shared/schema";
+import { createStorybookSchema, type StoryGenerationProgress, type Purchase, type InsertPurchase, type User, type AdminUser } from "@shared/schema";
 import { randomUUID, randomBytes } from "crypto";
 import * as fs from "fs";
 import * as path from "path";
 import multer from "multer";
 import { setupAuth, isAuthenticated } from "./replitAuth";
 import passport, { normalizeEmail, validateEmail, hashPassword } from "./auth";
+import { isAdmin } from "./adminAuth";
 import Stripe from "stripe";
 import { z } from "zod";
 
@@ -276,6 +277,290 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Admin validation schemas
+  const updateSettingSchema = z.object({
+    value: z.string()
+  });
+
+  const updateHeroSlotSchema = z.object({
+    storybookId: z.string().optional(),
+    headline: z.string().optional(),
+    ctaText: z.string().optional(),
+    isActive: z.boolean().optional()
+  });
+
+  const addFeaturedStorybookSchema = z.object({
+    storybookId: z.string(),
+    rank: z.number()
+  });
+
+  // Helper function for audit logging
+  async function logAdminAction(
+    adminId: string,
+    action: string,
+    resourceType: string,
+    resourceId: string,
+    changes: any,
+    req: Request
+  ) {
+    await storage.createAuditLog({
+      adminId,
+      action,
+      resourceType,
+      resourceId,
+      changes,
+      ipAddress: req.ip || req.connection.remoteAddress,
+      userAgent: req.headers['user-agent']
+    });
+  }
+
+  // Admin API Routes
+
+  // POST /api/admin/login - Admin login
+  app.post('/api/admin/login', (req, res, next) => {
+    passport.authenticate('admin-local', (err: any, admin: AdminUser | false, info: any) => {
+      if (err) {
+        console.error('Admin login error:', err);
+        return res.status(500).json({ message: 'Internal server error' });
+      }
+      
+      if (!admin) {
+        return res.status(401).json({ message: info?.message || 'Invalid credentials' });
+      }
+
+      req.logIn({ ...admin, isAdminUser: true }, (loginErr) => {
+        if (loginErr) {
+          console.error('Admin login session error:', loginErr);
+          return res.status(500).json({ message: 'Internal server error' });
+        }
+
+        // Set admin flag in session
+        (req.session as any).isAdminUser = true;
+
+        // Return admin without password
+        const { password: _, ...adminWithoutPassword } = admin;
+        res.json(adminWithoutPassword);
+      });
+    })(req, res, next);
+  });
+
+  // POST /api/admin/logout - Admin logout
+  app.post('/api/admin/logout', (req, res) => {
+    req.logout((err) => {
+      if (err) {
+        console.error('Admin logout error:', err);
+        return res.status(500).json({ message: 'Internal server error' });
+      }
+
+      req.session.destroy((destroyErr) => {
+        if (destroyErr) {
+          console.error('Admin session destroy error:', destroyErr);
+          return res.status(500).json({ message: 'Failed to destroy session' });
+        }
+
+        res.json({ message: 'Logout successful' });
+      });
+    });
+  });
+
+  // GET /api/admin/me - Get current admin user
+  app.get('/api/admin/me', isAdmin, async (req, res) => {
+    try {
+      const admin = req.user as AdminUser;
+      const { password: _, ...adminWithoutPassword } = admin;
+      res.json(adminWithoutPassword);
+    } catch (error) {
+      console.error('Get admin user error:', error);
+      res.status(500).json({ message: 'Internal server error' });
+    }
+  });
+
+  // GET /api/admin/settings - Get all settings
+  app.get('/api/admin/settings', isAdmin, async (req, res) => {
+    try {
+      const settings = await storage.getAllSettings();
+      res.json(settings);
+    } catch (error) {
+      console.error('Get settings error:', error);
+      res.status(500).json({ message: 'Internal server error' });
+    }
+  });
+
+  // PUT /api/admin/settings/:key - Update setting
+  app.put('/api/admin/settings/:key', isAdmin, async (req, res) => {
+    try {
+      const { key } = req.params;
+      const admin = req.user as AdminUser;
+      
+      const validation = updateSettingSchema.safeParse(req.body);
+      if (!validation.success) {
+        return res.status(400).json({ message: 'Invalid request body', errors: validation.error.errors });
+      }
+
+      const { value } = validation.data;
+      
+      // Get old value for audit log
+      const oldSetting = await storage.getSetting(key);
+      
+      // Update setting
+      await storage.updateSetting(key, value, admin.id);
+      
+      // Log action
+      await logAdminAction(
+        admin.id,
+        'update_setting',
+        'setting',
+        key,
+        { key, oldValue: oldSetting?.value, newValue: value },
+        req
+      );
+      
+      res.json({ message: 'Setting updated successfully' });
+    } catch (error) {
+      console.error('Update setting error:', error);
+      res.status(500).json({ message: 'Internal server error' });
+    }
+  });
+
+  // GET /api/admin/hero-slots - Get hero slots
+  app.get('/api/admin/hero-slots', isAdmin, async (req, res) => {
+    try {
+      const slots = await storage.getHeroSlots();
+      res.json(slots);
+    } catch (error) {
+      console.error('Get hero slots error:', error);
+      res.status(500).json({ message: 'Internal server error' });
+    }
+  });
+
+  // PUT /api/admin/hero-slots/:slotNumber - Update hero slot
+  app.put('/api/admin/hero-slots/:slotNumber', isAdmin, async (req, res) => {
+    try {
+      const { slotNumber } = req.params;
+      const admin = req.user as AdminUser;
+      
+      const validation = updateHeroSlotSchema.safeParse(req.body);
+      if (!validation.success) {
+        return res.status(400).json({ message: 'Invalid request body', errors: validation.error.errors });
+      }
+
+      const data = validation.data;
+      
+      // Update slot
+      await storage.updateHeroSlot(parseInt(slotNumber), {
+        ...data,
+        updatedBy: admin.id
+      });
+      
+      // Log action
+      await logAdminAction(
+        admin.id,
+        'update_hero_slot',
+        'hero_slot',
+        slotNumber,
+        { slotNumber, ...data },
+        req
+      );
+      
+      res.json({ message: 'Hero slot updated successfully' });
+    } catch (error) {
+      console.error('Update hero slot error:', error);
+      res.status(500).json({ message: 'Internal server error' });
+    }
+  });
+
+  // GET /api/admin/featured - Get featured storybooks
+  app.get('/api/admin/featured', isAdmin, async (req, res) => {
+    try {
+      const featured = await storage.getFeaturedStorybooks();
+      res.json(featured);
+    } catch (error) {
+      console.error('Get featured storybooks error:', error);
+      res.status(500).json({ message: 'Internal server error' });
+    }
+  });
+
+  // POST /api/admin/featured - Add featured storybook
+  app.post('/api/admin/featured', isAdmin, async (req, res) => {
+    try {
+      const admin = req.user as AdminUser;
+      
+      const validation = addFeaturedStorybookSchema.safeParse(req.body);
+      if (!validation.success) {
+        return res.status(400).json({ message: 'Invalid request body', errors: validation.error.errors });
+      }
+
+      const { storybookId, rank } = validation.data;
+      
+      // Add featured storybook
+      const featured = await storage.addFeaturedStorybook(storybookId, rank, admin.id);
+      
+      // Log action
+      await logAdminAction(
+        admin.id,
+        'add_featured_storybook',
+        'featured_storybook',
+        featured.id,
+        { storybookId, rank },
+        req
+      );
+      
+      res.json(featured);
+    } catch (error) {
+      console.error('Add featured storybook error:', error);
+      res.status(500).json({ message: 'Internal server error' });
+    }
+  });
+
+  // DELETE /api/admin/featured/:id - Remove featured storybook
+  app.delete('/api/admin/featured/:id', isAdmin, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const admin = req.user as AdminUser;
+      
+      // Remove featured storybook
+      await storage.removeFeaturedStorybook(id);
+      
+      // Log action
+      await logAdminAction(
+        admin.id,
+        'remove_featured_storybook',
+        'featured_storybook',
+        id,
+        { id },
+        req
+      );
+      
+      res.json({ message: 'Featured storybook removed successfully' });
+    } catch (error) {
+      console.error('Remove featured storybook error:', error);
+      res.status(500).json({ message: 'Internal server error' });
+    }
+  });
+
+  // GET /api/admin/audit-logs - Get audit logs (super admin only)
+  app.get('/api/admin/audit-logs', isAdmin, async (req, res) => {
+    try {
+      const admin = req.user as AdminUser;
+      
+      // Check if super admin
+      if (!admin.isSuperAdmin) {
+        return res.status(403).json({ message: 'Super admin access required' });
+      }
+      
+      const { adminId, limit } = req.query;
+      const logs = await storage.getAuditLogs(
+        adminId as string | undefined,
+        limit ? parseInt(limit as string) : undefined
+      );
+      
+      res.json(logs);
+    } catch (error) {
+      console.error('Get audit logs error:', error);
+      res.status(500).json({ message: 'Internal server error' });
+    }
+  });
+
   // Get metrics (public - no auth required)
   app.get('/api/metrics', async (req, res) => {
     try {
@@ -309,10 +594,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: validationResult.error.message });
       }
 
+      // Fetch pages_per_book setting from admin settings
+      const pagesSetting = await storage.getSetting('pages_per_book');
+      const pagesPerBook = pagesSetting ? parseInt(pagesSetting.value) : 3;
+      
+      // Validate page count (minimum 1, maximum 10 for performance)
+      const validatedPagesPerBook = Math.max(1, Math.min(10, pagesPerBook));
+
       const sessionId = randomUUID();
 
-      // Start generation in background with userId
-      generateStorybookAsync(sessionId, userId, prompt, imagePaths)
+      // Start generation in background with userId and pagesPerBook
+      generateStorybookAsync(sessionId, userId, prompt, imagePaths, validatedPagesPerBook)
         .catch((error: unknown) => {
           console.error("Story generation failed:", error);
           const errorMessage = error instanceof Error ? error.message : 'Unknown error';
@@ -364,6 +656,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get example storybooks for homepage showcase (public)
   app.get("/api/storybooks/examples", async (req, res) => {
     try {
+      // Try to fetch hero slots from admin settings
+      const heroSlots = await storage.getHeroSlots();
+      
+      // Filter active slots that have a storybook assigned
+      const activeSlots = heroSlots
+        .filter(slot => slot.isActive && slot.storybookId)
+        .sort((a, b) => Number(a.slotNumber) - Number(b.slotNumber));
+      
+      if (activeSlots.length > 0) {
+        // Fetch storybooks for active hero slots
+        const storybooks = [];
+        for (const slot of activeSlots) {
+          const storybook = await storage.getStorybook(slot.storybookId!);
+          if (storybook) {
+            storybooks.push(storybook);
+          }
+        }
+        
+        // If we found storybooks, return them
+        if (storybooks.length > 0) {
+          return res.json(storybooks);
+        }
+      }
+      
+      // Fallback to most recent storybooks if no hero slots configured
       const examples = await storage.getExampleStorybooks(3);
       res.json(examples);
     } catch (error) {
@@ -700,6 +1017,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Items array is required" });
       }
 
+      // Fetch pricing from admin settings with fallback defaults
+      const digitalPriceSetting = await storage.getSetting('digital_price');
+      const printPriceSetting = await storage.getSetting('print_price');
+      const digitalPrice = digitalPriceSetting ? parseInt(digitalPriceSetting.value) : 399;
+      const printPrice = printPriceSetting ? parseInt(printPriceSetting.value) : 2499;
+
       const lineItems = [];
       const processedItems = [];
       
@@ -717,7 +1040,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
 
         // SECURITY: Calculate price server-side, ignore client-provided price
-        const serverPrice = PRICES[type as 'digital' | 'print'];
+        const serverPrice = type === 'digital' ? digitalPrice : printPrice;
 
         lineItems.push({
           price_data: {
@@ -775,6 +1098,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Items array is required" });
       }
 
+      // Fetch pricing from admin settings with fallback defaults
+      const digitalPriceSetting = await storage.getSetting('digital_price');
+      const printPriceSetting = await storage.getSetting('print_price');
+      const digitalPrice = digitalPriceSetting ? parseInt(digitalPriceSetting.value) : 399;
+      const printPrice = printPriceSetting ? parseInt(printPriceSetting.value) : 2499;
+
       let total = 0;
       const processedItems = [];
 
@@ -792,8 +1121,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           return res.status(404).json({ message: `Storybook ${storybookId} not found` });
         }
 
-        // SECURITY: Calculate price server-side using PRICES constants
-        const serverPrice = PRICES[type as 'digital' | 'print'];
+        // SECURITY: Calculate price server-side from admin settings
+        const serverPrice = type === 'digital' ? digitalPrice : printPrice;
         total += serverPrice;
 
         processedItems.push({
@@ -1104,7 +1433,8 @@ async function generateStorybookAsync(
   sessionId: string,
   userId: string,
   prompt: string,
-  imagePaths: string[]
+  imagePaths: string[],
+  pagesPerBook: number = 3
 ): Promise<void> {
   try {
     // Step 1: Processing images
@@ -1118,10 +1448,10 @@ async function generateStorybookAsync(
     await storage.setGenerationProgress(sessionId, {
       step: 'generating_story',
       progress: 30,
-      message: 'Generating story outline...',
+      message: `Generating ${pagesPerBook}-page story outline...`,
     });
 
-    const generatedStory = await generateStoryFromPrompt(prompt, imagePaths);
+    const generatedStory = await generateStoryFromPrompt(prompt, imagePaths, pagesPerBook);
 
     // Step 3: Generate illustrations
     await storage.setGenerationProgress(sessionId, {

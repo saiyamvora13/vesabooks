@@ -1,4 +1,4 @@
-import { type Storybook, type InsertStorybook, type StoryGenerationProgress, storybooks, users, type User, type UpsertUser, type Purchase, type InsertPurchase, purchases, passwordResetTokens, type PasswordResetToken } from "@shared/schema";
+import { type Storybook, type InsertStorybook, type StoryGenerationProgress, storybooks, users, type User, type UpsertUser, type Purchase, type InsertPurchase, purchases, passwordResetTokens, type PasswordResetToken, type AdminUser, type InsertAdminUser, adminUsers, type SiteSetting, siteSettings, type HeroStorybookSlot, type InsertHeroStorybookSlot, heroStorybookSlots, type FeaturedStorybook, type InsertFeaturedStorybook, featuredStorybooks, type AdminAuditLog, type InsertAdminAuditLog, adminAuditLogs } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, count, countDistinct, isNull, and, lt } from "drizzle-orm";
 import { normalizeEmail } from "./auth";
@@ -44,6 +44,30 @@ export interface IStorage {
   deletePasswordResetToken(token: string): Promise<void>;
   deleteExpiredPasswordResetTokens(): Promise<void>;
   updateUserPassword(userId: string, hashedPassword: string): Promise<void>;
+  
+  // Admin user operations
+  getAdminUser(id: string): Promise<AdminUser | undefined>;
+  getAdminUserByEmail(email: string): Promise<AdminUser | undefined>;
+  createAdminUser(userData: InsertAdminUser): Promise<AdminUser>;
+  
+  // Settings operations
+  getSetting(key: string): Promise<SiteSetting | undefined>;
+  updateSetting(key: string, value: string, updatedBy: string): Promise<void>;
+  getAllSettings(): Promise<SiteSetting[]>;
+  
+  // Hero slots operations
+  getHeroSlots(): Promise<HeroStorybookSlot[]>;
+  updateHeroSlot(slotNumber: number, data: Partial<InsertHeroStorybookSlot>): Promise<void>;
+  
+  // Featured storybooks operations
+  getFeaturedStorybooks(): Promise<FeaturedStorybook[]>;
+  addFeaturedStorybook(storybookId: string, rank: number, updatedBy: string): Promise<FeaturedStorybook>;
+  removeFeaturedStorybook(id: string): Promise<void>;
+  updateFeaturedRank(id: string, rank: number): Promise<void>;
+  
+  // Audit logging
+  createAuditLog(log: InsertAdminAuditLog): Promise<void>;
+  getAuditLogs(adminId?: string, limit?: number): Promise<AdminAuditLog[]>;
 }
 
 // Database storage for persistent data
@@ -349,6 +373,140 @@ export class DatabaseStorage implements IStorage {
       .update(users)
       .set({ password: hashedPassword, updatedAt: new Date() })
       .where(eq(users.id, userId));
+  }
+
+  // Admin user operations
+  async getAdminUser(id: string): Promise<AdminUser | undefined> {
+    const [admin] = await db
+      .select()
+      .from(adminUsers)
+      .where(eq(adminUsers.id, id));
+    return admin || undefined;
+  }
+
+  async getAdminUserByEmail(email: string): Promise<AdminUser | undefined> {
+    const [admin] = await db
+      .select()
+      .from(adminUsers)
+      .where(eq(adminUsers.email, email.toLowerCase().trim()));
+    return admin || undefined;
+  }
+
+  async createAdminUser(userData: InsertAdminUser): Promise<AdminUser> {
+    const [admin] = await db
+      .insert(adminUsers)
+      .values(userData)
+      .returning();
+    return admin;
+  }
+
+  // Settings operations
+  async getSetting(key: string): Promise<SiteSetting | undefined> {
+    const [setting] = await db
+      .select()
+      .from(siteSettings)
+      .where(eq(siteSettings.key, key));
+    return setting || undefined;
+  }
+
+  async updateSetting(key: string, value: string, updatedBy: string): Promise<void> {
+    await db
+      .update(siteSettings)
+      .set({ 
+        value, 
+        updatedBy, 
+        updatedAt: new Date() 
+      })
+      .where(eq(siteSettings.key, key));
+  }
+
+  async getAllSettings(): Promise<SiteSetting[]> {
+    const settings = await db
+      .select()
+      .from(siteSettings);
+    return settings;
+  }
+
+  // Hero slots operations
+  async getHeroSlots(): Promise<HeroStorybookSlot[]> {
+    const slots = await db
+      .select()
+      .from(heroStorybookSlots)
+      .orderBy(heroStorybookSlots.slotNumber);
+    return slots;
+  }
+
+  async updateHeroSlot(slotNumber: number, data: Partial<InsertHeroStorybookSlot>): Promise<void> {
+    await db
+      .update(heroStorybookSlots)
+      .set({ 
+        ...data, 
+        updatedAt: new Date() 
+      })
+      .where(eq(heroStorybookSlots.slotNumber, slotNumber.toString()));
+  }
+
+  // Featured storybooks operations
+  async getFeaturedStorybooks(): Promise<FeaturedStorybook[]> {
+    const featured = await db
+      .select()
+      .from(featuredStorybooks)
+      .orderBy(featuredStorybooks.rank);
+    return featured;
+  }
+
+  async addFeaturedStorybook(storybookId: string, rank: number, updatedBy: string): Promise<FeaturedStorybook> {
+    const [featured] = await db
+      .insert(featuredStorybooks)
+      .values({
+        storybookId,
+        rank: rank.toString(),
+        updatedBy,
+      })
+      .returning();
+    return featured;
+  }
+
+  async removeFeaturedStorybook(id: string): Promise<void> {
+    await db
+      .delete(featuredStorybooks)
+      .where(eq(featuredStorybooks.id, id));
+  }
+
+  async updateFeaturedRank(id: string, rank: number): Promise<void> {
+    await db
+      .update(featuredStorybooks)
+      .set({ 
+        rank: rank.toString(), 
+        updatedAt: new Date() 
+      })
+      .where(eq(featuredStorybooks.id, id));
+  }
+
+  // Audit logging
+  async createAuditLog(log: InsertAdminAuditLog): Promise<void> {
+    await db
+      .insert(adminAuditLogs)
+      .values(log);
+  }
+
+  async getAuditLogs(adminId?: string, limit: number = 100): Promise<AdminAuditLog[]> {
+    if (adminId) {
+      const logs = await db
+        .select()
+        .from(adminAuditLogs)
+        .where(eq(adminAuditLogs.adminId, adminId))
+        .orderBy(desc(adminAuditLogs.createdAt))
+        .limit(limit);
+      return logs;
+    } else {
+      const logs = await db
+        .select()
+        .from(adminAuditLogs)
+        .orderBy(desc(adminAuditLogs.createdAt))
+        .limit(limit);
+      return logs;
+    }
   }
 }
 

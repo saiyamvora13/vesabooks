@@ -119,3 +119,81 @@ export const insertPasswordResetTokenSchema = createInsertSchema(passwordResetTo
 
 export type InsertPasswordResetToken = z.infer<typeof insertPasswordResetTokenSchema>;
 export type PasswordResetToken = typeof passwordResetTokens.$inferSelect;
+
+// Admin Users table - separate from regular users for security
+export const adminUsers = pgTable("admin_users", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  email: varchar("email").notNull().unique(),
+  password: varchar("password").notNull(),
+  firstName: varchar("first_name"),
+  lastName: varchar("last_name"),
+  isSuperAdmin: boolean("is_super_admin").notNull().default(false),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export type AdminUser = typeof adminUsers.$inferSelect;
+export type InsertAdminUser = typeof adminUsers.$inferInsert;
+
+// Site Settings table - flexible key-value store for configuration
+export const siteSettings = pgTable("site_settings", {
+  key: varchar("key").primaryKey(),
+  value: text("value").notNull(),
+  description: text("description"),
+  updatedBy: varchar("updated_by").references(() => adminUsers.id),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export type SiteSetting = typeof siteSettings.$inferSelect;
+export type InsertSiteSetting = typeof siteSettings.$inferInsert;
+
+// Hero Storybook Slots - control which storybooks appear on homepage
+export const heroStorybookSlots = pgTable("hero_storybook_slots", {
+  slotNumber: numeric("slot_number").primaryKey(),
+  storybookId: varchar("storybook_id").references(() => storybooks.id, { onDelete: 'set null' }),
+  headline: text("headline"),
+  ctaText: text("cta_text"),
+  isActive: boolean("is_active").notNull().default(true),
+  updatedBy: varchar("updated_by").references(() => adminUsers.id),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export type HeroStorybookSlot = typeof heroStorybookSlots.$inferSelect;
+export type InsertHeroStorybookSlot = typeof heroStorybookSlots.$inferInsert;
+
+// Featured Storybooks - curated featured content with ranking
+export const featuredStorybooks = pgTable("featured_storybooks", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  storybookId: varchar("storybook_id").notNull().references(() => storybooks.id, { onDelete: 'cascade' }),
+  rank: numeric("rank").notNull(),
+  featuredFrom: timestamp("featured_from").defaultNow(),
+  featuredTo: timestamp("featured_to"),
+  isActive: boolean("is_active").notNull().default(true),
+  updatedBy: varchar("updated_by").references(() => adminUsers.id),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("idx_featured_storybooks_active").on(table.isActive, table.rank),
+  unique().on(table.storybookId),
+]);
+
+export type FeaturedStorybook = typeof featuredStorybooks.$inferSelect;
+export type InsertFeaturedStorybook = typeof featuredStorybooks.$inferInsert;
+
+// Admin Audit Logs - track all admin actions for security
+export const adminAuditLogs = pgTable("admin_audit_logs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  adminId: varchar("admin_id").notNull().references(() => adminUsers.id, { onDelete: 'cascade' }),
+  action: text("action").notNull(),
+  resourceType: text("resource_type"),
+  resourceId: varchar("resource_id"),
+  changes: jsonb("changes"),
+  ipAddress: varchar("ip_address"),
+  userAgent: text("user_agent"),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("idx_admin_audit_logs_admin").on(table.adminId),
+  index("idx_admin_audit_logs_created").on(table.createdAt),
+]);
+
+export type AdminAuditLog = typeof adminAuditLogs.$inferSelect;
+export type InsertAdminAuditLog = typeof adminAuditLogs.$inferInsert;

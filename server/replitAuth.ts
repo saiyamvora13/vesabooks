@@ -105,13 +105,18 @@ export async function setupAuth(app: Express) {
     const userObj = user as any;
     if (userObj.claims) {
       cb(null, user);
+    } else if (userObj.isAdminUser) {
+      // Admin user - serialize with flag
+      cb(null, { id: userObj.id, isAdminUser: true });
     } else {
+      // Regular user
       cb(null, userObj.id);
     }
   });
   
   passport.deserializeUser(async (data: any, cb) => {
     if (typeof data === 'string') {
+      // Regular user ID
       try {
         const user = await storage.getUser(data);
         if (!user) {
@@ -121,7 +126,19 @@ export async function setupAuth(app: Express) {
       } catch (error) {
         cb(error);
       }
+    } else if (data?.isAdminUser) {
+      // Admin user
+      try {
+        const admin = await storage.getAdminUser(data.id);
+        if (!admin) {
+          return cb(null, false);
+        }
+        cb(null, { ...admin, isAdminUser: true });
+      } catch (error) {
+        cb(error);
+      }
     } else {
+      // OIDC user with claims
       cb(null, data);
     }
   });

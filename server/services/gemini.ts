@@ -45,7 +45,8 @@ function hasStyleInstructions(prompt: string): boolean {
 
 export async function generateStoryFromPrompt(
   prompt: string,
-  inspirationImagePaths: string[]
+  inspirationImagePaths: string[],
+  pagesPerBook: number = 3
 ): Promise<GeneratedStory> {
   try {
     // Adapt system instruction based on whether user specified a style
@@ -54,8 +55,8 @@ export async function generateStoryFromPrompt(
     const hasImages = inspirationImagePaths && inspirationImagePaths.length > 0;
     
     const systemInstruction = hasCustomStyle
-      ? `You are a creative storyteller. Your task is to generate a complete 3-page story based on a user's prompt${hasImages ? ' and optional inspirational images' : ''}. Respect the user's style preferences and tone specified in their prompt. You must respond with a JSON object that strictly follows the provided schema. Ensure you create a compelling 'coverImagePrompt' and that the 'pages' array contains exactly 3 elements. The imagePrompts should match the style and tone requested by the user.`
-      : `You are a creative and whimsical children's storybook author. Your task is to generate a complete 3-page story based on a user's prompt${hasImages ? ' and optional inspirational images' : ''}. The story should be suitable for children aged 5-7. You must respond with a JSON object that strictly follows the provided schema. Ensure you create a compelling 'coverImagePrompt' and that the 'pages' array contains exactly 3 elements.`;
+      ? `You are a creative storyteller. Your task is to generate a complete ${pagesPerBook}-page story based on a user's prompt${hasImages ? ' and optional inspirational images' : ''}. Respect the user's style preferences and tone specified in their prompt. You must respond with a JSON object that strictly follows the provided schema. Ensure you create a compelling 'coverImagePrompt' and that the 'pages' array contains exactly ${pagesPerBook} elements. The imagePrompts should match the style and tone requested by the user.`
+      : `You are a creative and whimsical children's storybook author. Your task is to generate a complete ${pagesPerBook}-page story based on a user's prompt${hasImages ? ' and optional inspirational images' : ''}. The story should be suitable for children aged 5-7. You must respond with a JSON object that strictly follows the provided schema. Ensure you create a compelling 'coverImagePrompt' and that the 'pages' array contains exactly ${pagesPerBook} elements.`;
 
     const imageParts = [];
     
@@ -103,13 +104,13 @@ export async function generateStoryFromPrompt(
         },
         pages: {
           type: Type.ARRAY,
-          description: "An array of 3 pages for the storybook.",
+          description: `An array of ${pagesPerBook} pages for the storybook.`,
           items: {
             type: Type.OBJECT,
             properties: {
               pageNumber: {
                 type: Type.NUMBER,
-                description: "The page number (1, 2, or 3).",
+                description: `The page number (1 to ${pagesPerBook}).`,
               },
               text: {
                 type: Type.STRING,
