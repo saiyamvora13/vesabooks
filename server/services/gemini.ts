@@ -60,7 +60,7 @@ function extractArtStyle(prompt: string): string | undefined {
 }
 
 // Optimize image for web display - reduces file size by ~90% with no visible quality loss
-async function optimizeImageForWeb(imageBuffer: Buffer): Promise<Buffer> {
+export async function optimizeImageForWeb(imageBuffer: Buffer): Promise<Buffer> {
   // Optimal web resolution: resize to max 1200px width while maintaining aspect ratio
   // Convert to JPEG at 90% quality for significant size reduction (2-5MB → 200-500KB)
   // Flatten transparency with white background (standard for web)
