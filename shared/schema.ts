@@ -44,9 +44,12 @@ export const storybooks = pgTable("storybooks", {
     pageNumber: number;
     text: string;
     imageUrl: string;
+    imagePrompt: string;
   }>>().notNull(),
   inspirationImages: json("inspiration_images").$type<string[]>().notNull().default([]),
   coverImageUrl: text("cover_image_url"),
+  mainCharacterDescription: text("main_character_description"),
+  storyArc: text("story_arc"),
   createdAt: timestamp("created_at").defaultNow(),
   shareUrl: text("share_url"),
   deletedAt: timestamp("deleted_at"),

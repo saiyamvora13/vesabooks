@@ -1538,6 +1538,7 @@ async function generateStorybookAsync(
         pageNumber: page.pageNumber,
         text: page.text,
         imageUrl,
+        imagePrompt: page.imagePrompt,
       });
 
       // Update progress
@@ -1556,7 +1557,7 @@ async function generateStorybookAsync(
       message: 'Finalizing your storybook...',
     });
 
-    // Save to storage with userId, including cover image URL
+    // Save to storage with userId, including cover image URL and story metadata
     const storybook = await storage.createStorybook({
       userId,
       title: generatedStory.title,
@@ -1564,6 +1565,8 @@ async function generateStorybookAsync(
       pages,
       inspirationImages: [],
       coverImageUrl,
+      mainCharacterDescription: generatedStory.mainCharacterDescription,
+      storyArc: generatedStory.storyArc,
     });
 
     // Complete
