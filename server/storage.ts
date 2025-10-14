@@ -1,4 +1,4 @@
-import { type Storybook, type InsertStorybook, type StoryGenerationProgress, storybooks, users, type User, type UpsertUser, type Purchase, type InsertPurchase, purchases, passwordResetTokens, type PasswordResetToken, type AdminUser, type InsertAdminUser, adminUsers, type SiteSetting, siteSettings, type HeroStorybookSlot, type InsertHeroStorybookSlot, heroStorybookSlots, type FeaturedStorybook, type InsertFeaturedStorybook, featuredStorybooks, type AdminAuditLog, type InsertAdminAuditLog, adminAuditLogs } from "@shared/schema";
+import { type Storybook, type InsertStorybook, type StoryGenerationProgress, storybooks, users, type User, type UpsertUser, type Purchase, type InsertPurchase, purchases, passwordResetTokens, type PasswordResetToken, type AdminUser, type InsertAdminUser, adminUsers, type SiteSetting, siteSettings, type HeroStorybookSlot, type InsertHeroStorybookSlot, heroStorybookSlots, type FeaturedStorybook, type InsertFeaturedStorybook, featuredStorybooks, type AdminAuditLog, type InsertAdminAuditLog, adminAuditLogs, type SamplePrompt, type InsertSamplePrompt, samplePrompts } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, count, countDistinct, isNull, and, lt } from "drizzle-orm";
 import { normalizeEmail } from "./auth";
@@ -68,6 +68,14 @@ export interface IStorage {
   // Audit logging
   createAuditLog(log: InsertAdminAuditLog): Promise<void>;
   getAuditLogs(adminId?: string, limit?: number): Promise<AdminAuditLog[]>;
+  
+  // Sample prompts operations
+  getAllSamplePrompts(): Promise<SamplePrompt[]>;
+  getActiveSamplePrompts(): Promise<SamplePrompt[]>;
+  getSamplePrompt(id: string): Promise<SamplePrompt | undefined>;
+  createSamplePrompt(data: InsertSamplePrompt): Promise<SamplePrompt>;
+  updateSamplePrompt(id: string, data: Partial<InsertSamplePrompt>): Promise<SamplePrompt>;
+  deleteSamplePrompt(id: string): Promise<void>;
 }
 
 // Database storage for persistent data
@@ -507,6 +515,55 @@ export class DatabaseStorage implements IStorage {
         .limit(limit);
       return logs;
     }
+  }
+
+  // Sample prompts operations
+  async getAllSamplePrompts(): Promise<SamplePrompt[]> {
+    const prompts = await db
+      .select()
+      .from(samplePrompts)
+      .orderBy(samplePrompts.displayOrder);
+    return prompts;
+  }
+
+  async getActiveSamplePrompts(): Promise<SamplePrompt[]> {
+    const prompts = await db
+      .select()
+      .from(samplePrompts)
+      .where(eq(samplePrompts.isActive, true))
+      .orderBy(samplePrompts.displayOrder);
+    return prompts;
+  }
+
+  async getSamplePrompt(id: string): Promise<SamplePrompt | undefined> {
+    const [prompt] = await db
+      .select()
+      .from(samplePrompts)
+      .where(eq(samplePrompts.id, id));
+    return prompt || undefined;
+  }
+
+  async createSamplePrompt(data: InsertSamplePrompt): Promise<SamplePrompt> {
+    const [prompt] = await db
+      .insert(samplePrompts)
+      .values(data)
+      .returning();
+    return prompt;
+  }
+
+  async updateSamplePrompt(id: string, data: Partial<InsertSamplePrompt>): Promise<SamplePrompt> {
+    const [prompt] = await db
+      .update(samplePrompts)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(samplePrompts.id, id))
+      .returning();
+    return prompt;
+  }
+
+  async deleteSamplePrompt(id: string): Promise<void> {
+    await db
+      .delete(samplePrompts)
+      .where(eq(samplePrompts.id, id));
   }
 }
 
