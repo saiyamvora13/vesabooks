@@ -1503,7 +1503,7 @@ async function generateStorybookAsync(
     const { ObjectStorageService } = await import("./objectStorage");
     const objectStorage = new ObjectStorageService();
 
-    // Use the first inspiration image as the base for all generated images (if available)
+    // Use the first inspiration image as the base for cover image (if available)
     const baseImagePath = imagePaths.length > 0 ? imagePaths[0] : undefined;
     
     // Generate cover image
@@ -1514,10 +1514,8 @@ async function generateStorybookAsync(
     // Upload cover image to Object Storage
     const coverImageUrl = await objectStorage.uploadFile(coverImagePath, coverImageFileName);
     
-    // Clean up local cover image
-    if (fs.existsSync(coverImagePath)) {
-      fs.unlinkSync(coverImagePath);
-    }
+    // KEEP cover image locally to use as reference for character consistency in all page illustrations
+    // It will be cleaned up after all pages are generated
 
     const pages = [];
     for (let i = 0; i < generatedStory.pages.length; i++) {
@@ -1525,8 +1523,8 @@ async function generateStorybookAsync(
       const imageFileName = `${sessionId}_page_${page.pageNumber}.png`;
       const imagePath = path.join(generatedDir, imageFileName);
 
-      // Generate illustration for this page using the base image (if available)
-      await generateIllustration(page.imagePrompt, imagePath, baseImagePath);
+      // Generate illustration for this page using the COVER IMAGE as reference for character consistency
+      await generateIllustration(page.imagePrompt, imagePath, coverImagePath);
 
       // Upload to Object Storage
       const imageUrl = await objectStorage.uploadFile(imagePath, imageFileName);
@@ -1582,7 +1580,12 @@ async function generateStorybookAsync(
       message: storybook.id, // Store ID in message for retrieval
     });
 
-    // Clean up uploaded files
+    // Clean up cover image now that all pages are generated
+    if (fs.existsSync(coverImagePath)) {
+      fs.unlinkSync(coverImagePath);
+    }
+
+    // Clean up uploaded inspiration images
     imagePaths.forEach(imagePath => {
       if (fs.existsSync(imagePath)) {
         fs.unlinkSync(imagePath);

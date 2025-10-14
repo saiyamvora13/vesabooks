@@ -13,6 +13,8 @@ export interface GeneratedStory {
   title: string;
   author: string;
   coverImagePrompt: string;
+  mainCharacterDescription: string;
+  storyArc: string;
   pages: StoryPage[];
 }
 
@@ -54,9 +56,69 @@ export async function generateStoryFromPrompt(
     
     const hasImages = inspirationImagePaths && inspirationImagePaths.length > 0;
     
+    // Calculate story structure pacing - simple and robust for all page counts
+    let beginningPages: number, middlePages: number, endPages: number;
+    
+    if (pagesPerBook <= 2) {
+      // Very short books: simplified structure
+      beginningPages = 1;
+      middlePages = 0;
+      endPages = Math.max(0, pagesPerBook - 1);
+    } else {
+      // 3+ pages: ensure each act gets at least 1 page, distribute rest to middle
+      beginningPages = Math.max(1, Math.round(pagesPerBook * 0.25)); // ~25%
+      endPages = Math.max(1, Math.round(pagesPerBook * 0.25));        // ~25%
+      middlePages = pagesPerBook - beginningPages - endPages;          // ~50% (remainder)
+      
+      // Ensure middle has at least 1 page for books with 3+ pages
+      if (middlePages < 1) {
+        middlePages = 1;
+        // Reduce beginning or end to make room
+        if (beginningPages > 1) beginningPages--;
+        else if (endPages > 1) endPages--;
+      }
+    }
+    
+    // Build narrative structure guidance based on page count
+    let narrativeStructure = '';
+    if (pagesPerBook === 1) {
+      narrativeStructure = `Single page format: Combine introduction, challenge, and resolution into one cohesive scene.`;
+    } else if (pagesPerBook === 2) {
+      narrativeStructure = `Two-page format:
+   - Page 1: Introduce the character and present the challenge/adventure
+   - Page 2: Show the resolution and what was learned`;
+    } else {
+      narrativeStructure = `Three-act structure:
+   - BEGINNING (pages 1-${beginningPages}): Introduce the main character, setting, and normal world
+   - MIDDLE (pages ${beginningPages + 1}-${beginningPages + middlePages}): Present conflict/challenge, show struggles and attempts to overcome obstacles
+   - END (pages ${beginningPages + middlePages + 1}-${pagesPerBook}): Resolve the conflict, show growth/learning, provide closure`;
+    }
+    
     const systemInstruction = hasCustomStyle
-      ? `You are a creative storyteller. Your task is to generate a complete ${pagesPerBook}-page story based on a user's prompt${hasImages ? ' and optional inspirational images' : ''}. Respect the user's style preferences and tone specified in their prompt. You must respond with a JSON object that strictly follows the provided schema. Ensure you create a compelling 'coverImagePrompt' and that the 'pages' array contains exactly ${pagesPerBook} elements. The imagePrompts should match the style and tone requested by the user.`
-      : `You are a creative and whimsical children's storybook author. Your task is to generate a complete ${pagesPerBook}-page story based on a user's prompt${hasImages ? ' and optional inspirational images' : ''}. The story should be suitable for children aged 5-7. You must respond with a JSON object that strictly follows the provided schema. Ensure you create a compelling 'coverImagePrompt' and that the 'pages' array contains exactly ${pagesPerBook} elements.`;
+      ? `You are a master storyteller crafting a complete ${pagesPerBook}-page narrative based on a user's prompt${hasImages ? ' and optional inspirational images' : ''}. 
+
+CRITICAL STORY STRUCTURE REQUIREMENTS:
+1. NARRATIVE ARC - ${narrativeStructure}
+
+2. CONTINUITY - Each page must flow naturally from the previous one. Avoid random disconnected scenes.
+
+3. CHARACTER CONSISTENCY - Describe the main character's appearance in detail ONCE in 'mainCharacterDescription', then use that EXACT description in every imagePrompt. The character must look identical across all pages.
+
+4. STORY ELEMENTS - Include: clear protagonist, conflict/problem, rising action, climax, and resolution.
+
+Respect the user's style preferences. Return JSON following the schema with exactly ${pagesPerBook} pages.`
+      : `You are a master children's storybook author crafting a complete ${pagesPerBook}-page story based on a user's prompt${hasImages ? ' and optional inspirational images' : ''}. Stories should be suitable for children aged 5-7.
+
+CRITICAL STORY STRUCTURE REQUIREMENTS:
+1. NARRATIVE ARC - ${narrativeStructure}
+
+2. CONTINUITY - Each page must connect to the previous one. No random jumps. Use transitions like "Then...", "Next...", "Suddenly...".
+
+3. CHARACTER CONSISTENCY - Describe the main character's appearance in detail ONCE in 'mainCharacterDescription', then use that EXACT description in every imagePrompt. The character must look identical across all pages (same clothes, hair, features).
+
+4. STORY ELEMENTS - Include: lovable protagonist, clear problem, attempts to solve it, moment of success, happy ending with lesson.
+
+Return JSON following the schema with exactly ${pagesPerBook} pages.`;
 
     const imageParts = [];
     
@@ -98,13 +160,21 @@ export async function generateStoryFromPrompt(
           type: Type.STRING,
           description: "The author's name for the storybook.",
         },
+        mainCharacterDescription: {
+          type: Type.STRING,
+          description: "A VERY DETAILED physical description of the main character that will be used in ALL image prompts for consistency. Include: age/type (child/animal/creature), gender, specific hair color and style, eye color, skin tone/fur color, clothing (exact colors and style), distinctive features, size/build. Be extremely specific so the character looks identical in every illustration. Example: 'A 7-year-old girl with long curly red hair in pigtails, bright green eyes, fair skin with freckles, wearing a yellow raincoat with blue buttons, red rain boots, and a white dress underneath. She has a small gap between her front teeth and carries a green backpack.'"
+        },
+        storyArc: {
+          type: Type.STRING,
+          description: `A brief summary of the story's narrative arc in 2-3 sentences. Describe: (1) The beginning - who is the character and their normal world, (2) The middle - what problem/adventure they encounter, (3) The end - how it resolves and what they learn. This ensures the ${pagesPerBook} pages follow a cohesive storyline.`
+        },
         coverImagePrompt: {
           type: Type.STRING,
-          description: "A detailed, descriptive prompt for an AI image generator to create the cover image for the book. This should be a single, compelling scene that represents the entire story's theme and main character."
+          description: "A detailed, descriptive prompt for an AI image generator to create the cover image. Include the mainCharacterDescription verbatim, describe a compelling scene representing the story's theme, specify the setting, and include artistic style details."
         },
         pages: {
           type: Type.ARRAY,
-          description: `An array of ${pagesPerBook} pages for the storybook.`,
+          description: `An array of exactly ${pagesPerBook} pages that follow the story arc from beginning to end.`,
           items: {
             type: Type.OBJECT,
             properties: {
@@ -115,21 +185,21 @@ export async function generateStoryFromPrompt(
               text: {
                 type: Type.STRING,
                 description: hasCustomStyle
-                  ? "The text for one page of the story, between 100 and 150 words. Match the tone and style specified in the user's prompt."
-                  : "The text for one page of the story, between 100 and 150 words. It should be engaging for a child.",
+                  ? "The narrative text for this page (100-150 words). Ensure it flows naturally from the previous page and advances the story arc. Match the tone specified in the user's prompt."
+                  : "The narrative text for this page (100-150 words). Ensure it flows naturally from the previous page and advances the story arc. Use clear, engaging language for children aged 5-7.",
               },
               imagePrompt: {
                 type: Type.STRING,
                 description: hasCustomStyle
-                  ? "A detailed, descriptive prompt for an AI image generator to create an illustration for this page. Describe the scene, characters, actions, style, and colors clearly. The style should match what the user requested in their prompt."
-                  : "A detailed, descriptive prompt for an AI image generator to create an illustration for this page. Describe the scene, characters, actions, style, and colors clearly. The style should be consistent with a whimsical, illustrated children's book.",
+                  ? "A detailed image generation prompt. MUST include the mainCharacterDescription VERBATIM to ensure consistency. Then describe the specific scene, action, setting, and any other characters. Maintain the style requested by the user."
+                  : "A detailed image generation prompt. MUST include the mainCharacterDescription VERBATIM to ensure the character looks identical. Then describe the specific scene, action, setting, background, and any other characters/objects. Use vibrant, whimsical children's book illustration style.",
               },
             },
             required: ["pageNumber", "text", "imagePrompt"],
           },
         },
       },
-      required: ["title", "author", "coverImagePrompt", "pages"],
+      required: ["title", "author", "mainCharacterDescription", "storyArc", "coverImagePrompt", "pages"],
     };
 
     const response = await ai.models.generateContent({
