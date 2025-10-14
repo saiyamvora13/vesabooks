@@ -26,7 +26,7 @@ Key features include:
 - **EPUB E-book Download**: Allows users to download storybooks as EPUB files with composite cover images and embedded illustrations for offline reading.
 - **Print-Ready PDF Download**: Generates professional PDFs for print orders, adhering to commercial printing specifications with precise trim, bleed, and safe margins, using `pdf-lib`.
 - **Error Handling & Retry Logic**: Includes automatic retry mechanisms for failed generation processes and a manual "Try Again" option.
-- **Persistent Image Storage**: All images are stored in Replit Object Storage.
+- **Persistent Image Storage**: All images are stored in Replit Object Storage with automatic optimization (JPEG compression at 90% quality, resized to 1200px max width) for ~90% file size reduction without visible quality loss.
 
 ### System Design Choices
 - **Data Storage**: PostgreSQL via Drizzle ORM for `users`, `storybooks`, `purchases`, `sessions`, and `password_reset_tokens`. `storybooks` includes `mainCharacterDescription` and `storyArc`. Admin data is stored in `admin_users`, `site_settings`, `hero_storybook_slots`, `featured_storybooks`, and `admin_audit_logs`. File uploads are stored in Replit Object Storage.
