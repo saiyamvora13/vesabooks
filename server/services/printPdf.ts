@@ -208,17 +208,14 @@ export async function generatePrintReadyPDF(storybook: Storybook): Promise<Buffe
     
     // Calculate text area with safe margins FROM TRIM EDGE
     // Trim edge is BLEED distance from page edge
-    const textAreaLeft = BLEED + SPINE_MARGIN; // Left margin from trim (spine side)
-    const textAreaRight = PAGE_WIDTH - BLEED - SAFE_MARGIN; // Right margin from trim
-    const textAreaTop = PAGE_HEIGHT - BLEED - SAFE_MARGIN; // Top margin from trim
-    const textAreaBottom = BLEED + SAFE_MARGIN + 30; // Bottom margin (extra space for page number)
-    const textWidth = textAreaRight - textAreaLeft; // Width between margins
-    const textHeight = textAreaTop - textAreaBottom; // Available height for text
+    const textX = BLEED + SPINE_MARGIN; // Left margin from trim (spine side)
+    const textY = PAGE_HEIGHT - BLEED - SAFE_MARGIN; // Top margin from trim
+    const textWidth = PAGE_WIDTH - BLEED - SPINE_MARGIN - BLEED - SAFE_MARGIN; // Width between margins
+    const textHeight = PAGE_HEIGHT - 2 * BLEED - 2 * SAFE_MARGIN; // Height between top and bottom safe areas
     
-    // Kid-friendly text formatting (ages 6-12)
-    const fontSize = 20; // Larger font for young readers
-    const lineHeight = fontSize * 1.8; // Extra line spacing for readability
-    const textFont = boldFont; // Bold font is more readable for kids
+    // Format and draw text
+    const fontSize = 13;
+    const lineHeight = fontSize * 1.6; // 1.6x line spacing for readability
     const words = page.text.split(' ');
     const lines: string[] = [];
     let currentLine = '';
@@ -226,7 +223,7 @@ export async function generatePrintReadyPDF(storybook: Storybook): Promise<Buffe
     // Word wrap text
     for (const word of words) {
       const testLine = currentLine + (currentLine ? ' ' : '') + word;
-      const testWidth = textFont.widthOfTextAtSize(testLine, fontSize);
+      const testWidth = font.widthOfTextAtSize(testLine, fontSize);
       
       if (testWidth > textWidth && currentLine) {
         lines.push(currentLine);
@@ -239,42 +236,31 @@ export async function generatePrintReadyPDF(storybook: Storybook): Promise<Buffe
       lines.push(currentLine);
     }
     
-    // Calculate total text block height
-    const totalTextHeight = lines.length * lineHeight;
-    
-    // Center text vertically in available space
-    let currentY = textAreaTop - ((textHeight - totalTextHeight) / 2);
-    
-    // Draw each line of text (centered horizontally)
+    // Draw each line of text
+    let currentY = textY;
     for (const line of lines) {
-      if (currentY - lineHeight < textAreaBottom) break; // Stop if we reach bottom safe area
-      
-      // Center each line horizontally
-      const lineWidth = textFont.widthOfTextAtSize(line, fontSize);
-      const centerX = textAreaLeft + (textWidth - lineWidth) / 2;
+      if (currentY - lineHeight < BLEED + SAFE_MARGIN) break; // Stop if we reach bottom safe area
       
       rightPage.drawText(line, {
-        x: centerX,
+        x: textX,
         y: currentY - fontSize,
         size: fontSize,
-        font: textFont,
-        color: rgb(0.15, 0.2, 0.3), // Darker, kid-friendly color
+        font: font,
+        color: rgb(0.2, 0.25, 0.33),
       });
       
       currentY -= lineHeight;
     }
     
-    // Add page number at bottom center (within safe area)
+    // Add page number at bottom (within safe area)
     const pageNumText = `${i + 1}`;
-    const pageNumFontSize = 14;
-    const pageNumWidth = textFont.widthOfTextAtSize(pageNumText, pageNumFontSize);
-    const pageNumX = textAreaLeft + (textWidth - pageNumWidth) / 2; // Center horizontally
+    const pageNumX = PAGE_WIDTH - BLEED - SAFE_MARGIN - font.widthOfTextAtSize(pageNumText, 10);
     rightPage.drawText(pageNumText, {
       x: pageNumX,
-      y: BLEED + SAFE_MARGIN + 8, // Position within safe area
-      size: pageNumFontSize,
-      font: textFont,
-      color: rgb(0.4, 0.4, 0.4),
+      y: BLEED + SAFE_MARGIN + 10, // Position within safe area, 10pts above safe margin
+      size: 10,
+      font: font,
+      color: rgb(0.5, 0.5, 0.5),
     });
   }
   
