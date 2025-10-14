@@ -203,3 +203,27 @@ export const adminAuditLogs = pgTable("admin_audit_logs", {
 
 export type AdminAuditLog = typeof adminAuditLogs.$inferSelect;
 export type InsertAdminAuditLog = typeof adminAuditLogs.$inferInsert;
+
+// Sample Prompts - pre-made story ideas for users to get started
+export const samplePrompts = pgTable("sample_prompts", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  title: text("title").notNull(),
+  prompt: text("prompt").notNull(),
+  ageRange: varchar("age_range").notNull(),
+  isActive: boolean("is_active").notNull().default(true),
+  displayOrder: numeric("display_order").notNull().default('0'),
+  updatedBy: varchar("updated_by").references(() => adminUsers.id),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("idx_sample_prompts_active_order").on(table.isActive, table.displayOrder),
+]);
+
+export const insertSamplePromptSchema = createInsertSchema(samplePrompts).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type SamplePrompt = typeof samplePrompts.$inferSelect;
+export type InsertSamplePrompt = z.infer<typeof insertSamplePromptSchema>;
