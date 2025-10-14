@@ -188,14 +188,14 @@ export function FlipbookViewer({ pages, title, author = "AI Author", coverImageU
 
     sheets.push({
       front: <Cover title={title} author={author} coverImageUrl={coverImageUrl} />,
-      back: pages.length > 0 ? <ImagePage page={pages[0]} pageNum={2} /> : <EndPage totalPages={0} />,
+      back: pages.length > 0 ? <ImagePage page={pages[0]} pageNum={1} /> : <EndPage totalPages={0} />,
     });
 
     for (let i = 0; i < numPages; i++) {
       const page = pages[i];
-      const frontContent = <TextPage page={page} author={author} pageNum={2 * i + 1} onTurn={goToNextPage} />;
+      const frontContent = <TextPage page={page} author={author} pageNum={i + 1} onTurn={goToNextPage} />;
       const backContent = (i < numPages - 1)
-        ? <ImagePage page={pages[i + 1]} pageNum={2 * (i + 1) + 2} />
+        ? <ImagePage page={pages[i + 1]} pageNum={i + 2} />
         : <EndPage totalPages={numPages * 2} />;
 
       sheets.push({ front: frontContent, back: backContent });
