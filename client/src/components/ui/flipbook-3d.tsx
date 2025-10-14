@@ -66,9 +66,6 @@ const ImagePage = ({ page, pageNum }: { page: StoryPage; pageNum: number }) => (
         <p className="text-muted-foreground">Missing image</p>
       </div>
     )}
-    <span className="absolute bottom-4 left-8 text-base font-semibold text-slate-800 bg-white/60 backdrop-blur-sm rounded-full px-3 py-1 shadow-sm">
-      {pageNum}
-    </span>
   </div>
 );
 
