@@ -371,9 +371,11 @@
       "printEdition": "Print Ausgabe",
       "downloadableEpub": "Herunterladbares EPUB",
       "professionallyPrinted": "Professioneller Druck",
-      "includesFreeEbook": "✨ Inkl. kostenloses E-Book"
+      "includesFreeEbook": "✨ Inkl. kostenloses E-Book",
+      "digitalOwnerDiscount": "Digital-Besitzer Rabatt"
     },
     "total": "Gesamt",
+    "totalDiscount": "Gesamtersparnis",
     "clearCart": "Warenkorb Leeren",
     "proceedToCheckout": "Zur Kasse Gehen",
     "toast": {

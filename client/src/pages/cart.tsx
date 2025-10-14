@@ -12,14 +12,21 @@ import { getCart, removeFromCart, clearCart, type CartItem } from "@/lib/cartUti
 import { useAuth } from "@/hooks/useAuth";
 import { useQuery } from "@tanstack/react-query";
 import type { Storybook } from "@shared/schema";
+import { apiRequest } from "@/lib/queryClient";
 
-function CartItemCard({ item, onRemove }: { item: CartItem; onRemove: (storybookId: string, type: 'digital' | 'print') => void }) {
+interface PricedCartItem extends CartItem {
+  originalPrice?: number;
+  discount?: number;
+}
+
+function CartItemCard({ item, onRemove }: { item: PricedCartItem; onRemove: (storybookId: string, type: 'digital' | 'print') => void }) {
   const { t } = useTranslation();
   const { data: storybook, isLoading } = useQuery<Storybook>({
     queryKey: ['/api/storybooks', item.storybookId],
   });
 
   const coverImageUrl = storybook?.pages?.[0]?.imageUrl;
+  const hasDiscount = item.discount && item.discount > 0;
 
   return (
     <Card data-testid={`card-item-${item.storybookId}-${item.type}`}>
@@ -58,21 +65,33 @@ function CartItemCard({ item, onRemove }: { item: CartItem; onRemove: (storybook
                   {t('cart.item.includesFreeEbook')}
                 </Badge>
               )}
+              {hasDiscount && item.discount && (
+                <Badge variant="default" className="w-fit bg-green-600 hover:bg-green-700" data-testid={`badge-discount-${item.storybookId}`}>
+                  {t('cart.item.digitalOwnerDiscount')}: -${(item.discount / 100).toFixed(2)}
+                </Badge>
+              )}
             </div>
           </div>
           
-          <div className="flex items-center gap-3 flex-shrink-0">
-            <span className="text-lg font-semibold" data-testid={`text-price-${item.storybookId}-${item.type}`}>
-              ${(item.price / 100).toFixed(2)}
-            </span>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => onRemove(item.storybookId, item.type)}
-              data-testid={`button-remove-${item.storybookId}-${item.type}`}
-            >
-              <X className="h-4 w-4" />
-            </Button>
+          <div className="flex flex-col items-end gap-1 flex-shrink-0">
+            <div className="flex items-center gap-3">
+              {hasDiscount && (
+                <span className="text-sm text-muted-foreground line-through" data-testid={`text-original-price-${item.storybookId}-${item.type}`}>
+                  ${((item.originalPrice || item.price) / 100).toFixed(2)}
+                </span>
+              )}
+              <span className={`text-lg font-semibold ${hasDiscount ? 'text-green-600' : ''}`} data-testid={`text-price-${item.storybookId}-${item.type}`}>
+                ${(item.price / 100).toFixed(2)}
+              </span>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => onRemove(item.storybookId, item.type)}
+                data-testid={`button-remove-${item.storybookId}-${item.type}`}
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
           </div>
         </div>
       </CardHeader>
@@ -86,6 +105,27 @@ export default function Cart() {
   const { toast } = useToast();
   const { isAuthenticated } = useAuth();
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
+  const [pricedItems, setPricedItems] = useState<PricedCartItem[]>([]);
+
+  // Fetch pricing with discounts when authenticated
+  const { data: pricingData } = useQuery({
+    queryKey: ['/api/cart/calculate-pricing', cartItems],
+    queryFn: async () => {
+      if (!isAuthenticated || cartItems.length === 0) return null;
+      const response = await apiRequest('POST', '/api/cart/calculate-pricing', { items: cartItems });
+      return response.json();
+    },
+    enabled: isAuthenticated && cartItems.length > 0,
+  });
+
+  // Merge cart items with pricing data
+  useEffect(() => {
+    if (pricingData?.items) {
+      setPricedItems(pricingData.items);
+    } else {
+      setPricedItems(cartItems);
+    }
+  }, [pricingData, cartItems]);
 
   useEffect(() => {
     const loadCart = () => {
@@ -164,7 +204,8 @@ export default function Cart() {
     setLocation('/checkout');
   };
 
-  const totalPrice = cartItems.reduce((sum, item) => sum + item.price, 0);
+  const totalPrice = pricedItems.reduce((sum, item) => sum + item.price, 0);
+  const totalDiscount = pricedItems.reduce((sum, item) => sum + (item.discount || 0), 0);
 
   return (
     <div className="min-h-screen bg-background">
@@ -198,7 +239,7 @@ export default function Cart() {
         ) : (
           <div className="space-y-6">
             <div className="space-y-4">
-              {cartItems.map((item) => (
+              {pricedItems.map((item) => (
                 <CartItemCard
                   key={`${item.storybookId}-${item.type}`}
                   item={item}
@@ -209,6 +250,14 @@ export default function Cart() {
 
             <Card className="bg-muted/50">
               <CardContent className="pt-6">
+                {totalDiscount > 0 && (
+                  <div className="flex items-center justify-between mb-3 pb-3 border-b">
+                    <span className="text-sm text-muted-foreground">{t('cart.totalDiscount')}</span>
+                    <span className="text-sm font-semibold text-green-600" data-testid="text-total-discount">
+                      -${(totalDiscount / 100).toFixed(2)}
+                    </span>
+                  </div>
+                )}
                 <div className="flex items-center justify-between mb-6">
                   <span className="text-lg font-semibold">{t('cart.total')}</span>
                   <span className="text-3xl font-bold text-[hsl(258,90%,20%)] dark:text-[hsl(258,70%,70%)]" data-testid="text-total">

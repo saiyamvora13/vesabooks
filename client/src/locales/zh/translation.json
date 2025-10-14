@@ -371,9 +371,11 @@
       "printEdition": "印刷版",
       "downloadableEpub": "可下载的EPUB",
       "professionallyPrinted": "专业印刷",
-      "includesFreeEbook": "✨ 包含免费电子书"
+      "includesFreeEbook": "✨ 包含免费电子书",
+      "digitalOwnerDiscount": "数字版拥有者折扣"
     },
     "total": "总计",
+    "totalDiscount": "总节省",
     "clearCart": "清空购物车",
     "proceedToCheckout": "去结账",
     "toast": {

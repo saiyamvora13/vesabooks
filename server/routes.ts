@@ -1074,7 +1074,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
 
         // SECURITY: Calculate price server-side, ignore client-provided price
-        const serverPrice = type === 'digital' ? digitalPrice : printPrice;
+        let serverPrice = type === 'digital' ? digitalPrice : printPrice;
+        let discount = 0;
+        let originalPrice = serverPrice;
+
+        // Apply digital-to-print discount: if buying print and already owns digital, reduce price
+        if (type === 'print') {
+          const existingDigitalPurchase = await storage.getStorybookPurchase(userId, storybookId, 'digital');
+          if (existingDigitalPurchase) {
+            discount = digitalPrice;
+            serverPrice = Math.max(0, printPrice - digitalPrice); // Ensure price doesn't go negative
+          }
+        }
 
         lineItems.push({
           price_data: {
@@ -1095,6 +1106,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           storybookId: item.storybookId,
           type: item.type,
           price: serverPrice,
+          originalPrice,
+          discount,
         });
       }
 
@@ -1156,13 +1169,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
 
         // SECURITY: Calculate price server-side from admin settings
-        const serverPrice = type === 'digital' ? digitalPrice : printPrice;
+        let serverPrice = type === 'digital' ? digitalPrice : printPrice;
+        let discount = 0;
+        let originalPrice = serverPrice;
+
+        // Apply digital-to-print discount: if buying print and already owns digital, reduce price
+        if (type === 'print') {
+          const existingDigitalPurchase = await storage.getStorybookPurchase(userId, storybookId, 'digital');
+          if (existingDigitalPurchase) {
+            discount = digitalPrice;
+            serverPrice = Math.max(0, printPrice - digitalPrice); // Ensure price doesn't go negative
+          }
+        }
+
         total += serverPrice;
 
         processedItems.push({
           storybookId,
           type,
           price: serverPrice,
+          originalPrice,
+          discount,
         });
       }
 
@@ -1187,6 +1214,57 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Create payment intent error:", error);
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       res.status(500).json({ message: `Failed to create payment intent: ${errorMessage}` });
+    }
+  });
+
+  // Calculate cart pricing with discounts (requires authentication)
+  app.post("/api/cart/calculate-pricing", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.id || req.user.claims?.sub;
+      const { items } = req.body;
+
+      if (!items || !Array.isArray(items)) {
+        return res.status(400).json({ message: "Items array is required" });
+      }
+
+      // Fetch pricing from admin settings with fallback defaults
+      const digitalPriceSetting = await storage.getSetting('digital_price');
+      const printPriceSetting = await storage.getSetting('print_price');
+      const digitalPrice = digitalPriceSetting ? parseInt(digitalPriceSetting.value) : 399;
+      const printPrice = printPriceSetting ? parseInt(printPriceSetting.value) : 2499;
+
+      const pricedItems = [];
+
+      for (const item of items) {
+        const { storybookId, type } = item;
+        
+        // Calculate price with potential discount
+        let price = type === 'digital' ? digitalPrice : printPrice;
+        let discount = 0;
+        let originalPrice = price;
+
+        // Apply digital-to-print discount
+        if (type === 'print') {
+          const existingDigitalPurchase = await storage.getStorybookPurchase(userId, storybookId, 'digital');
+          if (existingDigitalPurchase) {
+            discount = digitalPrice;
+            price = Math.max(0, printPrice - digitalPrice);
+          }
+        }
+
+        // Preserve all original item fields and override pricing
+        pricedItems.push({
+          ...item,
+          price,
+          originalPrice,
+          discount,
+        });
+      }
+
+      res.json({ items: pricedItems });
+    } catch (error) {
+      console.error("Calculate cart pricing error:", error);
+      res.status(500).json({ message: "Failed to calculate pricing" });
     }
   });
 

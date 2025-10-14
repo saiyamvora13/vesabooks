@@ -12,9 +12,15 @@ import { useAuth } from "@/hooks/useAuth";
 import { getCart, clearCart, type CartItem } from "@/lib/cartUtils";
 import { apiRequest } from "@/lib/queryClient";
 import { ShoppingCart, CreditCard, Loader2 } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
 
 // Load Stripe outside component
 const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLIC_KEY || '');
+
+interface PricedCartItem extends CartItem {
+  originalPrice?: number;
+  discount?: number;
+}
 
 interface CheckoutFormProps {
   totalAmount: number;
@@ -156,9 +162,30 @@ export default function Checkout() {
   const { toast } = useToast();
   const { isAuthenticated, isLoading: authLoading } = useAuth();
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
+  const [pricedItems, setPricedItems] = useState<PricedCartItem[]>([]);
   const [clientSecret, setClientSecret] = useState<string>("");
   const [isCreatingPaymentIntent, setIsCreatingPaymentIntent] = useState(true);
   const [paymentIntentError, setPaymentIntentError] = useState<string>("");
+
+  // Fetch pricing with discounts when authenticated
+  const { data: pricingData } = useQuery({
+    queryKey: ['/api/cart/calculate-pricing', cartItems],
+    queryFn: async () => {
+      if (!isAuthenticated || cartItems.length === 0) return null;
+      const response = await apiRequest('POST', '/api/cart/calculate-pricing', { items: cartItems });
+      return response.json();
+    },
+    enabled: isAuthenticated && cartItems.length > 0,
+  });
+
+  // Merge cart items with pricing data
+  useEffect(() => {
+    if (pricingData?.items) {
+      setPricedItems(pricingData.items);
+    } else {
+      setPricedItems(cartItems);
+    }
+  }, [pricingData, cartItems]);
 
   // Check authentication
   useEffect(() => {
@@ -221,7 +248,8 @@ export default function Checkout() {
     }
   }, [isAuthenticated, authLoading, setLocation, toast, t]);
 
-  const totalPrice = cartItems.reduce((sum, item) => sum + item.price, 0);
+  const totalPrice = pricedItems.reduce((sum, item) => sum + item.price, 0);
+  const totalDiscount = pricedItems.reduce((sum, item) => sum + (item.discount || 0), 0);
 
   // Show loading state
   if (authLoading || isCreatingPaymentIntent) {
@@ -310,40 +338,59 @@ export default function Checkout() {
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="space-y-3">
-                  {cartItems.map((item) => (
-                    <div 
-                      key={`${item.storybookId}-${item.type}`}
-                      className="space-y-2"
-                      data-testid={`checkout-item-${item.storybookId}-${item.type}`}
-                    >
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="flex-1 min-w-0">
-                          <p className="font-medium text-sm truncate" data-testid={`text-item-title-${item.storybookId}-${item.type}`}>
-                            {item.title}
-                          </p>
-                          <div className="mt-1 space-y-1">
-                            <Badge 
-                              variant={item.type === 'digital' ? 'default' : 'secondary'}
-                              data-testid={`badge-item-type-${item.storybookId}-${item.type}`}
-                            >
-                              {item.type === 'digital' ? t('checkout.orderSummary.ebook') : t('checkout.orderSummary.printEdition')}
-                            </Badge>
-                            {item.type === 'print' && (
-                              <p className="text-xs text-muted-foreground mt-1" data-testid={`text-free-ebook-${item.storybookId}`}>
-                                {t('checkout.orderSummary.includesFreeEbook')}
-                              </p>
+                  {pricedItems.map((item) => {
+                    const hasDiscount = item.discount && item.discount > 0;
+                    return (
+                      <div 
+                        key={`${item.storybookId}-${item.type}`}
+                        className="space-y-2"
+                        data-testid={`checkout-item-${item.storybookId}-${item.type}`}
+                      >
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="flex-1 min-w-0">
+                            <p className="font-medium text-sm truncate" data-testid={`text-item-title-${item.storybookId}-${item.type}`}>
+                              {item.title}
+                            </p>
+                            <div className="mt-1 space-y-1">
+                              <Badge 
+                                variant={item.type === 'digital' ? 'default' : 'secondary'}
+                                data-testid={`badge-item-type-${item.storybookId}-${item.type}`}
+                              >
+                                {item.type === 'digital' ? t('checkout.orderSummary.ebook') : t('checkout.orderSummary.printEdition')}
+                              </Badge>
+                              {item.type === 'print' && (
+                                <p className="text-xs text-muted-foreground mt-1" data-testid={`text-free-ebook-${item.storybookId}`}>
+                                  {t('checkout.orderSummary.includesFreeEbook')}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                          <div className="flex flex-col items-end gap-1">
+                            {hasDiscount && (
+                              <span className="text-xs text-muted-foreground line-through" data-testid={`text-original-price-${item.storybookId}-${item.type}`}>
+                                ${((item.originalPrice || item.price) / 100).toFixed(2)}
+                              </span>
                             )}
+                            <span className={`text-sm font-semibold whitespace-nowrap ${hasDiscount ? 'text-green-600' : ''}`} data-testid={`text-item-price-${item.storybookId}-${item.type}`}>
+                              ${(item.price / 100).toFixed(2)}
+                            </span>
                           </div>
                         </div>
-                        <span className="text-sm font-semibold whitespace-nowrap" data-testid={`text-item-price-${item.storybookId}-${item.type}`}>
-                          ${(item.price / 100).toFixed(2)}
-                        </span>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
 
                 <div className="border-t border-border my-4" />
+
+                {totalDiscount > 0 && (
+                  <div className="flex items-center justify-between pb-2">
+                    <span className="text-sm text-muted-foreground">{t('cart.totalDiscount')}</span>
+                    <span className="text-sm font-semibold text-green-600" data-testid="text-total-discount">
+                      -${(totalDiscount / 100).toFixed(2)}
+                    </span>
+                  </div>
+                )}
 
                 <div className="flex items-center justify-between pt-2">
                   <span className="text-lg font-semibold">{t('checkout.orderSummary.total')}</span>
