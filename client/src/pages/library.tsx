@@ -185,7 +185,7 @@ function StorybookPurchaseButtons({ storybook }: { storybook: Storybook }) {
                 <ShoppingCart className="h-4 w-4" />
                 {digitalPurchase?.owned ? (
                   <span className="flex items-center gap-1">
-                    <span>{t('storybook.library.purchase.buyPrint')}</span>
+                    <span>Buy Print</span>
                     <span className="line-through text-muted-foreground">($${(printPrice / 100).toFixed(2)})</span>
                     <span>-</span>
                     <span className="font-semibold">${(Math.max(0, printPrice - digitalPrice) / 100).toFixed(2)}</span>
