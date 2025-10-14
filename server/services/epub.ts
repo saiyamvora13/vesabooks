@@ -7,28 +7,6 @@ import * as path from "path";
 import * as os from "os";
 import { randomUUID } from "crypto";
 
-// Helper function to convert image buffer to base64 data URL
-async function getImageDataUrl(imageUrl: string): Promise<string> {
-  try {
-    const filename = imageUrl.split('/').pop();
-    if (!filename) {
-      throw new Error('Invalid image URL');
-    }
-
-    const objectStorageService = new ObjectStorageService();
-    const imageBuffer = await objectStorageService.getFileBuffer(filename);
-    
-    // Convert to base64
-    const base64 = imageBuffer.toString('base64');
-    const mimeType = filename.endsWith('.png') ? 'image/png' : 'image/jpeg';
-    
-    return `data:${mimeType};base64,${base64}`;
-  } catch (error) {
-    console.error('Error fetching image for data URL:', error);
-    throw error;
-  }
-}
-
 export async function generateEpub(storybook: Storybook): Promise<Buffer> {
   // Use dynamic import for CommonJS module
   const epubModule = await import("epub-gen-memory");
@@ -36,6 +14,9 @@ export async function generateEpub(storybook: Storybook): Promise<Buffer> {
   
   // Prepare content array for EPUB
   const content: Chapter[] = [];
+
+  // Use localhost HTTP URLs - epub-gen-memory will fetch and package images automatically
+  const baseUrl = "http://localhost:5000";
 
   // Generate composite cover image with title/author overlay for external cover
   const coverImageUrl = storybook.coverImageUrl || storybook.pages[0]?.imageUrl;
@@ -51,11 +32,11 @@ export async function generateEpub(storybook: Storybook): Promise<Buffer> {
       fs.writeFileSync(compositeCoverPath, compositeBuffer);
     }
     
-    // Add internal cover page with title and author overlay using base64 data URL
-    const coverDataUrl = await getImageDataUrl(coverImageUrl);
+    // Add internal cover page with title and author overlay
+    const coverUrl = `${baseUrl}${coverImageUrl}`;
     content.push({
       content: `<div class="cover-page">
-  <img src="${coverDataUrl}" alt="Cover" class="cover-image" />
+  <img src="${coverUrl}" alt="Cover" class="cover-image" />
   <div class="cover-overlay"></div>
   <div class="cover-text">
     <h1>${escapeHtml(storybook.title)}</h1>
@@ -67,29 +48,29 @@ export async function generateEpub(storybook: Storybook): Promise<Buffer> {
     });
   }
 
-  // Add each story page with base64 data URLs - mobile-first responsive layout
+  // Add each story page - mobile-first responsive layout: image first on mobile, side-by-side on larger screens
   for (const page of storybook.pages) {
-    const pageDataUrl = await getImageDataUrl(page.imageUrl);
+    const pageImageUrl = `${baseUrl}${page.imageUrl}`;
     
     content.push({
       content: `<div class="story-page">
   <div class="page-image">
-    <img src="${pageDataUrl}" alt="Illustration for page ${page.pageNumber}" />
+    <img src="${pageImageUrl}" alt="Illustration for page ${page.pageNumber}" />
   </div>
   <div class="page-text">
     <p>${escapeHtml(page.text)}</p>
   </div>
 </div>`,
-      excludeFromToc: true,
+      excludeFromToc: true, // Exclude from Table of Contents
     });
   }
 
   // Add back cover if it exists
   if (storybook.backCoverImageUrl) {
-    const backCoverDataUrl = await getImageDataUrl(storybook.backCoverImageUrl);
+    const backCoverUrl = `${baseUrl}${storybook.backCoverImageUrl}`;
     content.push({
       content: `<div class="back-cover-page">
-  <img src="${backCoverDataUrl}" alt="Back Cover" class="back-cover-image" />
+  <img src="${backCoverUrl}" alt="Back Cover" class="back-cover-image" />
 </div>`,
       excludeFromToc: true,
     });
@@ -170,7 +151,7 @@ export async function generateEpub(storybook: Storybook): Promise<Buffer> {
         min-height: 100vh;
       }
       
-      /* On larger screens: image left, text right */
+      /* On larger screens (tablets/desktops): image left, text right */
       @media (min-width: 768px) {
         .story-page {
           flex-direction: row;
@@ -263,15 +244,17 @@ export async function generateCompositeCoverImage(
   title: string
 ): Promise<Buffer | null> {
   try {
-    // Extract filename from coverImageUrl (e.g., "/api/storage/xxx_cover.png" → "xxx_cover.png")
-    const filename = coverImageUrl.split('/').pop();
-    if (!filename) {
+    // Extract the path after /api/storage/ to handle both flat and date-based paths
+    // Example: /api/storage/2025/10/14/xxx_cover.jpg → 2025/10/14/xxx_cover.jpg
+    // Example: /api/storage/xxx_cover.jpg → xxx_cover.jpg
+    const filePath = coverImageUrl.replace('/api/storage/', '');
+    if (!filePath) {
       return null;
     }
 
     // Download the cover image using ObjectStorageService
     const objectStorageService = new ObjectStorageService();
-    const imageBuffer = await objectStorageService.getFileBuffer(filename);
+    const imageBuffer = await objectStorageService.getFileBuffer(filePath);
 
     // Get image dimensions
     const image = sharp(imageBuffer);
