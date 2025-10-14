@@ -823,7 +823,300 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Get metrics (public - no auth required)
+  // POST /api/admin/migrate-all-images - Migrate ALL PNG images to optimized JPEG
+  app.post('/api/admin/migrate-all-images', isAdmin, async (req, res) => {
+    try {
+      const admin = req.user as AdminUser;
+      
+      // Get ALL storybooks with PNG images
+      const allStorybooks = await storage.getAllStorybooks();
+      const storybooksToMigrate = allStorybooks.filter(sb => 
+        sb.coverImageUrl?.endsWith('.png') || 
+        sb.backCoverImageUrl?.endsWith('.png') ||
+        sb.pages.some(p => p.imageUrl?.endsWith('.png'))
+      );
+      
+      if (storybooksToMigrate.length === 0) {
+        return res.json({ 
+          message: 'No PNG images to migrate',
+          migratedBooks: 0,
+          migratedImages: 0 
+        });
+      }
+
+      const { ObjectStorageService } = await import("./objectStorage");
+      const objectStorage = new ObjectStorageService();
+      const generatedDir = path.join(process.cwd(), "generated");
+      if (!fs.existsSync(generatedDir)) {
+        fs.mkdirSync(generatedDir, { recursive: true });
+      }
+
+      let totalMigratedImages = 0;
+      const results = [];
+      const deletionLog: string[] = [];
+
+      for (const storybook of storybooksToMigrate) {
+        const migratedImages: string[] = [];
+        const filesToDelete: string[] = [];
+        let migrationFailed = false;
+        let failureReason = '';
+
+        let newCoverUrl = storybook.coverImageUrl;
+        let newBackCoverUrl = storybook.backCoverImageUrl;
+        const updatedPages = [...storybook.pages];
+        const uploadedNewFiles: string[] = [];
+        
+        try {
+          const createdAt = storybook.createdAt || new Date();
+          
+          // Migrate cover image
+          if (storybook.coverImageUrl?.endsWith('.png')) {
+            const oldFilename = storybook.coverImageUrl.split('/').pop()!;
+            const newFilename = oldFilename.replace('.png', '.jpg');
+            
+            const imageBuffer = await objectStorage.getFileBuffer(oldFilename);
+            const optimizedBuffer = await optimizeImageForWeb(imageBuffer);
+            
+            const tempPath = path.join(generatedDir, newFilename);
+            fs.writeFileSync(tempPath, optimizedBuffer);
+            
+            newCoverUrl = await objectStorage.uploadFile(tempPath, newFilename, true, createdAt);
+            const uploadedPath = newCoverUrl.replace('/api/storage/', '');
+            uploadedNewFiles.push(uploadedPath);
+            fs.unlinkSync(tempPath);
+            
+            filesToDelete.push(oldFilename);
+            migratedImages.push(`Cover: ${oldFilename} → ${newFilename}`);
+          }
+
+          // Migrate back cover image
+          if (storybook.backCoverImageUrl?.endsWith('.png')) {
+            const oldFilename = storybook.backCoverImageUrl.split('/').pop()!;
+            const newFilename = oldFilename.replace('.png', '.jpg');
+            
+            const imageBuffer = await objectStorage.getFileBuffer(oldFilename);
+            const optimizedBuffer = await optimizeImageForWeb(imageBuffer);
+            
+            const tempPath = path.join(generatedDir, newFilename);
+            fs.writeFileSync(tempPath, optimizedBuffer);
+            
+            newBackCoverUrl = await objectStorage.uploadFile(tempPath, newFilename, true, createdAt);
+            const uploadedPath = newBackCoverUrl.replace('/api/storage/', '');
+            uploadedNewFiles.push(uploadedPath);
+            fs.unlinkSync(tempPath);
+            
+            filesToDelete.push(oldFilename);
+            migratedImages.push(`Back Cover: ${oldFilename} → ${newFilename}`);
+          }
+
+          // Migrate page images
+          for (let i = 0; i < storybook.pages.length; i++) {
+            const page = storybook.pages[i];
+            if (page.imageUrl?.endsWith('.png')) {
+              const oldFilename = page.imageUrl.split('/').pop()!;
+              const newFilename = oldFilename.replace('.png', '.jpg');
+              
+              const imageBuffer = await objectStorage.getFileBuffer(oldFilename);
+              const optimizedBuffer = await optimizeImageForWeb(imageBuffer);
+              
+              const tempPath = path.join(generatedDir, newFilename);
+              fs.writeFileSync(tempPath, optimizedBuffer);
+              
+              const newUrl = await objectStorage.uploadFile(tempPath, newFilename, true, createdAt);
+              const uploadedPath = newUrl.replace('/api/storage/', '');
+              uploadedNewFiles.push(uploadedPath);
+              fs.unlinkSync(tempPath);
+              
+              filesToDelete.push(oldFilename);
+              updatedPages[i] = { ...page, imageUrl: newUrl };
+              migratedImages.push(`Page ${page.pageNumber}: ${oldFilename} → ${newFilename}`);
+            }
+          }
+
+          // Only update database if ALL uploads succeeded
+          if (migratedImages.length > 0) {
+            const { db } = await import('./db');
+            const { storybooks } = await import('@shared/schema');
+            const { eq } = await import('drizzle-orm');
+            
+            await db.update(storybooks)
+              .set({ 
+                coverImageUrl: newCoverUrl,
+                backCoverImageUrl: newBackCoverUrl,
+                pages: updatedPages
+              })
+              .where(eq(storybooks.id, storybook.id));
+
+            totalMigratedImages += migratedImages.length;
+
+            // Delete old PNG files after successful DB update
+            for (const oldFile of filesToDelete) {
+              try {
+                await objectStorage.deleteFile(oldFile);
+                deletionLog.push(`✓ Deleted: ${oldFile}`);
+              } catch (deleteError) {
+                const errMsg = `✗ Failed to delete ${oldFile}: ${String(deleteError)}`;
+                deletionLog.push(errMsg);
+                console.error(errMsg);
+              }
+            }
+          }
+        } catch (error) {
+          migrationFailed = true;
+          failureReason = String(error);
+          console.error(`Failed to migrate storybook ${storybook.id}:`, error);
+          
+          // Clean up uploaded new files on failure
+          for (const newFile of uploadedNewFiles) {
+            try {
+              await objectStorage.deleteFile(newFile);
+            } catch (cleanupError) {
+              console.error(`Failed to cleanup uploaded file ${newFile}:`, cleanupError);
+            }
+          }
+        }
+
+        results.push({
+          storybookId: storybook.id,
+          title: storybook.title,
+          migratedImages: migrationFailed ? [] : migratedImages,
+          count: migrationFailed ? 0 : migratedImages.length,
+          failed: migrationFailed,
+          failureReason: migrationFailed ? failureReason : undefined
+        });
+      }
+
+      // Log action
+      await logAdminAction(
+        admin.id,
+        'migrate_all_images',
+        'storybook',
+        'full_migration',
+        { 
+          booksProcessed: storybooksToMigrate.length,
+          totalImages: totalMigratedImages,
+          deletionLog,
+          results 
+        },
+        req
+      );
+
+      res.json({
+        message: `Successfully migrated ${totalMigratedImages} images from ${storybooksToMigrate.length} books`,
+        migratedBooks: storybooksToMigrate.length,
+        migratedImages: totalMigratedImages,
+        deletionLog,
+        details: results
+      });
+    } catch (error) {
+      console.error('Full image migration error:', error);
+      res.status(500).json({ message: 'Internal server error', error: String(error) });
+    }
+  });
+
+  // POST /api/admin/cleanup-orphaned-pngs - Delete orphaned PNG files
+  app.post('/api/admin/cleanup-orphaned-pngs', isAdmin, async (req, res) => {
+    try {
+      const admin = req.user as AdminUser;
+      
+      const { ObjectStorageService } = await import("./objectStorage");
+      const objectStorage = new ObjectStorageService();
+      
+      // Get all files from storage
+      const allFiles = await objectStorage.listAllFiles();
+      const pngFiles = allFiles.filter(f => f.name.endsWith('.png'));
+      
+      if (pngFiles.length === 0) {
+        return res.json({ 
+          message: 'No PNG files found in storage',
+          deletedCount: 0 
+        });
+      }
+
+      // Get all storybooks to check what's in the database
+      const allStorybooks = await storage.getAllStorybooks();
+      const dbPngUrls = new Set<string>();
+      
+      // Collect all PNG URLs from database
+      for (const sb of allStorybooks) {
+        if (sb.coverImageUrl?.endsWith('.png')) {
+          const filename = sb.coverImageUrl.split('/').pop()!;
+          dbPngUrls.add(filename);
+        }
+        if (sb.backCoverImageUrl?.endsWith('.png')) {
+          const filename = sb.backCoverImageUrl.split('/').pop()!;
+          dbPngUrls.add(filename);
+        }
+        for (const page of sb.pages) {
+          if (page.imageUrl?.endsWith('.png')) {
+            const filename = page.imageUrl.split('/').pop()!;
+            dbPngUrls.add(filename);
+          }
+        }
+      }
+
+      const deletionResults: Array<{ file: string; status: 'deleted' | 'in_use' | 'error'; message?: string }> = [];
+      let deletedCount = 0;
+
+      // Check each PNG file
+      for (const pngFile of pngFiles) {
+        const filename = pngFile.name.split('/').pop() || pngFile.name;
+        
+        // If file is still referenced in database, don't delete
+        if (dbPngUrls.has(filename)) {
+          deletionResults.push({
+            file: pngFile.name,
+            status: 'in_use',
+            message: 'Still referenced in database'
+          });
+          continue;
+        }
+
+        // File is orphaned, safe to delete
+        try {
+          await objectStorage.deleteFile(pngFile.name);
+          deletedCount++;
+          deletionResults.push({
+            file: pngFile.name,
+            status: 'deleted',
+            message: `Deleted orphaned PNG (${(pngFile.size / (1024 * 1024)).toFixed(2)}MB)`
+          });
+        } catch (error) {
+          deletionResults.push({
+            file: pngFile.name,
+            status: 'error',
+            message: String(error)
+          });
+        }
+      }
+
+      // Log action
+      await logAdminAction(
+        admin.id,
+        'cleanup_orphaned_pngs',
+        'storage',
+        'cleanup',
+        { 
+          totalPngs: pngFiles.length,
+          deletedCount,
+          results: deletionResults
+        },
+        req
+      );
+
+      res.json({
+        message: `Cleaned up ${deletedCount} orphaned PNG files`,
+        totalPngsFound: pngFiles.length,
+        deletedCount,
+        details: deletionResults
+      });
+    } catch (error) {
+      console.error('Cleanup orphaned PNGs error:', error);
+      res.status(500).json({ message: 'Internal server error', error: String(error) });
+    }
+  });
+
+  // GET /api/metrics (public - no auth required)
   app.get('/api/metrics', async (req, res) => {
     try {
       const metrics = await storage.getMetrics();
