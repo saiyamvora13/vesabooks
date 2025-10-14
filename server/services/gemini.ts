@@ -16,6 +16,7 @@ export interface GeneratedStory {
   mainCharacterDescription: string;
   storyArc: string;
   pages: StoryPage[];
+  artStyle?: string; // Optional: extracted art style from user prompt for consistency across all images
 }
 
 function getMimeType(filePath: string): string {
@@ -43,6 +44,18 @@ function hasStyleInstructions(prompt: string): boolean {
   ];
   
   return styleKeywords.some(keyword => lowerPrompt.includes(keyword));
+}
+
+// Helper function to extract the art style directive from user prompt for consistency
+function extractArtStyle(prompt: string): string | undefined {
+  if (!hasStyleInstructions(prompt)) {
+    // No custom style, return undefined so we use the default children's book style
+    return undefined;
+  }
+  
+  // User has specified a custom style - extract it from the prompt
+  // We'll preserve the entire prompt as the style directive to maintain consistency
+  return prompt;
 }
 
 export async function generateStoryFromPrompt(
@@ -234,6 +247,9 @@ Return JSON following the schema with exactly ${pagesPerBook} pages.`;
       parsedJson.author = "AI Storyteller";
     }
 
+    // Extract and store the art style from the original user prompt for consistency across all images
+    parsedJson.artStyle = extractArtStyle(prompt);
+
     return parsedJson as GeneratedStory;
   } catch (error) {
     throw new Error(`Failed to generate story: ${error}`);
@@ -245,16 +261,17 @@ const delay = (ms: number) => new Promise(res => setTimeout(res, ms));
 export async function generateIllustration(
   imagePrompt: string,
   outputPath: string,
-  baseImagePath?: string
+  baseImagePath?: string,
+  explicitStyle?: string // Optional: explicit art style from user prompt for consistency
 ): Promise<void> {
   let retries = 3;
   let waitTime = 2000; // Start with a 2-second delay
 
   while (retries > 0) {
     try {
-      // Only add children's book style if user hasn't specified their own style
-      const fullPrompt = hasStyleInstructions(imagePrompt)
-        ? imagePrompt
+      // Use explicit style if provided (for consistency), otherwise add default children's book style
+      const fullPrompt = explicitStyle
+        ? `${imagePrompt}, ${explicitStyle}`
         : `${imagePrompt}, in the style of a vibrant and colorful children's book illustration, whimsical and gentle.`;
       
       const contentParts: any[] = [];
