@@ -380,8 +380,9 @@ function StorybookPurchaseButtons({ storybook }: { storybook: Storybook }) {
   const inCartPrint = isInCart(storybook.id, 'print');
 
   // Calculate price with potential discount
+  // Only apply digital discount for first-time print purchases, not repurchases
   let printPurchasePrice = printPrice;
-  if (digitalPurchase?.owned) {
+  if (digitalPurchase?.owned && !printPurchase?.owned) {
     printPurchasePrice = Math.max(0, printPrice - digitalPrice);
   }
 
@@ -418,43 +419,43 @@ function StorybookPurchaseButtons({ storybook }: { storybook: Storybook }) {
           </Button>
         )}
 
-        {printPurchase?.owned ? (
-          <Badge variant="secondary" className="w-full justify-center py-1">
-            <Check className="h-3 w-3 mr-1" />
-            {t('storybook.library.purchase.printPurchased')}
-          </Badge>
-        ) : (
-          <Button
-            size="sm"
-            variant="outline"
-            className="w-full h-auto py-2"
-            onClick={() => setCheckoutDialog({ open: true, type: 'print' })}
-            data-testid={`button-buy-print-${storybook.id}`}
-          >
-            <div className="flex flex-col items-center gap-0.5">
-              <div className="flex items-center gap-1.5">
-                <ShoppingCart className="h-4 w-4" />
-                {digitalPurchase?.owned ? (
-                  <span className="flex items-center gap-1">
-                    <span>Buy Print</span>
-                    <span className="line-through text-muted-foreground">(${(printPrice / 100).toFixed(2)})</span>
-                    <span>-</span>
-                    <span className="font-semibold">${(printPurchasePrice / 100).toFixed(2)}</span>
-                  </span>
-                ) : (
-                  <span>{t('storybook.library.purchase.buyPrint')}</span>
-                )}
-              </div>
-              {digitalPurchase?.owned ? (
-                <span className="text-xs text-green-600 dark:text-green-400 font-medium">
-                  {t('purchases.upgrade.savings', { amount: (digitalPrice / 100).toFixed(2) })}
+        <Button
+          size="sm"
+          variant="outline"
+          className="w-full h-auto py-2"
+          onClick={() => setCheckoutDialog({ open: true, type: 'print' })}
+          data-testid={`button-buy-print-${storybook.id}`}
+        >
+          <div className="flex flex-col items-center gap-0.5">
+            <div className="flex items-center gap-1.5">
+              <ShoppingCart className="h-4 w-4" />
+              {printPurchase?.owned ? (
+                <span className="flex items-center gap-1">
+                  <span>Buy Again</span>
+                  <span className="font-semibold">${(printPrice / 100).toFixed(2)}</span>
+                </span>
+              ) : digitalPurchase?.owned ? (
+                <span className="flex items-center gap-1">
+                  <span>Buy Print</span>
+                  <span className="line-through text-muted-foreground">(${(printPrice / 100).toFixed(2)})</span>
+                  <span>-</span>
+                  <span className="font-semibold">${(printPurchasePrice / 100).toFixed(2)}</span>
                 </span>
               ) : (
-                <span className="text-xs text-muted-foreground">{t('storybook.library.purchase.freeEbookIncluded')}</span>
+                <span>{t('storybook.library.purchase.buyPrint')}</span>
               )}
             </div>
-          </Button>
-        )}
+            {printPurchase?.owned ? (
+              <span className="text-xs text-muted-foreground">Order another copy</span>
+            ) : digitalPurchase?.owned ? (
+              <span className="text-xs text-green-600 dark:text-green-400 font-medium">
+                {t('purchases.upgrade.savings', { amount: (digitalPrice / 100).toFixed(2) })}
+              </span>
+            ) : (
+              <span className="text-xs text-muted-foreground">{t('storybook.library.purchase.freeEbookIncluded')}</span>
+            )}
+          </div>
+        </Button>
       </div>
 
       {checkoutDialog.open && checkoutDialog.type && (

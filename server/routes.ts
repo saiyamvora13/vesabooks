@@ -1074,9 +1074,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         let originalPrice = serverPrice;
 
         // Apply digital-to-print discount: if buying print and already owns digital, reduce price
+        // Only apply discount for first-time print purchases, not repurchases
         if (type === 'print') {
           const existingDigitalPurchase = await storage.getStorybookPurchase(userId, storybookId, 'digital');
-          if (existingDigitalPurchase) {
+          const existingPrintPurchase = await storage.getStorybookPurchase(userId, storybookId, 'print');
+          if (existingDigitalPurchase && !existingPrintPurchase) {
             discount = digitalPrice;
             serverPrice = Math.max(0, printPrice - digitalPrice); // Ensure price doesn't go negative
           }
@@ -1169,9 +1171,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         let originalPrice = serverPrice;
 
         // Apply digital-to-print discount: if buying print and already owns digital, reduce price
+        // Only apply discount for first-time print purchases, not repurchases
         if (type === 'print') {
           const existingDigitalPurchase = await storage.getStorybookPurchase(userId, storybookId, 'digital');
-          if (existingDigitalPurchase) {
+          const existingPrintPurchase = await storage.getStorybookPurchase(userId, storybookId, 'print');
+          if (existingDigitalPurchase && !existingPrintPurchase) {
             discount = digitalPrice;
             serverPrice = Math.max(0, printPrice - digitalPrice); // Ensure price doesn't go negative
           }
@@ -1239,9 +1243,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         let originalPrice = price;
 
         // Apply digital-to-print discount
+        // Only apply discount for first-time print purchases, not repurchases
         if (type === 'print') {
           const existingDigitalPurchase = await storage.getStorybookPurchase(userId, storybookId, 'digital');
-          if (existingDigitalPurchase) {
+          const existingPrintPurchase = await storage.getStorybookPurchase(userId, storybookId, 'print');
+          if (existingDigitalPurchase && !existingPrintPurchase) {
             discount = digitalPrice;
             price = Math.max(0, printPrice - digitalPrice);
           }
