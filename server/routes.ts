@@ -751,7 +751,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Helper function to extract filename from URL
       const extractFilename = (url: string): string => {
-        // URL format: "/api/storage/filename.png"
+        // URL format: "/api/storage/filename.jpg"
         const parts = url.split('/');
         return parts[parts.length - 1];
       };
@@ -1521,7 +1521,7 @@ async function generateStorybookAsync(
     const baseImagePath = imagePaths.length > 0 ? imagePaths[0] : undefined;
     
     // Generate cover image
-    const coverImageFileName = `${sessionId}_cover.png`;
+    const coverImageFileName = `${sessionId}_cover.jpg`;
     const coverImagePath = path.join(generatedDir, coverImageFileName);
     
     // IMPORTANT: Programmatically prepend character description to ensure consistency
@@ -1544,7 +1544,7 @@ async function generateStorybookAsync(
     const pages = [];
     for (let i = 0; i < generatedStory.pages.length; i++) {
       const page = generatedStory.pages[i];
-      const imageFileName = `${sessionId}_page_${page.pageNumber}.png`;
+      const imageFileName = `${sessionId}_page_${page.pageNumber}.jpg`;
       const imagePath = path.join(generatedDir, imageFileName);
 
       // Generate illustration for this page using the COVER IMAGE as reference for character consistency
@@ -1586,7 +1586,7 @@ async function generateStorybookAsync(
     });
 
     // Generate back cover image
-    const backCoverImageFileName = `${sessionId}_back_cover.png`;
+    const backCoverImageFileName = `${sessionId}_back_cover.jpg`;
     const backCoverImagePath = path.join(generatedDir, backCoverImageFileName);
     
     // Create back cover prompt that complements the front cover

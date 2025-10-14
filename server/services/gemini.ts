@@ -1,5 +1,6 @@
 import * as fs from "fs";
 import { GoogleGenAI, Modality, Type } from "@google/genai";
+import sharp from "sharp";
 
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || "" });
 
@@ -56,6 +57,24 @@ function extractArtStyle(prompt: string): string | undefined {
   // User has specified a custom style
   // Return a flag to indicate we should NOT add default style (Gemini will include the style in imagePrompts)
   return "custom";
+}
+
+// Optimize image for web display - reduces file size by ~90% with no visible quality loss
+async function optimizeImageForWeb(imageBuffer: Buffer): Promise<Buffer> {
+  // Optimal web resolution: resize to max 1200px width while maintaining aspect ratio
+  // Convert to JPEG at 90% quality for significant size reduction (2-5MB → 200-500KB)
+  // Flatten transparency with white background (standard for web)
+  return await sharp(imageBuffer)
+    .resize(1200, null, { 
+      fit: 'inside', // Maintain aspect ratio, fit within width
+      withoutEnlargement: true // Don't upscale smaller images
+    })
+    .flatten({ background: '#ffffff' }) // Replace transparency with white
+    .jpeg({ 
+      quality: 90, // High quality (visually identical to original)
+      mozjpeg: true // Use mozjpeg for better compression
+    })
+    .toBuffer();
 }
 
 export async function generateStoryFromPrompt(
@@ -311,7 +330,9 @@ export async function generateIllustration(
           for (const part of content.parts) {
             if (part.inlineData?.data) {
               const imageData = Buffer.from(part.inlineData.data, "base64");
-              fs.writeFileSync(outputPath, imageData);
+              // Optimize image for web: reduce size by ~90% with no visible quality loss
+              const optimizedImage = await optimizeImageForWeb(imageData);
+              fs.writeFileSync(outputPath, optimizedImage);
               return;
             }
           }

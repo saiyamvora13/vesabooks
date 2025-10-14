@@ -120,9 +120,13 @@ export class ObjectStorageService {
     const bucket = objectStorageClient.bucket(bucketName);
     const file = bucket.file(objectName);
     
+    // Determine content type based on file extension
+    const ext = destinationPath.toLowerCase().split('.').pop();
+    const contentType = ext === 'jpg' || ext === 'jpeg' ? 'image/jpeg' : 'image/png';
+    
     // Upload the file
     await file.save(fs.readFileSync(localPath), {
-      contentType: 'image/png',
+      contentType,
       metadata: {
         cacheControl: 'public, max-age=3600',
       },
