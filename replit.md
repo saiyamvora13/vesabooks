@@ -27,11 +27,7 @@ Key features include:
 - **Print-Ready PDF Download**: Generates professional PDFs for print orders, adhering to commercial printing specifications with precise trim, bleed, and safe margins, using `pdf-lib`.
 - **Error Handling & Retry Logic**: Includes automatic retry mechanisms for failed generation processes and a manual "Try Again" option.
 - **Persistent Image Storage**: All images are stored in Replit Object Storage with automatic optimization (JPEG compression at 90% quality, resized to 1200px max width) for ~90% file size reduction without visible quality loss. Images are organized in date-based folders (YYYY/MM/DD) based on storybook creation date for efficient management and scalability.
-- **Storage Management Tools**: Admin endpoints for storage analysis and cleanup:
-  - `/api/admin/storage-analysis` - Analyze all files, identify large files (>1.5MB), PNG vs JPG distribution, and potential duplicates
-  - `/api/admin/migrate-images` - Test migration (2 books) to convert PNG images to optimized JPEGs
-  - `/api/admin/migrate-all-images` - Full migration of ALL remaining PNG storybooks to optimized JPEGs with date-based organization
-  - `/api/admin/cleanup-orphaned-pngs` - Safely delete orphaned PNG files not referenced in database
+- **Storage Optimization Complete (Oct 2025)**: Successfully reduced total storage from 142 MB to 29 MB (~79% reduction) by migrating all storybooks from PNG to optimized JPG format and removing orphaned files. All 35 storybooks now use JPG format exclusively with date-based folder organization. Final state: 150 files, 0 PNG files, 100% JPG format.
 
 ### System Design Choices
 - **Data Storage**: PostgreSQL via Drizzle ORM for `users`, `storybooks`, `purchases`, `sessions`, and `password_reset_tokens`. `storybooks` includes `mainCharacterDescription` and `storyArc`. Admin data is stored in `admin_users`, `site_settings`, `hero_storybook_slots`, `featured_storybooks`, and `admin_audit_logs`. File uploads are stored in Replit Object Storage.
