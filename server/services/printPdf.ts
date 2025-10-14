@@ -215,10 +215,10 @@ export async function generatePrintReadyPDF(storybook: Storybook): Promise<Buffe
     const textAreaWidth = textAreaRight - textAreaLeft; // Width between margins
     const textAreaHeight = textAreaTop - textAreaBottom; // Available height for text
     
-    // Kid-friendly text formatting (ages 6-12) - LARGER FONT
-    const fontSize = 26; // Much larger font for young readers
-    const lineHeight = fontSize * 1.9; // Generous line spacing
-    const textFont = boldFont; // Bold font is more readable for kids
+    // Kid-friendly text formatting (ages 6-12)
+    const fontSize = 22; // Readable font size for young readers
+    const lineHeight = fontSize * 1.7; // Good line spacing for readability
+    const textFont = font; // Regular Helvetica font
     const words = page.text.split(' ');
     const lines: string[] = [];
     let currentLine = '';
@@ -242,15 +242,24 @@ export async function generatePrintReadyPDF(storybook: Storybook): Promise<Buffe
     // Calculate total text block height
     const totalTextHeight = lines.length * lineHeight;
     
-    // Center text vertically: start from middle and go up by half the text height
-    const textBlockCenterY = textAreaBottom + (textAreaHeight / 2);
-    let startY = textBlockCenterY + (totalTextHeight / 2);
+    // Center text vertically if it fits, otherwise start from top
+    let startY: number;
+    if (totalTextHeight <= textAreaHeight) {
+      // Text fits - center it vertically
+      const textBlockCenterY = textAreaBottom + (textAreaHeight / 2);
+      startY = textBlockCenterY + (totalTextHeight / 2);
+    } else {
+      // Text too tall - start from top
+      startY = textAreaTop;
+    }
     
-    // Draw each line of text (centered horizontally and vertically)
-    for (const line of lines) {
-      const currentY = startY - (lines.indexOf(line) * lineHeight);
+    // Draw each line of text (centered horizontally, vertically centered if space allows)
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+      const currentY = startY - (i * lineHeight);
       
-      if (currentY - fontSize < textAreaBottom) break; // Stop if we reach bottom safe area
+      // Stop if we reach bottom safe area (don't cut off text)
+      if (currentY - fontSize < textAreaBottom) break;
       
       // Center each line horizontally
       const lineWidth = textFont.widthOfTextAtSize(line, fontSize);
