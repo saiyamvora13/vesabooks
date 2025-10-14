@@ -65,6 +65,7 @@ export function removeFromCart(storybookId: string, type: 'digital' | 'print'): 
 export function clearCart(): void {
   try {
     localStorage.removeItem(CART_STORAGE_KEY);
+    window.dispatchEvent(new Event('cartUpdated'));
   } catch (error) {
     console.error('Error clearing cart:', error);
   }

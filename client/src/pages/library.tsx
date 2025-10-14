@@ -360,7 +360,6 @@ function StorybookPurchaseButtons({ storybook }: { storybook: Storybook }) {
         type: type === 'digital' ? 'Digital' : 'Print' 
       }),
     });
-    window.dispatchEvent(new Event('cartUpdated'));
     setCartUpdated(prev => prev + 1);
   };
 
@@ -373,7 +372,6 @@ function StorybookPurchaseButtons({ storybook }: { storybook: Storybook }) {
         type: type === 'digital' ? 'Digital' : 'Print' 
       }),
     });
-    window.dispatchEvent(new Event('cartUpdated'));
     setCartUpdated(prev => prev + 1);
   };
 
