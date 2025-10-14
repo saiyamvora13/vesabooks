@@ -833,11 +833,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: 'Storybook not found' });
       }
 
-      // Check if user owns the storybook or has purchased the print version
+      // Check if user owns the storybook or has purchased any version (digital or print)
       const ownedByUser = storybook.userId === userId;
       const printPurchase = await storage.getStorybookPurchase(userId, id, 'print');
+      const digitalPurchase = await storage.getStorybookPurchase(userId, id, 'digital');
       
-      if (!ownedByUser && !printPurchase) {
+      if (!ownedByUser && !printPurchase && !digitalPurchase) {
         return res.status(403).json({ message: 'You do not have access to download this print PDF' });
       }
 

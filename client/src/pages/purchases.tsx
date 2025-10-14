@@ -10,9 +10,9 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
-import { clearCart } from "@/lib/cartUtils";
+import { clearCart, addToCart, isInCart } from "@/lib/cartUtils";
 import { type Purchase, type Storybook } from "@shared/schema";
-import { Download, Package, Mail, BookOpen } from "lucide-react";
+import { Download, Package, Mail, BookOpen, ShoppingCart, Sparkles } from "lucide-react";
 
 interface PurchaseWithStorybook extends Purchase {
   storybook?: Storybook;
@@ -24,6 +24,7 @@ export default function Purchases() {
   const { toast } = useToast();
   const { isAuthenticated, isLoading: authLoading } = useAuth();
   const [downloadingPurchaseId, setDownloadingPurchaseId] = useState<string | null>(null);
+  const [downloadingPdfPurchaseId, setDownloadingPdfPurchaseId] = useState<string | null>(null);
 
   const { data: purchases, isLoading } = useQuery<Purchase[]>({
     queryKey: ['/api/purchases'],
@@ -55,6 +56,20 @@ export default function Purchases() {
     },
     enabled: !!purchases && purchases.length > 0,
   });
+
+  // Fetch site settings for pricing
+  const { data: settings } = useQuery<any>({
+    queryKey: ['/api/admin/settings'],
+    enabled: isAuthenticated,
+  });
+
+  // Get prices from settings with fallback defaults
+  const digitalPrice = settings?.find((s: any) => s.key === 'digital_price')?.value 
+    ? parseInt(settings.find((s: any) => s.key === 'digital_price').value) 
+    : 399;
+  const printPrice = settings?.find((s: any) => s.key === 'print_price')?.value 
+    ? parseInt(settings.find((s: any) => s.key === 'print_price').value) 
+    : 2499;
 
   // Handle success redirect from Stripe
   useEffect(() => {
@@ -123,6 +138,46 @@ export default function Purchases() {
     }
   };
 
+  const downloadPrintPdf = async (purchaseId: string, storybookId: string, title: string) => {
+    setDownloadingPdfPurchaseId(purchaseId);
+    
+    toast({
+      title: t('purchases.toast.preparingPrintPdf.title'),
+      description: t('purchases.toast.preparingPrintPdf.description'),
+    });
+    
+    try {
+      const response = await fetch(`/api/storybooks/${storybookId}/download-print-pdf`);
+      
+      if (!response.ok) {
+        throw new Error('Failed to download print PDF');
+      }
+      
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}_print.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+      
+      toast({
+        title: t('purchases.toast.printPdfDownloaded.title'),
+        description: t('purchases.toast.printPdfDownloaded.description'),
+      });
+    } catch (error) {
+      toast({
+        title: t('purchases.toast.downloadFailed.title'),
+        description: t('purchases.toast.downloadFailed.description'),
+        variant: "destructive",
+      });
+    } finally {
+      setDownloadingPdfPurchaseId(null);
+    }
+  };
+
   const getStatusBadgeVariant = (status: string) => {
     switch (status) {
       case 'completed':
@@ -138,6 +193,26 @@ export default function Purchases() {
 
   const getPurchaseTypeIcon = (type: string) => {
     return type === 'digital' ? <Download className="h-4 w-4" /> : <Package className="h-4 w-4" />;
+  };
+
+  const handleUpgradeToPrint = (storybookId: string, title: string) => {
+    const upgradedPrice = Math.max(0, printPrice - digitalPrice);
+    
+    addToCart({
+      storybookId,
+      type: 'print',
+      title,
+      price: upgradedPrice,
+    });
+    
+    window.dispatchEvent(new Event('cartUpdated'));
+    
+    toast({
+      title: t('purchases.upgrade.addedToCart'),
+      description: t('purchases.upgrade.discountedPrice', { price: (upgradedPrice / 100).toFixed(2) }),
+    });
+    
+    setLocation('/cart');
   };
 
   if (authLoading || isLoading) {
@@ -270,26 +345,46 @@ export default function Purchases() {
                             </div>
                           </div>
 
-                          <div className="flex items-center gap-3">
+                          <div className="flex items-center gap-3 flex-wrap">
                             {purchase.type === 'digital' && purchase.status === 'completed' && (
-                              <Button
-                                onClick={() => downloadEpub(purchase.id, purchase.storybookId, storybook?.title || 'storybook')}
-                                disabled={downloadingPurchaseId === purchase.id}
-                                variant="default"
-                                data-testid={`button-download-purchase-${purchase.id}`}
-                              >
-                                {downloadingPurchaseId === purchase.id ? (
-                                  <>
-                                    <i className="fas fa-spinner fa-spin mr-2"></i>
-                                    {t('purchases.item.preparing')}
-                                  </>
-                                ) : (
-                                  <>
-                                    <Download className="h-4 w-4 mr-2" />
-                                    {t('purchases.item.downloadEbook')}
-                                  </>
-                                )}
-                              </Button>
+                              <>
+                                <Button
+                                  onClick={() => downloadEpub(purchase.id, purchase.storybookId, storybook?.title || 'storybook')}
+                                  disabled={downloadingPurchaseId === purchase.id}
+                                  variant="default"
+                                  data-testid={`button-download-epub-${purchase.id}`}
+                                >
+                                  {downloadingPurchaseId === purchase.id ? (
+                                    <>
+                                      <i className="fas fa-spinner fa-spin mr-2"></i>
+                                      {t('purchases.item.preparing')}
+                                    </>
+                                  ) : (
+                                    <>
+                                      <Download className="h-4 w-4 mr-2" />
+                                      {t('purchases.item.downloadEbook')}
+                                    </>
+                                  )}
+                                </Button>
+                                <Button
+                                  onClick={() => downloadPrintPdf(purchase.id, purchase.storybookId, storybook?.title || 'storybook')}
+                                  disabled={downloadingPdfPurchaseId === purchase.id}
+                                  variant="outline"
+                                  data-testid={`button-download-print-pdf-${purchase.id}`}
+                                >
+                                  {downloadingPdfPurchaseId === purchase.id ? (
+                                    <>
+                                      <i className="fas fa-spinner fa-spin mr-2"></i>
+                                      {t('purchases.item.preparing')}
+                                    </>
+                                  ) : (
+                                    <>
+                                      <Download className="h-4 w-4 mr-2" />
+                                      {t('purchases.item.downloadPrintPdf')}
+                                    </>
+                                  )}
+                                </Button>
+                              </>
                             )}
                             {purchase.type === 'print' && purchase.status === 'completed' && (
                               <div className="flex items-center gap-2 text-sm text-muted-foreground bg-muted px-4 py-2 rounded-lg">
@@ -300,6 +395,59 @@ export default function Purchases() {
                           </div>
                         </div>
                       ))}
+
+                      {/* Upgrade to Print option for digital purchases */}
+                      {storybookPurchases.some(p => p.type === 'digital' && p.status === 'completed') && 
+                       !storybookPurchases.some(p => p.type === 'print') && (
+                        <div className="p-6 rounded-lg bg-gradient-to-r from-purple-50 to-blue-50 dark:from-purple-950/30 dark:to-blue-950/30 border-2 border-purple-200 dark:border-purple-800" data-testid={`upgrade-card-${storybookId}`}>
+                          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                            <div className="flex-1 space-y-2">
+                              <div className="flex items-center gap-2">
+                                <Sparkles className="h-5 w-5 text-purple-600 dark:text-purple-400" />
+                                <h4 className="text-lg font-semibold text-purple-900 dark:text-purple-100">
+                                  {t('purchases.upgrade.title')}
+                                </h4>
+                                <Badge className="bg-purple-600 hover:bg-purple-700 text-white">
+                                  {t('purchases.upgrade.badge')}
+                                </Badge>
+                              </div>
+                              <p className="text-sm text-purple-700 dark:text-purple-300">
+                                {t('purchases.upgrade.description')}
+                              </p>
+                              <div className="flex flex-col sm:flex-row sm:items-center gap-2 text-sm">
+                                <span className="font-semibold text-green-700 dark:text-green-400">
+                                  {t('purchases.upgrade.discountedPrice', { price: (Math.max(0, printPrice - digitalPrice) / 100).toFixed(2) })}
+                                </span>
+                                <span className="text-muted-foreground line-through">
+                                  {t('purchases.upgrade.originalPrice', { price: (printPrice / 100).toFixed(2) })}
+                                </span>
+                                <Badge variant="outline" className="w-fit border-green-600 text-green-700 dark:text-green-400">
+                                  {t('purchases.upgrade.savings', { amount: (digitalPrice / 100).toFixed(2) })}
+                                </Badge>
+                              </div>
+                            </div>
+                            <Button
+                              onClick={() => handleUpgradeToPrint(storybookId, storybook?.title || 'Untitled Storybook')}
+                              disabled={isInCart(storybookId, 'print')}
+                              size="lg"
+                              className="gradient-bg !text-[hsl(258,90%,20%)] shadow-lg hover:scale-105 transition-all"
+                              data-testid={`button-upgrade-${storybookId}`}
+                            >
+                              {isInCart(storybookId, 'print') ? (
+                                <>
+                                  <ShoppingCart className="h-5 w-5 mr-2" />
+                                  In Cart
+                                </>
+                              ) : (
+                                <>
+                                  <ShoppingCart className="h-5 w-5 mr-2" />
+                                  {t('purchases.upgrade.button')}
+                                </>
+                              )}
+                            </Button>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </CardContent>
                 </Card>

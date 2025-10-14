@@ -2,6 +2,7 @@ import { Resend } from 'resend';
 import type { Storybook, Purchase } from '@shared/schema';
 import { storage } from '../storage';
 import { getEmailTranslations, replacePlaceholders } from '../email-translations';
+import { generatePrintReadyPDF } from './printPdf';
 
 let connectionSettings: any;
 
@@ -228,11 +229,29 @@ export async function sendInvoiceEmail(
     </div>
   `;
 
+  // Generate PDFs for print purchases
+  const attachments: Array<{ filename: string; content: Buffer }> = [];
+  
+  for (const purchase of purchases) {
+    if (purchase.type === 'print') {
+      const storybook = await storage.getStorybook(purchase.storybookId);
+      if (storybook) {
+        const pdfBuffer = await generatePrintReadyPDF(storybook);
+        const filename = `${storybook.title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}-print.pdf`;
+        attachments.push({
+          filename,
+          content: pdfBuffer,
+        });
+      }
+    }
+  }
+
   await client.emails.send({
     from: fromEmail,
     to: userEmail,
     subject: replacePlaceholders(t.subject, { invoiceNumber }),
     html: htmlBody,
+    ...(attachments.length > 0 && { attachments }),
   });
 }
 

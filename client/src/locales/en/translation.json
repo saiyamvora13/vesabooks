@@ -473,8 +473,20 @@
       "printEdition": "Print Edition",
       "purchasedOn": "Purchased on {{date}}",
       "downloadEbook": "Download E-book",
+      "downloadPrintPdf": "Download Print PDF",
       "preparing": "Preparing...",
       "printOrderSent": "Print order sent to email"
+    },
+    "upgrade": {
+      "title": "Upgrade to Print Edition",
+      "badge": "✨ Special Offer",
+      "description": "Get a professionally printed version delivered to your door",
+      "discountedPrice": "Only ${{price}}",
+      "originalPrice": "Regular price: ${{price}}",
+      "savings": "Save ${{amount}} (digital owner discount)",
+      "button": "Upgrade to Print",
+      "addedToCart": "Print edition added to cart!",
+      "alreadyOwned": "You already own the print edition"
     },
     "status": {
       "completed": "Completed",
@@ -494,8 +506,16 @@
         "title": "E-book downloaded!",
         "description": "Your storybook has been downloaded as an EPUB file"
       },
+      "preparingPrintPdf": {
+        "title": "Preparing your print PDF...",
+        "description": "This may take a few seconds for large files"
+      },
+      "printPdfDownloaded": {
+        "title": "Print PDF downloaded!",
+        "description": "Your print-ready PDF has been downloaded"
+      },
       "downloadFailed": {
-        "title": "Failed to download e-book",
+        "title": "Failed to download",
         "description": "Please try again later"
       }
     }
