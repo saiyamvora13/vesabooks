@@ -53,9 +53,9 @@ function extractArtStyle(prompt: string): string | undefined {
     return undefined;
   }
   
-  // User has specified a custom style - extract it from the prompt
-  // We'll preserve the entire prompt as the style directive to maintain consistency
-  return prompt;
+  // User has specified a custom style
+  // Return a flag to indicate we should NOT add default style (Gemini will include the style in imagePrompts)
+  return "custom";
 }
 
 export async function generateStoryFromPrompt(
@@ -269,9 +269,10 @@ export async function generateIllustration(
 
   while (retries > 0) {
     try {
-      // Use explicit style if provided (for consistency), otherwise add default children's book style
-      const fullPrompt = explicitStyle
-        ? `${imagePrompt}, ${explicitStyle}`
+      // If explicit style is "custom", the imagePrompt already includes the style (from Gemini)
+      // If undefined, add default children's book style for consistency
+      const fullPrompt = explicitStyle === "custom"
+        ? imagePrompt // Already has custom style from Gemini
         : `${imagePrompt}, in the style of a vibrant and colorful children's book illustration, whimsical and gentle.`;
       
       const contentParts: any[] = [];

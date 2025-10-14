@@ -1529,7 +1529,11 @@ async function generateStorybookAsync(
     const coverPromptWithCharacter = characterDesc 
       ? `${characterDesc}. ${generatedStory.coverImagePrompt}`
       : generatedStory.coverImagePrompt;
-    await generateIllustration(coverPromptWithCharacter, coverImagePath, baseImagePath);
+    
+    // Extract art style for consistency across all images
+    const artStyle = generatedStory.artStyle;
+    
+    await generateIllustration(coverPromptWithCharacter, coverImagePath, baseImagePath, artStyle);
     
     // Upload cover image to Object Storage
     const coverImageUrl = await objectStorage.uploadFile(coverImagePath, coverImageFileName);
@@ -1548,7 +1552,7 @@ async function generateStorybookAsync(
       const pagePromptWithCharacter = characterDesc 
         ? `${characterDesc}. ${page.imagePrompt}`
         : page.imagePrompt;
-      await generateIllustration(pagePromptWithCharacter, imagePath, coverImagePath);
+      await generateIllustration(pagePromptWithCharacter, imagePath, coverImagePath, artStyle);
 
       // Upload to Object Storage
       const imageUrl = await objectStorage.uploadFile(imagePath, imageFileName);
@@ -1592,7 +1596,7 @@ async function generateStorybookAsync(
     const backCoverPromptWithCharacter = characterDesc 
       ? `${characterDesc}. ${backCoverBasePrompt}`
       : backCoverBasePrompt;
-    await generateIllustration(backCoverPromptWithCharacter, backCoverImagePath, coverImagePath);
+    await generateIllustration(backCoverPromptWithCharacter, backCoverImagePath, coverImagePath, artStyle);
     
     // Upload back cover to Object Storage
     const backCoverImageUrl = await objectStorage.uploadFile(backCoverImagePath, backCoverImageFileName);
