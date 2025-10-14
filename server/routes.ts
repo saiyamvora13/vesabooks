@@ -1523,7 +1523,13 @@ async function generateStorybookAsync(
     // Generate cover image
     const coverImageFileName = `${sessionId}_cover.png`;
     const coverImagePath = path.join(generatedDir, coverImageFileName);
-    await generateIllustration(generatedStory.coverImagePrompt, coverImagePath, baseImagePath);
+    
+    // IMPORTANT: Programmatically prepend character description to ensure consistency
+    const characterDesc = generatedStory.mainCharacterDescription?.trim() || '';
+    const coverPromptWithCharacter = characterDesc 
+      ? `${characterDesc}. ${generatedStory.coverImagePrompt}`
+      : generatedStory.coverImagePrompt;
+    await generateIllustration(coverPromptWithCharacter, coverImagePath, baseImagePath);
     
     // Upload cover image to Object Storage
     const coverImageUrl = await objectStorage.uploadFile(coverImagePath, coverImageFileName);
@@ -1538,7 +1544,11 @@ async function generateStorybookAsync(
       const imagePath = path.join(generatedDir, imageFileName);
 
       // Generate illustration for this page using the COVER IMAGE as reference for character consistency
-      await generateIllustration(page.imagePrompt, imagePath, coverImagePath);
+      // IMPORTANT: Programmatically prepend character description to ensure consistency
+      const pagePromptWithCharacter = characterDesc 
+        ? `${characterDesc}. ${page.imagePrompt}`
+        : page.imagePrompt;
+      await generateIllustration(pagePromptWithCharacter, imagePath, coverImagePath);
 
       // Upload to Object Storage
       const imageUrl = await objectStorage.uploadFile(imagePath, imageFileName);
@@ -1576,9 +1586,13 @@ async function generateStorybookAsync(
     const backCoverImagePath = path.join(generatedDir, backCoverImageFileName);
     
     // Create back cover prompt that complements the front cover
-    const backCoverPrompt = `Create a back cover illustration for a children's storybook that complements the front cover. The back cover should feature ${generatedStory.mainCharacterDescription} in a different scene that hints at the adventure without spoiling it. Maintain the same artistic style and color palette as the front cover.`;
+    const backCoverBasePrompt = `Create a back cover illustration for a children's storybook that complements the front cover. Show the character in a different scene that hints at the adventure without spoiling it. Maintain the same artistic style and color palette as the front cover.`;
     
-    await generateIllustration(backCoverPrompt, backCoverImagePath, coverImagePath);
+    // IMPORTANT: Programmatically prepend character description to ensure consistency
+    const backCoverPromptWithCharacter = characterDesc 
+      ? `${characterDesc}. ${backCoverBasePrompt}`
+      : backCoverBasePrompt;
+    await generateIllustration(backCoverPromptWithCharacter, backCoverImagePath, coverImagePath);
     
     // Upload back cover to Object Storage
     const backCoverImageUrl = await objectStorage.uploadFile(backCoverImagePath, backCoverImageFileName);

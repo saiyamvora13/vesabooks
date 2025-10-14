@@ -102,7 +102,7 @@ CRITICAL STORY STRUCTURE REQUIREMENTS:
 
 2. CONTINUITY - Each page must flow naturally from the previous one. Avoid random disconnected scenes.
 
-3. CHARACTER CONSISTENCY - Describe the main character's appearance in detail ONCE in 'mainCharacterDescription', then use that EXACT description in every imagePrompt. The character must look identical across all pages.
+3. CHARACTER CONSISTENCY - Create a VERY DETAILED physical description of the main character in 'mainCharacterDescription'. For imagePrompts, focus ONLY on describing the scene, action, setting, and environment. Do NOT repeat the character description in imagePrompts - it will be added automatically.
 
 4. STORY ELEMENTS - Include: clear protagonist, conflict/problem, rising action, climax, and resolution.
 
@@ -114,7 +114,7 @@ CRITICAL STORY STRUCTURE REQUIREMENTS:
 
 2. CONTINUITY - Each page must connect to the previous one. No random jumps. Use transitions like "Then...", "Next...", "Suddenly...".
 
-3. CHARACTER CONSISTENCY - Describe the main character's appearance in detail ONCE in 'mainCharacterDescription', then use that EXACT description in every imagePrompt. The character must look identical across all pages (same clothes, hair, features).
+3. CHARACTER CONSISTENCY - Create a VERY DETAILED physical description of the main character in 'mainCharacterDescription' (hair, clothes, features, etc.). For imagePrompts, focus ONLY on what's happening in each scene - the setting, action, and other elements. Do NOT include the character description in imagePrompts - it will be added automatically.
 
 4. STORY ELEMENTS - Include: lovable protagonist, clear problem, attempts to solve it, moment of success, happy ending with lesson.
 
@@ -170,7 +170,7 @@ Return JSON following the schema with exactly ${pagesPerBook} pages.`;
         },
         coverImagePrompt: {
           type: Type.STRING,
-          description: "A detailed, descriptive prompt for an AI image generator to create the cover image. Include the mainCharacterDescription verbatim, describe a compelling scene representing the story's theme, specify the setting, and include artistic style details."
+          description: "A detailed, descriptive prompt for an AI image generator to create the cover image. Describe a compelling scene representing the story's theme, specify the setting, and include artistic style details. (Note: The character description will be added automatically, so focus on the scene, action, and environment.)"
         },
         pages: {
           type: Type.ARRAY,
@@ -191,8 +191,8 @@ Return JSON following the schema with exactly ${pagesPerBook} pages.`;
               imagePrompt: {
                 type: Type.STRING,
                 description: hasCustomStyle
-                  ? "A detailed image generation prompt. MUST include the mainCharacterDescription VERBATIM to ensure consistency. Then describe the specific scene, action, setting, and any other characters. Maintain the style requested by the user."
-                  : "A detailed image generation prompt. MUST include the mainCharacterDescription VERBATIM to ensure the character looks identical. Then describe the specific scene, action, setting, background, and any other characters/objects. Use vibrant, whimsical children's book illustration style.",
+                  ? "A detailed image generation prompt. Describe the specific scene, action, setting, and any other characters/objects. Maintain the style requested by the user. (Note: The character description will be added automatically, so focus on what's happening in the scene.)"
+                  : "A detailed image generation prompt. Describe the specific scene, action, setting, background, and any other characters/objects. Use vibrant, whimsical children's book illustration style. (Note: The character description will be added automatically, so focus on the scene details.)",
               },
             },
             required: ["pageNumber", "text", "imagePrompt"],
