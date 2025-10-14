@@ -103,13 +103,12 @@ CRITICAL STORY STRUCTURE REQUIREMENTS:
 2. CONTINUITY - Each page must flow naturally from the previous one. Avoid random disconnected scenes.
 
 3. CHARACTER CONSISTENCY - This is CRITICAL for visual consistency across all ${pagesPerBook}+ illustrations:
-   - In 'mainCharacterDescription': Create an EXTREMELY DETAILED description of PERMANENT, UNCHANGING features
-   - Front-load the most important visual details first (hair, eyes, clothing)
-   - Specify EXACT clothing colors, patterns, and items that will NOT change throughout the story
-   - Include unique identifying marks (freckles, birthmarks, scars, gaps in teeth, etc.)
-   - The character must wear the SAME OUTFIT on every single page
-   - For imagePrompts: Focus ONLY on scene details (setting, action, background, other characters/objects)
-   - NEVER repeat the character description in imagePrompts - it will be prepended automatically
+   - In 'mainCharacterDescription': Create an EXTREMELY DETAILED description of PERMANENT physical features ONLY
+   - Front-load the most important features first (hair color/style, eye color, facial features)
+   - Include ONLY features that NEVER change: hair, eyes, skin tone, unique marks (freckles, birthmarks, scars, gaps in teeth), body type, facial structure
+   - DO NOT include clothing in the character description - clothing can change contextually (pajamas at bedtime, swimsuit at pool, etc.)
+   - For imagePrompts: Describe the scene, action, setting, and what the character is wearing/doing in that specific scene
+   - NEVER repeat the permanent character features in imagePrompts - they will be prepended automatically
 
 4. STORY ELEMENTS - Include: clear protagonist, conflict/problem, rising action, climax, and resolution.
 
@@ -122,13 +121,12 @@ CRITICAL STORY STRUCTURE REQUIREMENTS:
 2. CONTINUITY - Each page must connect to the previous one. No random jumps. Use transitions like "Then...", "Next...", "Suddenly...".
 
 3. CHARACTER CONSISTENCY - This is CRITICAL for visual consistency across all ${pagesPerBook}+ illustrations:
-   - In 'mainCharacterDescription': Create an EXTREMELY DETAILED description of PERMANENT, UNCHANGING features
-   - Front-load the most important visual details first (hair color/style, eye color, clothing)
-   - Specify EXACT clothing with precise colors, patterns, and items that will NEVER change throughout the entire story
-   - Include unique identifying marks (freckles, birthmarks, scars, gaps in teeth, distinctive features)
-   - The character must wear the SAME OUTFIT on every single page - no outfit changes allowed
-   - For imagePrompts: Focus ONLY on what's happening in the scene (setting, action, background, other characters/objects)
-   - NEVER include the character's appearance in imagePrompts - it will be prepended automatically
+   - In 'mainCharacterDescription': Create an EXTREMELY DETAILED description of PERMANENT physical features ONLY
+   - Front-load the most important features first (hair color/style, eye color, facial features)
+   - Include ONLY features that NEVER change: hair, eyes, skin tone, unique marks (freckles, birthmarks, scars, gaps in teeth), body type, facial structure
+   - DO NOT include clothing in the character description - clothing can change contextually (pajamas at bedtime, swimsuit at pool, costume at party, etc.)
+   - For imagePrompts: Describe the scene, action, setting, and what the character is wearing/doing in that specific scene
+   - NEVER repeat the permanent character features in imagePrompts - they will be prepended automatically
 
 4. STORY ELEMENTS - Include: lovable protagonist, clear problem, attempts to solve it, moment of success, happy ending with lesson.
 
@@ -176,7 +174,7 @@ Return JSON following the schema with exactly ${pagesPerBook} pages.`;
         },
         mainCharacterDescription: {
           type: Type.STRING,
-          description: "A VERY DETAILED physical description of the main character's UNCHANGING features that will be used in ALL image prompts for visual consistency. CRITICAL: The character's appearance must remain IDENTICAL across all 10+ illustrations. Front-load the most important features first. Include: (1) Age/type and gender, (2) Specific hair color and exact hairstyle, (3) Eye color, (4) Skin tone/fur color with any unique marks (freckles, birthmarks, scars, gaps in teeth), (5) UNCHANGING clothing with exact colors, patterns, and specific items (this outfit stays the same throughout the entire story), (6) Distinctive accessories that don't change, (7) Body type/build. Be extremely specific about permanent visual details. Example: 'A 7-year-old girl with long curly bright red hair tied in two high pigtails with yellow ribbons, large emerald green eyes, fair skin with three small freckles across her nose, wearing a sunshine yellow raincoat with exactly four bright blue round buttons down the front, cherry red rubber rain boots, a white cotton dress with tiny purple flowers underneath, a small gap between her two front teeth, always carries a forest green backpack with a silver zipper, petite build.'"
+          description: "A VERY DETAILED physical description of the main character's PERMANENT features that will be used in ALL image prompts for visual consistency. CRITICAL: The character's core physical appearance must remain IDENTICAL across all 10+ illustrations. Front-load the most important features first. Include ONLY permanent features: (1) Age/type and gender, (2) Specific hair color and exact hairstyle, (3) Eye color, (4) Skin tone/fur color with any unique marks (freckles, birthmarks, scars, gaps in teeth, distinctive facial features), (5) Body type/build, (6) Any permanent distinctive features. DO NOT describe clothing here - clothing can change based on story context (pajamas, swimsuit, costume, etc.). Be extremely specific about permanent visual details that never change. Example: 'A 7-year-old girl with long curly bright red hair tied in two high pigtails, large emerald green eyes, fair skin with three small freckles across her nose, a small gap between her two front teeth, petite build, round face with a button nose.'"
         },
         storyArc: {
           type: Type.STRING,
