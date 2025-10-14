@@ -266,13 +266,25 @@ export async function generateCompositeCoverImage(
     const overlayHeight = Math.floor(height * 0.25); // 25% of image height
     const overlayY = height - overlayHeight;
     
-    // Helper function to split long titles into multiple lines
+    // Helper function to split long titles into multiple lines with character-level wrapping
     const wrapText = (text: string, maxCharsPerLine: number): string[] => {
       const words = text.split(' ');
       const lines: string[] = [];
       let currentLine = '';
       
-      for (const word of words) {
+      for (let word of words) {
+        // If a single word is too long, break it at character level
+        while (word.length > maxCharsPerLine) {
+          // If we have a current line, push it first
+          if (currentLine) {
+            lines.push(currentLine);
+            currentLine = '';
+          }
+          // Break the word at maxCharsPerLine with a hyphen
+          lines.push(word.substring(0, maxCharsPerLine - 1) + '-');
+          word = word.substring(maxCharsPerLine - 1);
+        }
+        
         const testLine = currentLine ? `${currentLine} ${word}` : word;
         if (testLine.length <= maxCharsPerLine) {
           currentLine = testLine;
@@ -285,14 +297,26 @@ export async function generateCompositeCoverImage(
       return lines;
     };
     
-    // Wrap title text based on width (approximately 15-20 chars per line for readability)
-    const maxCharsPerLine = Math.floor(width / 40); // Rough estimate based on width
-    const titleLines = wrapText(title, Math.max(maxCharsPerLine, 15));
+    // Calculate maximum characters per line with safety margin
+    // Use a more conservative estimate to ensure text fits
+    const safeWidth = width * 0.85; // Use 85% of width for safety margin
+    const maxCharsPerLine = Math.floor(safeWidth / 45); // Adjusted divisor for better fit
+    const titleLines = wrapText(title, Math.max(maxCharsPerLine, 12)); // Minimum 12 chars per line
     
-    // Calculate font sizes based on title length and number of lines
-    const baseFontSize = titleLines.length > 2 ? 45 : 
-                        titleLines.length > 1 ? 55 : 
-                        title.length > 20 ? 60 : 70;
+    // Find the longest line to calculate appropriate font size
+    const longestLineLength = Math.max(...titleLines.map(line => line.length));
+    
+    // Calculate font sizes based on both number of lines and longest line length
+    // Ensure text fits horizontally by scaling based on longest line
+    const fontSizeByLines = titleLines.length > 3 ? 40 : 
+                           titleLines.length > 2 ? 45 : 
+                           titleLines.length > 1 ? 50 : 60;
+    
+    // Calculate font size based on longest line to ensure it fits width
+    const fontSizeByWidth = Math.floor((safeWidth / longestLineLength) * 1.8);
+    
+    // Use the smaller of the two to ensure text fits both horizontally and vertically
+    const baseFontSize = Math.min(fontSizeByLines, fontSizeByWidth, 70); // Cap at 70
     const authorFontSize = Math.floor(baseFontSize * 0.5);
     
     // Calculate line height and starting position for multi-line title
