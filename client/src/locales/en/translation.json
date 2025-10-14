@@ -57,7 +57,6 @@
   },
   "home": {
     "hero": {
-      "badge": "Powered by Google Gemini AI",
       "title": "Create <gradient>Magical</gradient> Storybooks in Minutes",
       "subtitle": "Transform your ideas into beautifully illustrated children's storybooks using AI. No design skills required—just your imagination!",
       "createStory": "Create Your Story",

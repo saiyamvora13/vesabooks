@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
-import { BookOpen, Calendar, Plus, Trash2, ShoppingCart, Check, X, Download } from "lucide-react";
+import { BookOpen, Calendar, Plus, Trash2, ShoppingCart, Check, X, Download, Loader2, CreditCard } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import {
   AlertDialog,
@@ -19,10 +19,17 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useState, useEffect } from "react";
 import { addToCart, isInCart, removeFromCart } from "@/lib/cartUtils";
+import { loadStripe } from "@stripe/stripe-js";
+import { Elements, PaymentElement, useStripe, useElements } from "@stripe/react-stripe-js";
+
+// Validate Stripe public key exists
+const stripePublicKey = import.meta.env.VITE_STRIPE_PUBLIC_KEY;
+const stripePromise = stripePublicKey ? loadStripe(stripePublicKey) : null;
 
 interface Storybook {
   id: string;
@@ -33,10 +40,263 @@ interface Storybook {
   shareUrl: string | null;
 }
 
+interface CheckoutPaymentFormProps {
+  storybookId: string;
+  title: string;
+  price: number;
+  type: 'digital' | 'print';
+  onSuccess: () => void;
+}
+
+function CheckoutPaymentForm({ storybookId, title, price, type, onSuccess }: CheckoutPaymentFormProps) {
+  const { t } = useTranslation();
+  const stripe = useStripe();
+  const elements = useElements();
+  const { toast } = useToast();
+  const [isProcessing, setIsProcessing] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!stripe || !elements) {
+      return;
+    }
+
+    setIsProcessing(true);
+
+    try {
+      const { error, paymentIntent } = await stripe.confirmPayment({
+        elements,
+        confirmParams: {
+          return_url: `${window.location.origin}/library?success=true`,
+        },
+        redirect: 'if_required',
+      });
+
+      if (error) {
+        setIsProcessing(false);
+        toast({
+          title: "Payment Failed",
+          description: error.message || "An error occurred during payment.",
+          variant: "destructive",
+        });
+      } else if (paymentIntent && paymentIntent.status === 'succeeded') {
+        try {
+          const response = await apiRequest('POST', '/api/purchases/create', { 
+            paymentIntentId: paymentIntent.id 
+          });
+
+          if (!response.ok) {
+            throw new Error('Failed to create purchases');
+          }
+
+          toast({
+            title: "Payment Successful",
+            description: `You've successfully purchased ${title}!`,
+          });
+
+          onSuccess();
+        } catch (purchaseError) {
+          setIsProcessing(false);
+          toast({
+            title: "Processing Order",
+            description: "Your payment was successful. Your purchase is being processed.",
+          });
+          onSuccess();
+        }
+      }
+    } catch (error) {
+      setIsProcessing(false);
+      toast({
+        title: "Payment Error",
+        description: error instanceof Error ? error.message : "An unexpected error occurred.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-6">
+      <div className="space-y-4">
+        <PaymentElement />
+      </div>
+
+      <div className="flex items-center justify-between pt-4 border-t">
+        <span className="text-lg font-semibold">Total</span>
+        <span className="text-2xl font-bold gradient-text">
+          ${(price / 100).toFixed(2)}
+        </span>
+      </div>
+
+      <Button
+        type="submit"
+        disabled={!stripe || isProcessing}
+        className="w-full gradient-bg hover:opacity-90 !text-[hsl(258,90%,20%)] h-12"
+        data-testid="button-submit-payment"
+      >
+        {isProcessing ? (
+          <>
+            <Loader2 className="h-5 w-5 mr-2 animate-spin" />
+            Processing...
+          </>
+        ) : (
+          <>
+            <CreditCard className="h-5 w-5 mr-2" />
+            Pay ${(price / 100).toFixed(2)}
+          </>
+        )}
+      </Button>
+    </form>
+  );
+}
+
+interface CheckoutDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  storybook: Storybook;
+  type: 'digital' | 'print';
+  price: number;
+}
+
+function CheckoutDialog({ open, onOpenChange, storybook, type, price }: CheckoutDialogProps) {
+  const { t } = useTranslation();
+  const { toast } = useToast();
+  const [clientSecret, setClientSecret] = useState<string>("");
+  const [isCreatingPaymentIntent, setIsCreatingPaymentIntent] = useState(false);
+  const [error, setError] = useState<string>("");
+
+  useEffect(() => {
+    // Check if Stripe is configured
+    if (!stripePublicKey) {
+      setError("Stripe is not configured. Please contact support.");
+      return;
+    }
+
+    // Reset state when dialog opens
+    if (open) {
+      setClientSecret("");
+      setError("");
+      setIsCreatingPaymentIntent(true);
+
+      const createPaymentIntent = async () => {
+        try {
+          const response = await apiRequest('POST', '/api/create-payment-intent', { 
+            items: [{ storybookId: storybook.id, type, price }] 
+          });
+          
+          if (!response.ok) {
+            throw new Error('Failed to create payment intent');
+          }
+          
+          const data = await response.json();
+          
+          if (!data.clientSecret) {
+            throw new Error('No client secret received');
+          }
+          
+          setClientSecret(data.clientSecret);
+        } catch (error) {
+          const errorMsg = error instanceof Error ? error.message : "Failed to initialize checkout. Please try again.";
+          setError(errorMsg);
+          toast({
+            title: "Error",
+            description: errorMsg,
+            variant: "destructive",
+          });
+        } finally {
+          setIsCreatingPaymentIntent(false);
+        }
+      };
+      
+      createPaymentIntent();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, storybook.id, type, price]);
+
+  const handleSuccess = () => {
+    queryClient.invalidateQueries({ queryKey: ['/api/purchases/check'] });
+    onOpenChange(false);
+  };
+
+  const handleClose = (isOpen: boolean) => {
+    if (!isOpen) {
+      setClientSecret("");
+      setError("");
+    }
+    onOpenChange(isOpen);
+  };
+
+  const options = clientSecret ? {
+    clientSecret,
+    appearance: {
+      theme: 'stripe' as const,
+    },
+  } : undefined;
+
+  return (
+    <Dialog open={open} onOpenChange={handleClose}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <CreditCard className="h-5 w-5" />
+            Complete Purchase
+          </DialogTitle>
+        </DialogHeader>
+
+        {error ? (
+          <div className="flex flex-col items-center justify-center py-8">
+            <X className="h-12 w-12 text-destructive mb-4" />
+            <p className="text-sm text-destructive text-center">{error}</p>
+            <Button 
+              variant="outline" 
+              onClick={() => handleClose(false)} 
+              className="mt-4"
+              data-testid="button-close-error"
+            >
+              Close
+            </Button>
+          </div>
+        ) : isCreatingPaymentIntent || !clientSecret ? (
+          <div className="flex flex-col items-center justify-center py-8">
+            <Loader2 className="h-8 w-8 animate-spin text-primary mb-4" />
+            <p className="text-sm text-muted-foreground">Preparing checkout...</p>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            <div className="bg-muted/50 p-4 rounded-lg">
+              <p className="font-medium text-sm">{storybook.title}</p>
+              <Badge variant={type === 'digital' ? 'default' : 'secondary'} className="mt-2">
+                {type === 'digital' ? 'E-book' : 'Print Edition'}
+              </Badge>
+            </div>
+
+            {stripePromise && options ? (
+              <Elements stripe={stripePromise} options={options}>
+                <CheckoutPaymentForm 
+                  storybookId={storybook.id}
+                  title={storybook.title}
+                  price={price}
+                  type={type}
+                  onSuccess={handleSuccess}
+                />
+              </Elements>
+            ) : (
+              <div className="flex flex-col items-center justify-center py-4">
+                <p className="text-sm text-destructive">Unable to load payment system</p>
+              </div>
+            )}
+          </div>
+        )}
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 function StorybookPurchaseButtons({ storybook }: { storybook: Storybook }) {
   const { t } = useTranslation();
   const { toast } = useToast();
   const [cartUpdated, setCartUpdated] = useState(0);
+  const [checkoutDialog, setCheckoutDialog] = useState<{ open: boolean; type?: 'digital' | 'print' }>({ open: false });
 
   const { data: digitalPurchase } = useQuery<{ owned: boolean }>({
     queryKey: ['/api/purchases/check', storybook.id, 'digital', cartUpdated],
@@ -119,66 +379,58 @@ function StorybookPurchaseButtons({ storybook }: { storybook: Storybook }) {
   const inCartDigital = isInCart(storybook.id, 'digital');
   const inCartPrint = isInCart(storybook.id, 'print');
 
+  // Calculate price with potential discount
+  let printPurchasePrice = printPrice;
+  if (digitalPurchase?.owned) {
+    printPurchasePrice = Math.max(0, printPrice - digitalPrice);
+  }
+
   return (
-    <div className="space-y-2 mt-3">
-      {digitalPurchase?.owned ? (
-        <>
+    <>
+      <div className="space-y-2 mt-3">
+        {digitalPurchase?.owned ? (
+          <>
+            <Badge variant="secondary" className="w-full justify-center py-1">
+              <Check className="h-3 w-3 mr-1" />
+              {t('storybook.library.purchase.digitalPurchased')}
+            </Badge>
+            <Button
+              size="sm"
+              variant="outline"
+              className="w-full"
+              onClick={() => window.open(`/api/storybooks/${storybook.id}/download-print-pdf`)}
+              data-testid={`button-download-print-pdf-${storybook.id}`}
+            >
+              <Download className="h-4 w-4 mr-1" />
+              Download Print PDF
+            </Button>
+          </>
+        ) : (
+          <Button
+            size="sm"
+            variant="default"
+            className="w-full gradient-bg hover:opacity-90 !text-[hsl(258,90%,20%)]"
+            onClick={() => setCheckoutDialog({ open: true, type: 'digital' })}
+            data-testid={`button-buy-digital-${storybook.id}`}
+          >
+            <ShoppingCart className="h-4 w-4 mr-1" />
+            {t('storybook.library.purchase.buyEbook')}
+          </Button>
+        )}
+
+        {printPurchase?.owned ? (
           <Badge variant="secondary" className="w-full justify-center py-1">
             <Check className="h-3 w-3 mr-1" />
-            {t('storybook.library.purchase.digitalPurchased')}
+            {t('storybook.library.purchase.printPurchased')}
           </Badge>
+        ) : (
           <Button
             size="sm"
             variant="outline"
-            className="w-full"
-            onClick={() => window.open(`/api/storybooks/${storybook.id}/download-print-pdf`)}
-            data-testid={`button-download-print-pdf-${storybook.id}`}
+            className="w-full h-auto py-2"
+            onClick={() => setCheckoutDialog({ open: true, type: 'print' })}
+            data-testid={`button-buy-print-${storybook.id}`}
           >
-            <Download className="h-4 w-4 mr-1" />
-            Download Print PDF
-          </Button>
-        </>
-      ) : (
-        <Button
-          size="sm"
-          variant={inCartDigital ? "secondary" : "outline"}
-          className="w-full"
-          onClick={() => inCartDigital ? handleRemoveFromCart('digital') : handleAddToCart('digital')}
-          data-testid={`button-buy-digital-${storybook.id}`}
-        >
-          {inCartDigital ? (
-            <>
-              <X className="h-4 w-4 mr-1" />
-              {t('storybook.library.purchase.removeFromCart')}
-            </>
-          ) : (
-            <>
-              <ShoppingCart className="h-4 w-4 mr-1" />
-              {t('storybook.library.purchase.buyEbook')}
-            </>
-          )}
-        </Button>
-      )}
-
-      {printPurchase?.owned ? (
-        <Badge variant="secondary" className="w-full justify-center py-1">
-          <Check className="h-3 w-3 mr-1" />
-          {t('storybook.library.purchase.printPurchased')}
-        </Badge>
-      ) : (
-        <Button
-          size="sm"
-          variant={inCartPrint ? "secondary" : "outline"}
-          className="w-full h-auto py-2"
-          onClick={() => inCartPrint ? handleRemoveFromCart('print') : handleAddToCart('print')}
-          data-testid={`button-buy-print-${storybook.id}`}
-        >
-          {inCartPrint ? (
-            <>
-              <X className="h-4 w-4 mr-1" />
-              {t('storybook.library.purchase.removeFromCart')}
-            </>
-          ) : (
             <div className="flex flex-col items-center gap-0.5">
               <div className="flex items-center gap-1.5">
                 <ShoppingCart className="h-4 w-4" />
@@ -187,7 +439,7 @@ function StorybookPurchaseButtons({ storybook }: { storybook: Storybook }) {
                     <span>Buy Print</span>
                     <span className="line-through text-muted-foreground">(${(printPrice / 100).toFixed(2)})</span>
                     <span>-</span>
-                    <span className="font-semibold">${(Math.max(0, printPrice - digitalPrice) / 100).toFixed(2)}</span>
+                    <span className="font-semibold">${(printPurchasePrice / 100).toFixed(2)}</span>
                   </span>
                 ) : (
                   <span>{t('storybook.library.purchase.buyPrint')}</span>
@@ -201,10 +453,20 @@ function StorybookPurchaseButtons({ storybook }: { storybook: Storybook }) {
                 <span className="text-xs text-muted-foreground">{t('storybook.library.purchase.freeEbookIncluded')}</span>
               )}
             </div>
-          )}
-        </Button>
+          </Button>
+        )}
+      </div>
+
+      {checkoutDialog.open && checkoutDialog.type && (
+        <CheckoutDialog
+          open={checkoutDialog.open}
+          onOpenChange={(open) => setCheckoutDialog({ open, type: checkoutDialog.type })}
+          storybook={storybook}
+          type={checkoutDialog.type}
+          price={checkoutDialog.type === 'digital' ? digitalPrice : printPurchasePrice}
+        />
       )}
-    </div>
+    </>
   );
 }
 

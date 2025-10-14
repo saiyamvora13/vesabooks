@@ -160,8 +160,9 @@ export async function generatePrintReadyPDF(storybook: Storybook): Promise<Buffe
     });
     
     // Draw author text
-    coverPage.drawText('By AI Storyteller', {
-      x: PAGE_WIDTH / 2 - font.widthOfTextAtSize('By AI Storyteller', 12) / 2,
+    const authorText = `By ${storybook.author || 'AI Storyteller'}`;
+    coverPage.drawText(authorText, {
+      x: PAGE_WIDTH / 2 - font.widthOfTextAtSize(authorText, 12) / 2,
       y: titleBoxY + 20, // Position within safe area
       size: 12,
       font: font,
@@ -187,8 +188,9 @@ export async function generatePrintReadyPDF(storybook: Storybook): Promise<Buffe
       color: rgb(0.12, 0.16, 0.23),
     });
     
-    coverPage.drawText('By AI Storyteller', {
-      x: PAGE_WIDTH / 2 - font.widthOfTextAtSize('By AI Storyteller', 14) / 2,
+    const authorText = `By ${storybook.author || 'AI Storyteller'}`;
+    coverPage.drawText(authorText, {
+      x: PAGE_WIDTH / 2 - font.widthOfTextAtSize(authorText, 14) / 2,
       y: PAGE_HEIGHT / 2 - 20,
       size: 14,
       font: font,
@@ -316,27 +318,61 @@ export async function generatePrintReadyPDF(storybook: Storybook): Promise<Buffe
   // Add end page (no page number)
   const endPage = pdfDoc.addPage([PAGE_WIDTH, PAGE_HEIGHT]);
   
-  // Create gradient-like background with soft colors
-  endPage.drawRectangle({
-    x: 0,
-    y: 0,
-    width: PAGE_WIDTH,
-    height: PAGE_HEIGHT,
-    color: rgb(0.976, 0.969, 0.953), // #f9f7f3
-  });
-  
-  // Draw "The End" text centered
-  const endText = "The End";
-  const endFontSize = 36;
-  const endTextWidth = boldFont.widthOfTextAtSize(endText, endFontSize);
-  
-  endPage.drawText(endText, {
-    x: PAGE_WIDTH / 2 - endTextWidth / 2,
-    y: PAGE_HEIGHT / 2,
-    size: endFontSize,
-    font: boldFont,
-    color: rgb(0.2, 0.25, 0.31), // Slate 800
-  });
+  // If back cover image exists, use it; otherwise show "The End" text
+  if (storybook.backCoverImageUrl) {
+    const backCoverImage = await embedImage(storybook.backCoverImageUrl);
+    if (backCoverImage) {
+      const imgAspectRatio = backCoverImage.width / backCoverImage.height;
+      const pageAspectRatio = PAGE_WIDTH / PAGE_HEIGHT;
+      
+      let drawWidth = PAGE_WIDTH;
+      let drawHeight = PAGE_HEIGHT;
+      let x = 0;
+      let y = 0;
+      
+      // Scale to cover page with bleed (no white space)
+      if (imgAspectRatio > pageAspectRatio) {
+        // Image is wider - fit to height
+        drawHeight = PAGE_HEIGHT;
+        drawWidth = drawHeight * imgAspectRatio;
+        x = -(drawWidth - PAGE_WIDTH) / 2;
+      } else {
+        // Image is taller - fit to width
+        drawWidth = PAGE_WIDTH;
+        drawHeight = drawWidth / imgAspectRatio;
+        y = -(drawHeight - PAGE_HEIGHT) / 2;
+      }
+      
+      endPage.drawImage(backCoverImage, {
+        x,
+        y,
+        width: drawWidth,
+        height: drawHeight,
+      });
+    }
+  } else {
+    // Create gradient-like background with soft colors
+    endPage.drawRectangle({
+      x: 0,
+      y: 0,
+      width: PAGE_WIDTH,
+      height: PAGE_HEIGHT,
+      color: rgb(0.976, 0.969, 0.953), // #f9f7f3
+    });
+    
+    // Draw "The End" text centered
+    const endText = "The End";
+    const endFontSize = 36;
+    const endTextWidth = boldFont.widthOfTextAtSize(endText, endFontSize);
+    
+    endPage.drawText(endText, {
+      x: PAGE_WIDTH / 2 - endTextWidth / 2,
+      y: PAGE_HEIGHT / 2,
+      size: endFontSize,
+      font: boldFont,
+      color: rgb(0.2, 0.25, 0.31), // Slate 800
+    });
+  }
   
   const pdfBytes = await pdfDoc.save();
   return Buffer.from(pdfBytes);

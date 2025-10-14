@@ -7,6 +7,7 @@ import { useMutation } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { FileUpload } from "@/components/ui/file-upload";
@@ -39,6 +40,7 @@ export default function Create() {
 
   const createStorySchema = useMemo(() => z.object({
     prompt: z.string().min(10, t('common.validation.promptMinLength')),
+    author: z.string().optional(),
     images: z.array(z.instanceof(File)).min(0).max(5, t('common.validation.maxImagesExceeded')),
   }), [i18n.language]);
 
@@ -50,6 +52,7 @@ export default function Create() {
     resolver: zodResolver(createStorySchema),
     defaultValues: {
       prompt: "",
+      author: "",
       images: [],
     },
   });
@@ -58,6 +61,9 @@ export default function Create() {
     mutationFn: async (data: CreateStoryForm): Promise<GenerationResponse> => {
       const formData = new FormData();
       formData.append("prompt", data.prompt);
+      if (data.author) {
+        formData.append("author", data.author);
+      }
       data.images.forEach(image => {
         formData.append("images", image);
       });
@@ -336,6 +342,34 @@ export default function Create() {
                         <div className="text-sm text-muted-foreground">
                           <i className="fas fa-info-circle mr-1"></i>
                           {t('storybook.create.storyIdea.helpText')}
+                        </div>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  {/* Author Field */}
+                  <FormField
+                    control={form.control}
+                    name="author"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-sm font-semibold flex items-center">
+                          <i className="fas fa-user-pen text-primary mr-2"></i>
+                          Author
+                          <span className="ml-auto text-muted-foreground font-normal text-xs">Optional</span>
+                        </FormLabel>
+                        <FormControl>
+                          <Input
+                            {...field}
+                            placeholder="Leave blank to use your name"
+                            className="rounded-2xl"
+                            data-testid="input-author"
+                          />
+                        </FormControl>
+                        <div className="text-sm text-muted-foreground">
+                          <i className="fas fa-info-circle mr-1"></i>
+                          If left blank, your full name will be used as the author
                         </div>
                         <FormMessage />
                       </FormItem>

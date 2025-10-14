@@ -12,6 +12,7 @@ interface FlipbookViewerProps {
   title: string;
   author?: string;
   coverImageUrl?: string;
+  backCoverImageUrl?: string;
 }
 
 const PageFace = ({ 
@@ -107,28 +108,47 @@ const TextPage = ({
   </div>
 );
 
-const EndPage = ({ totalPages }: { totalPages: number }) => (
-  <div 
-    className="w-full h-full flex flex-col items-center justify-center p-4 relative"
-    style={{
-      background: 'linear-gradient(135deg, #f9f7f3 0%, #faf8f5 50%, #f7f5f1 100%)',
-    }}
-  >
-    <p 
-      className="text-3xl md:text-4xl text-slate-800"
-      style={{ fontFamily: '"EB Garamond", "Merriweather", Georgia, serif' }}
-    >
-      The End
-    </p>
-    {totalPages > 0 && (
-      <span className="absolute bottom-4 left-8 text-sm font-serif text-slate-600">
-        {totalPages}
-      </span>
-    )}
-  </div>
-);
+const EndPage = ({ totalPages, backCoverImageUrl }: { totalPages: number; backCoverImageUrl?: string }) => {
+  if (backCoverImageUrl) {
+    return (
+      <div className="w-full h-full relative">
+        <img 
+          src={backCoverImageUrl} 
+          alt="Story back cover" 
+          className="w-full h-full object-cover" 
+        />
+        {totalPages > 0 && (
+          <span className="absolute bottom-4 left-8 text-sm font-serif text-slate-600 bg-white/80 px-2 py-1 rounded">
+            {totalPages}
+          </span>
+        )}
+      </div>
+    );
+  }
 
-export function FlipbookViewer({ pages, title, author = "AI Author", coverImageUrl }: FlipbookViewerProps) {
+  return (
+    <div 
+      className="w-full h-full flex flex-col items-center justify-center p-4 relative"
+      style={{
+        background: 'linear-gradient(135deg, #f9f7f3 0%, #faf8f5 50%, #f7f5f1 100%)',
+      }}
+    >
+      <p 
+        className="text-3xl md:text-4xl text-slate-800"
+        style={{ fontFamily: '"EB Garamond", "Merriweather", Georgia, serif' }}
+      >
+        The End
+      </p>
+      {totalPages > 0 && (
+        <span className="absolute bottom-4 left-8 text-sm font-serif text-slate-600">
+          {totalPages}
+        </span>
+      )}
+    </div>
+  );
+};
+
+export function FlipbookViewer({ pages, title, author = "AI Author", coverImageUrl, backCoverImageUrl }: FlipbookViewerProps) {
   const numPages = pages.length;
   const numSheets = numPages + 1;
   const [currentPage, setCurrentPage] = useState(0);
@@ -185,7 +205,7 @@ export function FlipbookViewer({ pages, title, author = "AI Author", coverImageU
 
     sheets.push({
       front: <Cover title={title} author={author} coverImageUrl={coverImageUrl} />,
-      back: pages.length > 0 ? <ImagePage page={pages[0]} pageNum={1} /> : <EndPage totalPages={0} />,
+      back: pages.length > 0 ? <ImagePage page={pages[0]} pageNum={1} /> : <EndPage totalPages={0} backCoverImageUrl={backCoverImageUrl} />,
     });
 
     for (let i = 0; i < numPages; i++) {
@@ -193,13 +213,13 @@ export function FlipbookViewer({ pages, title, author = "AI Author", coverImageU
       const frontContent = <TextPage page={page} author={author} pageNum={i + 1} onTurn={goToNextPage} />;
       const backContent = (i < numPages - 1)
         ? <ImagePage page={pages[i + 1]} pageNum={i + 2} />
-        : <EndPage totalPages={numPages * 2} />;
+        : <EndPage totalPages={numPages * 2} backCoverImageUrl={backCoverImageUrl} />;
 
       sheets.push({ front: frontContent, back: backContent });
     }
 
     return sheets;
-  }, [pages, title, author, coverImageUrl, goToNextPage, numPages]);
+  }, [pages, title, author, coverImageUrl, backCoverImageUrl, goToNextPage, numPages]);
 
   const isBookOpen = currentPage > 0;
 
@@ -240,7 +260,7 @@ export function FlipbookViewer({ pages, title, author = "AI Author", coverImageU
       const storyPageIndex = Math.floor(pageIndex / 2);
       
       if (storyPageIndex >= pages.length) {
-        return <EndPage totalPages={numPages * 2} />;
+        return <EndPage totalPages={numPages * 2} backCoverImageUrl={backCoverImageUrl} />;
       }
       
       const page = pages[storyPageIndex];

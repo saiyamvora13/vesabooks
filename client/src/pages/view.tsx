@@ -285,8 +285,9 @@ export default function View() {
             <FlipbookViewer 
               pages={storybook.pages} 
               title={storybook.title}
-              author="AI Storyteller"
+              author={storybook.author || "AI Storyteller"}
               coverImageUrl={storybook.coverImageUrl || storybook.pages[0]?.imageUrl}
+              backCoverImageUrl={storybook.backCoverImageUrl}
             />
           </div>
 

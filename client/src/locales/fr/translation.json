@@ -57,7 +57,6 @@
   },
   "home": {
     "hero": {
-      "badge": "Propulsé par Google Gemini AI",
       "title": "Créez des Livres d'Histoires <gradient>Magiques</gradient> en Minutes",
       "subtitle": "Transformez vos idées en magnifiques livres illustrés pour enfants grâce à l'IA. Aucune compétence en design requise—juste votre imagination !",
       "createStory": "Créer Votre Histoire",

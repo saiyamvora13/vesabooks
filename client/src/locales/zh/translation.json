@@ -57,7 +57,6 @@
   },
   "home": {
     "hero": {
-      "badge": "由 Google Gemini AI 提供支持",
       "title": "在几分钟内创建<gradient>魔法</gradient>故事书",
       "subtitle": "使用AI将您的想法转化为精美插图的儿童故事书。无需设计技能——只需您的想象力！",
       "createStory": "创建您的故事",

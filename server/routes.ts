@@ -591,10 +591,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Create storybook (requires authentication)
   app.post("/api/storybooks", isAuthenticated, upload.array("images", 5), async (req: any, res) => {
     try {
-      const { prompt } = req.body;
+      const { prompt, author } = req.body;
       const files = req.files as Express.Multer.File[] | undefined;
       // Use req.user.id if available (from auth changes), fallback to claims.sub for compatibility
       const userId = req.user.id || req.user.claims?.sub;
+
+      // Get user info for author fallback
+      const user = await storage.getUser(userId);
+      const authorName = author || `${user?.firstName || ''} ${user?.lastName || ''}`.trim() || 'Anonymous';
 
       // Images are now optional - handle empty or undefined files
       const imagePaths = files ? files.map(f => f.path) : [];
@@ -603,6 +607,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Validate request
       const validationResult = createStorybookSchema.safeParse({
         prompt,
+        author: authorName,
         inspirationImages: imageFilenames,
       });
 
@@ -619,8 +624,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const sessionId = randomUUID();
 
-      // Start generation in background with userId and pagesPerBook
-      generateStorybookAsync(sessionId, userId, prompt, imagePaths, validatedPagesPerBook)
+      // Start generation in background with userId, author, and pagesPerBook
+      generateStorybookAsync(sessionId, userId, prompt, authorName, imagePaths, validatedPagesPerBook)
         .catch((error: unknown) => {
           console.error("Story generation failed:", error);
           const errorMessage = error instanceof Error ? error.message : 'Unknown error';
@@ -1469,6 +1474,7 @@ async function generateStorybookAsync(
   sessionId: string,
   userId: string,
   prompt: string,
+  author: string,
   imagePaths: string[],
   pagesPerBook: number = 3
 ): Promise<void> {
@@ -1552,21 +1558,47 @@ async function generateStorybookAsync(
       });
     }
 
-    // Step 4: Finalize
+    // Step 4: Generate back cover
+    await storage.setGenerationProgress(sessionId, {
+      step: 'finalizing',
+      progress: 92,
+      message: 'Creating back cover illustration...',
+    });
+
+    // Generate back cover image
+    const backCoverImageFileName = `${sessionId}_back_cover.png`;
+    const backCoverImagePath = path.join(generatedDir, backCoverImageFileName);
+    
+    // Create back cover prompt that complements the front cover
+    const backCoverPrompt = `Create a back cover illustration for a children's storybook that complements the front cover. The back cover should feature ${generatedStory.mainCharacterDescription} in a different scene that hints at the adventure without spoiling it. Maintain the same artistic style and color palette as the front cover.`;
+    
+    await generateIllustration(backCoverPrompt, backCoverImagePath, coverImagePath);
+    
+    // Upload back cover to Object Storage
+    const backCoverImageUrl = await objectStorage.uploadFile(backCoverImagePath, backCoverImageFileName);
+    
+    // Clean up local back cover image
+    if (fs.existsSync(backCoverImagePath)) {
+      fs.unlinkSync(backCoverImagePath);
+    }
+
+    // Step 5: Finalize
     await storage.setGenerationProgress(sessionId, {
       step: 'finalizing',
       progress: 95,
       message: 'Finalizing your storybook...',
     });
 
-    // Save to storage with userId, including cover image URL and story metadata
+    // Save to storage with userId, including cover image URL, back cover URL, author, and story metadata
     const storybook = await storage.createStorybook({
       userId,
       title: generatedStory.title,
+      author,
       prompt,
       pages,
       inspirationImages: [],
       coverImageUrl,
+      backCoverImageUrl,
       mainCharacterDescription: generatedStory.mainCharacterDescription,
       storyArc: generatedStory.storyArc,
     });
