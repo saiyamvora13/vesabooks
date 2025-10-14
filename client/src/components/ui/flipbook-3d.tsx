@@ -213,8 +213,8 @@ export function FlipbookViewer({ pages, title, author = "AI Author", coverImageU
       const storyPageIndex = Math.floor(pageIndex / 2);
       if (storyPageIndex >= pages.length) return "The End";
       
-      const isTextPage = pageIndex % 2 === 0;
-      const pageNum = storyPageIndex * 2 + (isTextPage ? 1 : 2);
+      const isTextPage = pageIndex % 2 === 1;
+      const pageNum = storyPageIndex + 1;
       return `Page ${pageNum}`;
     } else {
       // Desktop dual-page display
@@ -234,9 +234,9 @@ export function FlipbookViewer({ pages, title, author = "AI Author", coverImageU
         return <Cover title={title} author={author} coverImageUrl={coverImageUrl} />;
       }
       
-      // Calculate which actual page we're on (alternating between text and image)
+      // Calculate which actual page we're on (alternating between image and text)
       const pageIndex = currentPage - 1;
-      const isTextPage = pageIndex % 2 === 0;
+      const isTextPage = pageIndex % 2 === 1;
       const storyPageIndex = Math.floor(pageIndex / 2);
       
       if (storyPageIndex >= pages.length) {
@@ -247,10 +247,10 @@ export function FlipbookViewer({ pages, title, author = "AI Author", coverImageU
       
       if (isTextPage) {
         // Show text page
-        return <TextPage page={page} author={author} pageNum={storyPageIndex * 2 + 1} onTurn={goToNextPage} />;
+        return <TextPage page={page} author={author} pageNum={storyPageIndex + 1} onTurn={goToNextPage} />;
       } else {
         // Show image page
-        return <ImagePage page={page} pageNum={storyPageIndex * 2 + 2} />;
+        return <ImagePage page={page} pageNum={storyPageIndex + 1} />;
       }
     };
 
