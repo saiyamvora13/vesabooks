@@ -1116,6 +1116,144 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Sample Prompts API Routes
+  
+  // Validation schema for sample prompts
+  const samplePromptSchema = z.object({
+    title: z.string().min(1, "Title is required"),
+    prompt: z.string().min(10, "Prompt must be at least 10 characters"),
+    ageRange: z.string().min(1, "Age range is required"),
+    isActive: z.boolean().optional().default(true),
+    displayOrder: z.string().optional().default('0')
+  });
+
+  // GET /api/sample-prompts - Get active sample prompts (public, no auth required)
+  app.get('/api/sample-prompts', async (req, res) => {
+    try {
+      const prompts = await storage.getActiveSamplePrompts();
+      res.json(prompts);
+    } catch (error) {
+      console.error('Get active sample prompts error:', error);
+      res.status(500).json({ message: 'Internal server error' });
+    }
+  });
+
+  // GET /api/admin/sample-prompts - Get all sample prompts (admin only)
+  app.get('/api/admin/sample-prompts', isAdmin, async (req, res) => {
+    try {
+      const prompts = await storage.getAllSamplePrompts();
+      res.json(prompts);
+    } catch (error) {
+      console.error('Get all sample prompts error:', error);
+      res.status(500).json({ message: 'Internal server error' });
+    }
+  });
+
+  // POST /api/admin/sample-prompts - Create new sample prompt (admin only)
+  app.post('/api/admin/sample-prompts', isAdmin, async (req, res) => {
+    try {
+      const admin = req.user as AdminUser;
+      
+      const validation = samplePromptSchema.safeParse(req.body);
+      if (!validation.success) {
+        return res.status(400).json({ message: 'Invalid request body', errors: validation.error.errors });
+      }
+
+      const { title, prompt, ageRange, isActive, displayOrder } = validation.data;
+      
+      const newPrompt = await storage.createSamplePrompt({
+        title,
+        prompt,
+        ageRange,
+        isActive: isActive ?? true,
+        displayOrder: displayOrder ?? 0,
+        updatedBy: admin.id
+      });
+      
+      await logAdminAction(
+        admin.id,
+        'create_sample_prompt',
+        'sample_prompt',
+        newPrompt.id,
+        { title, ageRange, isActive, displayOrder },
+        req
+      );
+      
+      res.json(newPrompt);
+    } catch (error) {
+      console.error('Create sample prompt error:', error);
+      res.status(500).json({ message: 'Internal server error' });
+    }
+  });
+
+  // PUT /api/admin/sample-prompts/:id - Update sample prompt (admin only)
+  app.put('/api/admin/sample-prompts/:id', isAdmin, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const admin = req.user as AdminUser;
+      
+      const validation = samplePromptSchema.partial().safeParse(req.body);
+      if (!validation.success) {
+        return res.status(400).json({ message: 'Invalid request body', errors: validation.error.errors });
+      }
+
+      const data = validation.data;
+      
+      const oldPrompt = await storage.getSamplePrompt(id);
+      if (!oldPrompt) {
+        return res.status(404).json({ message: 'Sample prompt not found' });
+      }
+      
+      const updatedPrompt = await storage.updateSamplePrompt(id, {
+        ...data,
+        updatedBy: admin.id
+      });
+      
+      await logAdminAction(
+        admin.id,
+        'update_sample_prompt',
+        'sample_prompt',
+        id,
+        { old: oldPrompt, new: data },
+        req
+      );
+      
+      res.json(updatedPrompt);
+    } catch (error) {
+      console.error('Update sample prompt error:', error);
+      res.status(500).json({ message: 'Internal server error' });
+    }
+  });
+
+  // DELETE /api/admin/sample-prompts/:id - Delete sample prompt (admin only)
+  app.delete('/api/admin/sample-prompts/:id', isAdmin, async (req, res) => {
+    try {
+      const { id } = req.params;
+      const admin = req.user as AdminUser;
+      
+      const prompt = await storage.getSamplePrompt(id);
+      if (!prompt) {
+        return res.status(404).json({ message: 'Sample prompt not found' });
+      }
+      
+      await storage.deleteSamplePrompt(id);
+      
+      await logAdminAction(
+        admin.id,
+        'delete_sample_prompt',
+        'sample_prompt',
+        id,
+        { title: prompt.title },
+        req
+      );
+      
+      res.json({ message: 'Sample prompt deleted successfully' });
+    } catch (error) {
+      console.error('Delete sample prompt error:', error);
+      res.status(500).json({ message: 'Internal server error' });
+    }
+  });
+
   // GET /api/metrics (public - no auth required)
   app.get('/api/metrics', async (req, res) => {
     try {

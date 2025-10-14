@@ -21,6 +21,7 @@ import AdminSettings from "@/pages/admin/settings";
 import AdminHeroManagement from "@/pages/admin/hero-management";
 import AdminFeatured from "@/pages/admin/featured";
 import AdminAuditLogs from "@/pages/admin/audit-logs";
+import AdminSamplePrompts from "@/pages/admin/sample-prompts";
 
 function Router() {
   return (
@@ -44,6 +45,7 @@ function Router() {
       <Route path="/admin/settings" component={AdminSettings} />
       <Route path="/admin/hero" component={AdminHeroManagement} />
       <Route path="/admin/featured" component={AdminFeatured} />
+      <Route path="/admin/sample-prompts" component={AdminSamplePrompts} />
       <Route path="/admin/audit-logs" component={AdminAuditLogs} />
       
       <Route component={NotFound} />

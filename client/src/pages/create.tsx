@@ -3,8 +3,9 @@ import { useLocation } from "wouter";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
+import { SamplePrompt } from "@shared/schema";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
@@ -56,6 +57,14 @@ export default function Create() {
       images: [],
     },
   });
+
+  const { data: samplePrompts } = useQuery<SamplePrompt[]>({
+    queryKey: ["/api/sample-prompts"],
+  });
+
+  const handlePromptClick = (prompt: string) => {
+    form.setValue("prompt", prompt);
+  };
 
   const createStoryMutation = useMutation({
     mutationFn: async (data: CreateStoryForm): Promise<GenerationResponse> => {
@@ -166,6 +175,43 @@ export default function Create() {
             <CardContent className="p-4 sm:p-6 lg:p-8">
               <Form {...form}>
                 <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+                  {/* Sample Prompts */}
+                  {samplePrompts && samplePrompts.length > 0 && (
+                    <div className="space-y-3">
+                      <h3 className="text-sm font-semibold flex items-center">
+                        <i className="fas fa-sparkles text-primary mr-2"></i>
+                        {t('storybook.create.samplePrompts.label', 'Sample Story Ideas')}
+                      </h3>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        {samplePrompts.map((samplePrompt) => (
+                          <button
+                            key={samplePrompt.id}
+                            type="button"
+                            onClick={() => handlePromptClick(samplePrompt.prompt)}
+                            className="text-left p-4 rounded-xl border-2 border-purple-200 dark:border-purple-900 bg-purple-50 dark:bg-purple-950/30 hover:border-purple-400 dark:hover:border-purple-700 hover:bg-purple-100 dark:hover:bg-purple-950/50 transition-all cursor-pointer"
+                            data-testid={`card-sample-prompt-${samplePrompt.id}`}
+                          >
+                            <div className="flex items-center justify-between mb-2">
+                              <h4 className="font-semibold text-purple-900 dark:text-purple-100" data-testid={`text-prompt-title-${samplePrompt.id}`}>
+                                {samplePrompt.title}
+                              </h4>
+                              <span className="px-2 py-1 bg-purple-200 dark:bg-purple-900 text-purple-800 dark:text-purple-200 text-xs rounded-full" data-testid={`badge-age-range-${samplePrompt.id}`}>
+                                {samplePrompt.ageRange}
+                              </span>
+                            </div>
+                            <p className="text-sm text-purple-700 dark:text-purple-300 line-clamp-2">
+                              {samplePrompt.prompt.substring(0, 100)}...
+                            </p>
+                          </button>
+                        ))}
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        <i className="fas fa-info-circle mr-1"></i>
+                        {t('storybook.create.samplePrompts.helpText', 'Click a sample prompt to use it as inspiration for your story')}
+                      </p>
+                    </div>
+                  )}
+
                   {/* Story Prompt */}
                   <FormField
                     control={form.control}
