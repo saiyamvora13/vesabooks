@@ -90,7 +90,7 @@ Return ONLY the single mood word that best matches the text.`;
       },
     });
 
-    const mood = response.text()?.trim().toLowerCase();
+    const mood = response.text?.trim().toLowerCase();
     
     // Validate and default to calm if invalid
     const validMoods = ['calm', 'adventure', 'mystery', 'happy', 'suspense', 'dramatic'];
@@ -345,6 +345,12 @@ export async function generateIllustration(
   let retries = 3;
   let waitTime = 2000; // Start with a 2-second delay
 
+  // Log the generation for debugging character consistency
+  console.log(`[generateIllustration] Starting image generation`);
+  console.log(`[generateIllustration] Image prompt: ${imagePrompt.substring(0, 200)}...`);
+  console.log(`[generateIllustration] Base image: ${baseImagePath ? 'PROVIDED' : 'NONE'}`);
+  console.log(`[generateIllustration] Art style: ${explicitStyle || 'default'}`);
+
   while (retries > 0) {
     try {
       // If explicit style is "custom", the imagePrompt already includes the style (from Gemini)
@@ -352,6 +358,8 @@ export async function generateIllustration(
       const fullPrompt = explicitStyle === "custom"
         ? imagePrompt // Already has custom style from Gemini
         : `${imagePrompt}, in the style of a vibrant and colorful children's book illustration, whimsical and gentle.`;
+      
+      console.log(`[generateIllustration] Full prompt sent to Gemini: ${fullPrompt.substring(0, 250)}...`);
       
       const contentParts: any[] = [];
       
