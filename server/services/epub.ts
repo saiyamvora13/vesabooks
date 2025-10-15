@@ -33,24 +33,8 @@ export async function generateEpub(storybook: Storybook): Promise<Buffer> {
     }
   }
 
-  // Add blank first page - this ensures proper page alignment for two-page spreads
-  content.push({
-    content: `<div class="blank-page"></div>`,
-    excludeFromToc: true,
-  });
-
-  // Add cover as a full-page image (will be on the right page after blank)
-  if (coverImageUrl) {
-    const coverUrl = `${baseUrl}${coverImageUrl}`;
-    content.push({
-      content: `<div class="full-page-image">
-  <img src="${coverUrl}" alt="Cover" />
-</div>`,
-      excludeFromToc: true,
-    });
-  }
-
   // Add each story page as separate left (image) and right (text) pages
+  // Start directly with the story - no blank pages or internal cover
   for (const page of storybook.pages) {
     const pageImageUrl = `${baseUrl}${page.imageUrl}`;
     
