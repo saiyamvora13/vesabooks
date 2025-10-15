@@ -34,24 +34,22 @@ export async function generateEpub(storybook: Storybook): Promise<Buffer> {
   }
 
   // Add each story page as separate left (image) and right (text) pages
-  // Start directly with the story - no blank pages or internal cover
+  // Start directly with the story content
   for (const page of storybook.pages) {
     const pageImageUrl = `${baseUrl}${page.imageUrl}`;
     
-    // Left page - Image
+    // Left page - Image (simplified HTML)
     content.push({
-      content: `<div class="left-page full-page-image">
-  <img src="${pageImageUrl}" alt="Illustration for page ${page.pageNumber}" />
+      content: `<div class="page-image">
+  <img src="${pageImageUrl}" alt="Illustration" />
 </div>`,
       excludeFromToc: true,
     });
     
-    // Right page - Text
+    // Right page - Text (simplified HTML without nested divs)
     content.push({
-      content: `<div class="right-page text-page">
-  <div class="text-content">
-    <p>${escapeHtml(page.text)}</p>
-  </div>
+      content: `<div class="page-text">
+  <p>${escapeHtml(page.text)}</p>
 </div>`,
       excludeFromToc: true,
     });
@@ -72,7 +70,7 @@ export async function generateEpub(storybook: Storybook): Promise<Buffer> {
   if (storybook.backCoverImageUrl) {
     const backCoverUrl = `${baseUrl}${storybook.backCoverImageUrl}`;
     content.push({
-      content: `<div class="full-page-image back-cover">
+      content: `<div class="page-image">
   <img src="${backCoverUrl}" alt="Back Cover" />
 </div>`,
       excludeFromToc: true,
@@ -89,119 +87,71 @@ export async function generateEpub(storybook: Storybook): Promise<Buffer> {
     prependChapterTitles: false, // Don't prepend titles before content
     numberChaptersInTOC: false, // Don't number chapters in TOC
     css: `
-      /* Reset and base styles */
-      * {
-        margin: 0;
-        padding: 0;
-        box-sizing: border-box;
-      }
-      
+      /* Basic EPUB 2.0 compatible styles only */
       body {
         font-family: Georgia, serif;
         margin: 0;
         padding: 0;
         line-height: 1.6;
+        color: #000000;
+        background-color: #ffffff;
       }
       
-      /* Fixed page dimensions for traditional book layout */
+      /* Fixed page size */
       @page {
         size: 6in 9in;
         margin: 0;
       }
       
-      /* Blank page - completely empty */
+      /* Blank page - simple and empty */
       .blank-page {
         page-break-after: always;
-        min-height: 100vh;
+        height: 100%;
         width: 100%;
       }
       
-      /* Full page image for left pages */
-      .full-page-image {
+      /* Image page - full width and height */
+      .page-image {
         page-break-after: always;
-        min-height: 100vh;
+        height: 100%;
         width: 100%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
         margin: 0;
         padding: 0;
-        overflow: hidden;
+        text-align: center;
       }
       
-      .full-page-image img {
+      .page-image img {
         width: 100%;
-        height: 100vh;
-        object-fit: cover;
-        display: block;
-      }
-      
-      /* Left page (image page) */
-      .left-page {
-        page-break-before: auto;
-        page-break-after: always;
-      }
-      
-      /* Right page (text page) */
-      .right-page {
-        page-break-before: auto;
-        page-break-after: always;
-        min-height: 100vh;
-        width: 100%;
-      }
-      
-      /* Text page styling */
-      .text-page {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        padding: 10%;
-        background: linear-gradient(to bottom, #fffef9, #faf8f3);
-      }
-      
-      .text-content {
-        width: 100%;
-        max-width: 450px;
-      }
-      
-      .text-content p {
-        font-size: 16px;
-        line-height: 1.8;
-        color: #2c3e50;
-        text-align: justify;
+        height: 100%;
         margin: 0;
-        padding: 30px;
-        background: white;
-        border: 1px solid #e8e4d9;
-        border-radius: 8px;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+        padding: 0;
       }
       
-      /* Back cover specific styling */
-      .back-cover {
-        page-break-before: auto;
-        page-break-after: avoid;
+      /* Text page - simple and readable */
+      .page-text {
+        page-break-after: always;
+        height: 100%;
+        width: 100%;
+        margin: 0;
+        padding: 40px;
+        background-color: #ffffff;
+      }
+      
+      .page-text p {
+        font-family: Georgia, serif;
+        font-size: 18px;
+        line-height: 1.8;
+        color: #000000;
+        text-align: left;
+        margin: 20px;
+        padding: 0;
       }
       
       /* Ensure proper page breaks */
-      .left-page,
-      .right-page,
-      .full-page-image,
+      .page-image,
+      .page-text,
       .blank-page {
         page-break-inside: avoid;
-      }
-      
-      /* Page numbering suppression */
-      @page {
-        @bottom-center {
-          content: none;
-        }
-        @bottom-right {
-          content: none;
-        }
-        @bottom-left {
-          content: none;
-        }
       }
     `,
   };
