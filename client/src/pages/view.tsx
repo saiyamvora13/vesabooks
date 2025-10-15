@@ -136,7 +136,7 @@ export default function View() {
       if (!isSubscribed || audioInitialized) return;
       
       try {
-        console.log('Initializing AudioManager...');
+        console.log('🎵 Initializing AudioManager...');
         await audioManager.init();
         
         // Generate synthetic ambient music using Web Audio API oscillators
@@ -156,14 +156,22 @@ export default function View() {
         await audioManager.loadSoundEffect('page-turn', pageTurnUrl);
         
         if (isSubscribed) {
-          setAudioInitialized(true);
-          console.log('AudioManager initialized successfully');
+          console.log('🎵 AudioManager initialized successfully');
           
           // Play book-open sound when first opening the storybook
           if (!hasPlayedBookOpen) {
             audioManager.playSoundEffect('book-open');
             hasPlayedBookOpen = true;
           }
+          
+          // Start playing background music for the current page
+          const currentPage = storybook?.pages[currentPageNumber];
+          const mood = currentPage?.mood || 'calm';
+          console.log(`🎵 Starting background music with mood: ${mood} for page ${currentPageNumber}`);
+          await audioManager.crossfadeTo(mood as any, 2);
+          
+          // Mark as initialized AFTER music starts
+          setAudioInitialized(true);
         }
       } catch (error) {
         console.error('Failed to initialize audio:', error);
@@ -202,11 +210,11 @@ export default function View() {
     if (!audioInitialized || !storybook || currentPageNumber < 0) return;
     
     const currentPage = storybook.pages[currentPageNumber];
-    const mood = currentPage?.mood;
+    // Use mood if available, otherwise default to 'calm' for older storybooks
+    const mood = currentPage?.mood || 'calm';
     
-    if (mood) {
-      audioManager.crossfadeTo(mood as any, 2);
-    }
+    console.log(`📖 Page ${currentPageNumber}: mood = ${mood}`);
+    audioManager.crossfadeTo(mood as any, 2);
   }, [currentPageNumber, storybook, audioInitialized]);
 
   // Handle page change with sound effect
