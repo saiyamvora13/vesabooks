@@ -118,7 +118,6 @@ export async function generateEpub(storybook: Storybook): Promise<Buffer> {
         margin: 0;
         padding: 0;
         text-align: center;
-        background-color: #000000;
       }
       
       .page-image img {
@@ -154,7 +153,7 @@ export async function generateEpub(storybook: Storybook): Promise<Buffer> {
         line-height: 1.9;
         letter-spacing: 0.3px;
         color: #2c3e50;
-        padding: 50px 45px;
+        padding: 25% 45px;
         margin: 0;
         background-color: #ffffff;
         border-top: 3px solid #d4c4a8;
