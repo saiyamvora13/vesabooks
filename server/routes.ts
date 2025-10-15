@@ -2211,7 +2211,15 @@ async function generateStorybookAsync(
     // IMPORTANT: Programmatically prepend character description AND default clothing to ensure consistency
     const characterDesc = generatedStory.mainCharacterDescription?.trim() || '';
     const defaultClothing = generatedStory.defaultClothing?.trim() || '';
-    const fullCharacterDesc = [characterDesc, defaultClothing].filter(Boolean).join(', ');
+    
+    // Format the full character description with explicit clothing designation
+    let fullCharacterDesc = characterDesc;
+    if (defaultClothing) {
+      // Make it clear to the AI that this is the character's clothing
+      fullCharacterDesc = characterDesc 
+        ? `${characterDesc}, ${defaultClothing}`
+        : defaultClothing;
+    }
     const coverPromptWithCharacter = fullCharacterDesc 
       ? `${fullCharacterDesc}. ${generatedStory.coverImagePrompt}`
       : generatedStory.coverImagePrompt;
