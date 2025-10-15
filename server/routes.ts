@@ -26,6 +26,14 @@ const authRateLimiter = rateLimit({
   message: 'Too many authentication attempts, please try again later',
   standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
   legacyHeaders: false, // Disable the `X-RateLimit-*` headers
+  handler: (req, res) => {
+    const timestamp = new Date().toISOString();
+    const ip = req.ip || req.socket.remoteAddress || 'unknown';
+    const endpoint = req.path;
+    const userAgent = req.get('user-agent') || 'unknown';
+    console.log(`[RATE LIMIT EXCEEDED] ${timestamp} | Endpoint: ${endpoint} | IP: ${ip} | User-Agent: ${userAgent} | Limit: 5 requests/15min`);
+    res.status(429).json({ message: 'Too many authentication attempts, please try again later' });
+  },
 });
 
 const passwordResetRateLimiter = rateLimit({
@@ -34,6 +42,14 @@ const passwordResetRateLimiter = rateLimit({
   message: 'Too many password reset attempts, please try again later',
   standardHeaders: true,
   legacyHeaders: false,
+  handler: (req, res) => {
+    const timestamp = new Date().toISOString();
+    const ip = req.ip || req.socket.remoteAddress || 'unknown';
+    const endpoint = req.path;
+    const userAgent = req.get('user-agent') || 'unknown';
+    console.log(`[RATE LIMIT EXCEEDED] ${timestamp} | Endpoint: ${endpoint} | IP: ${ip} | User-Agent: ${userAgent} | Limit: 3 requests/1hour`);
+    res.status(429).json({ message: 'Too many password reset attempts, please try again later' });
+  },
 });
 
 // Price constants - server is the source of truth for pricing

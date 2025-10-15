@@ -30,6 +30,63 @@ Key features include:
 - **Storage Optimization Complete (Oct 2025)**: Successfully reduced total storage from 142 MB to 29 MB (~79% reduction) by migrating all storybooks from PNG to optimized JPG format and removing orphaned files. All 35 storybooks now use JPG format exclusively with date-based folder organization. Final state: 150 files, 0 PNG files, 100% JPG format.
 - **Sample Story Prompts (Oct 2025)**: Pre-populated story prompts with character placeholders (e.g., {main character}, {friend}, {animal}) for user inspiration. Admin-manageable via /admin/sample-prompts with CRUD operations, reordering, and active/inactive status. 5 diverse prompts covering ages 4-12 with themes like friendship, adventure, mystery, history, and nature.
 
+### Security & Monitoring
+
+#### Security Measures
+- **Password Hashing**: bcryptjs with 12 salt rounds for both user and admin authentication
+- **Rate Limiting**: 
+  - Authentication endpoints (login, signup): 5 attempts per 15 minutes per IP
+  - Password reset: 3 attempts per hour per IP
+  - Admin login: 5 attempts per 15 minutes per IP
+- **Session Management**: Secure session storage using PostgreSQL with connect-pg-simple
+- **Input Validation**: Zod schemas for all API endpoints and forms
+
+#### Production Monitoring
+After publishing your app, monitor rate-limit effectiveness using:
+
+**1. Replit Analytics Dashboard** (Publishing tool > Analytics tab)
+- Track HTTP 429 (Too Many Requests) status codes
+- Monitor request patterns by endpoint
+- Analyze traffic by IP, country, and device
+- View request duration and volumes
+
+**2. Application Logs** (Publishing tool > Overview tab)
+Rate-limit events are logged with the following format:
+```
+[RATE LIMIT EXCEEDED] 2025-10-15T12:34:56.789Z | Endpoint: /api/auth/login | IP: 192.168.1.1 | User-Agent: Mozilla/5.0... | Limit: 5 requests/15min
+```
+
+**3. Monitoring Best Practices**
+- **Week 1-2**: Establish baseline metrics and identify false positives
+- **Monitor for**:
+  - Frequency of 429 errors (should be rare for legitimate users)
+  - Support tickets about being locked out
+  - Patterns of attacks (many 429s from same IPs)
+  - Geographic distribution of blocked IPs
+- **Adjust thresholds** if needed based on:
+  - Legitimate user complaints → Increase limits
+  - Attack patterns → Decrease limits or add IP blocking
+  - Low 429 rates → Consider tightening security
+
+**4. Log Analysis**
+Search production logs for rate-limit patterns:
+```bash
+# Find all rate-limit exceeded events
+grep "RATE LIMIT EXCEEDED" logs
+
+# Find specific endpoint issues
+grep "Endpoint: /api/auth/login" logs | grep "RATE LIMIT"
+
+# Identify problematic IPs
+grep "RATE LIMIT EXCEEDED" logs | grep "IP: 192.168"
+```
+
+#### SEO & Accessibility
+- **SEO**: Complete meta tags (title, description, Open Graph, Twitter Cards) on all pages
+- **Sitemap**: Available at `/sitemap.xml` with all public routes
+- **Robots.txt**: Available at `/robots.txt` with proper crawling rules
+- **Accessibility**: ARIA labels on all interactive UI components for screen reader support
+
 ### System Design Choices
 - **Data Storage**: PostgreSQL via Drizzle ORM for `users`, `storybooks`, `purchases`, `sessions`, and `password_reset_tokens`. `storybooks` includes `mainCharacterDescription` and `storyArc`. Admin data is stored in `admin_users`, `site_settings`, `hero_storybook_slots`, `featured_storybooks`, and `admin_audit_logs`. File uploads are stored in Replit Object Storage.
 - **Frontend Frameworks**: React 18, TypeScript, Vite, Wouter, TanStack Query, Shadcn/ui, Radix UI, Tailwind CSS.
