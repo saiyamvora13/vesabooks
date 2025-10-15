@@ -2028,30 +2028,26 @@ Sitemap: ${baseUrl}/sitemap.xml`;
       }, pageNumber);
 
       // Generate the image for the new page
-      const { generateIllustration, optimizeImageForWeb } = await import("./services/gemini");
+      const { generateIllustration } = await import("./services/gemini");
       const { ObjectStorageService } = await import("./objectStorage");
       const objectStorage = new ObjectStorageService();
 
-      // Build the full image prompt with character description
+      // Build the full image prompt with character description and clothing
       const characterPrefix = storybook.mainCharacterDescription 
         ? `${storybook.mainCharacterDescription}, ${storybook.defaultClothing || ''}. `
         : '';
       const fullImagePrompt = characterPrefix + newPageContent.imagePrompt;
 
-      // Generate image to temp location
-      const tempImagePath = path.join("uploads", `${randomUUID()}_temp_page_${pageNumber}.png`);
-      await generateIllustration(fullImagePrompt, tempImagePath);
-
-      // Upload to object storage
-      const date = new Date();
-      const year = date.getFullYear();
-      const month = String(date.getMonth() + 1).padStart(2, '0');
-      const day = String(date.getDate()).padStart(2, '0');
+      // Generate image to temp location (generateIllustration already optimizes to JPG)
       const filename = `${randomUUID()}_page_${pageNumber}.jpg`;
-      const objectPath = `${year}/${month}/${day}/${filename}`;
+      const tempImagePath = path.join("uploads", filename);
+      
+      // Use art style from storybook if available
+      const artStyle = storybook.artStyle || undefined;
+      await generateIllustration(fullImagePrompt, tempImagePath, undefined, artStyle);
 
-      await objectStorage.uploadPublicObject(objectPath, tempImagePath);
-      const imageUrl = `/api/storage/${objectPath}`;
+      // Upload to object storage (uploadFile adds date-based path automatically)
+      const imageUrl = await objectStorage.uploadFile(tempImagePath, filename, true, storybook.createdAt || new Date());
 
       // Clean up temp file
       try {
