@@ -127,10 +127,13 @@ export default function View() {
 
   // Initialize audio system
   useEffect(() => {
+    let isSubscribed = true;
+    
     const initAudio = async () => {
-      if (audioInitialized) return;
+      if (!isSubscribed || audioInitialized) return;
       
       try {
+        console.log('Initializing AudioManager...');
         await audioManager.init();
         
         // Generate synthetic ambient music using Web Audio API oscillators
@@ -160,7 +163,10 @@ export default function View() {
           )
         );
         
-        setAudioInitialized(true);
+        if (isSubscribed) {
+          setAudioInitialized(true);
+          console.log('AudioManager initialized successfully');
+        }
       } catch (error) {
         console.error('Failed to initialize audio:', error);
       }
@@ -177,11 +183,13 @@ export default function View() {
     document.addEventListener('keydown', handleFirstInteraction);
 
     return () => {
+      isSubscribed = false;
       document.removeEventListener('click', handleFirstInteraction);
       document.removeEventListener('keydown', handleFirstInteraction);
+      // Only cleanup audio when component unmounts, not when audioInitialized changes
       audioManager.cleanup();
     };
-  }, [audioInitialized]);
+  }, []); // Remove audioInitialized from dependencies to prevent re-running when it changes
 
   // Handle page changes and crossfade music
   useEffect(() => {
