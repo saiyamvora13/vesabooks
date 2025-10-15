@@ -131,3 +131,21 @@ grep "RATE LIMIT EXCEEDED" logs | grep "IP: 192.168"
 - **react-i18next**: React integration for i18next.
 - **i18next**: Core internationalization library.
 - **i18next-browser-languagedetector**: Automatic language detection.
+
+### Testing & Quality Assurance
+- **Vitest**: Fast unit and integration testing framework with workspace mode for node/jsdom environments
+- **@testing-library/react**: React component testing utilities with renderWithProviders helper
+- **Supertest**: HTTP integration testing against real Express routes
+- **Testing Infrastructure (Oct 2025)**: 
+  - 59 integration tests covering authentication, payments, and story generation (100% pass rate)
+  - Tests use Supertest to exercise real Express routes, middleware, and service orchestration
+  - External services (Gemini AI, Stripe, Resend) properly mocked at module level
+  - Comprehensive test fixtures and utilities in tests/shared and tests/server
+  - Documentation available in TESTING.md with examples and best practices
+  - Command: `npx vitest run` for execution, `npx vitest --ui` for interactive mode
+
+### Performance Optimizations (Oct 2025)
+- **Image Optimization**: Centralized utility in server/utils/imageOptimization.ts with preset-aware sizing for web (1200px) and PDF (1800x2700px) formats
+- **Lazy Loading**: All 14 img tags use loading="lazy" attribute for improved page load performance
+- **Code Splitting**: React.lazy() implemented for route-based code splitting with Suspense fallback, Home page eagerly loaded to prevent synchronous suspense errors
+- **Bundle Size**: Secondary routes lazy loaded to reduce initial bundle size and improve Time to Interactive (TTI)
