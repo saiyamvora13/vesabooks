@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight, RefreshCw } from 'lucide-react';
+import { Button } from './button';
 
 interface StoryPage {
   pageNumber: number;
@@ -13,6 +14,9 @@ interface FlipbookViewerProps {
   author?: string;
   coverImageUrl?: string;
   backCoverImageUrl?: string;
+  isOwner?: boolean;
+  onRegeneratePage?: (pageNumber: number) => void;
+  regeneratingPageNumber?: number | null;
 }
 
 const PageFace = ({ 
@@ -62,8 +66,20 @@ const Cover = ({ title, author, coverImageUrl }: { title: string; author: string
   </div>
 );
 
-const ImagePage = ({ page, pageNum }: { page: StoryPage; pageNum: number }) => (
-  <div className="w-full h-full relative">
+const ImagePage = ({ 
+  page, 
+  pageNum,
+  isOwner,
+  onRegeneratePage,
+  isRegenerating
+}: { 
+  page: StoryPage; 
+  pageNum: number;
+  isOwner?: boolean;
+  onRegeneratePage?: (pageNumber: number) => void;
+  isRegenerating?: boolean;
+}) => (
+  <div className="w-full h-full relative group">
     {page.imageUrl ? (
       <img 
         src={page.imageUrl} 
@@ -76,6 +92,24 @@ const ImagePage = ({ page, pageNum }: { page: StoryPage; pageNum: number }) => (
         <p className="text-muted-foreground">Missing image</p>
       </div>
     )}
+    {isOwner && onRegeneratePage && (
+      <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+        <Button
+          size="sm"
+          variant="secondary"
+          onClick={(e) => {
+            e.stopPropagation();
+            onRegeneratePage(page.pageNumber);
+          }}
+          disabled={isRegenerating}
+          data-testid={`button-regenerate-page-${page.pageNumber}`}
+          className="shadow-lg"
+        >
+          <RefreshCw className={`w-4 h-4 mr-1 ${isRegenerating ? 'animate-spin' : ''}`} />
+          {isRegenerating ? 'Regenerating...' : 'Regenerate'}
+        </Button>
+      </div>
+    )}
   </div>
 );
 
@@ -83,12 +117,18 @@ const TextPage = ({
   page, 
   author, 
   pageNum, 
-  onTurn 
+  onTurn,
+  isOwner,
+  onRegeneratePage,
+  isRegenerating
 }: { 
   page: StoryPage; 
   author: string; 
   pageNum: number; 
   onTurn: () => void;
+  isOwner?: boolean;
+  onRegeneratePage?: (pageNumber: number) => void;
+  isRegenerating?: boolean;
 }) => (
   <div 
     className="w-full h-full flex flex-col justify-center p-8 md:p-12 relative cursor-pointer group" 
@@ -110,6 +150,24 @@ const TextPage = ({
         {page.text}
       </p>
     </div>
+    {isOwner && onRegeneratePage && (
+      <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity z-10">
+        <Button
+          size="sm"
+          variant="secondary"
+          onClick={(e) => {
+            e.stopPropagation();
+            onRegeneratePage(page.pageNumber);
+          }}
+          disabled={isRegenerating}
+          data-testid={`button-regenerate-page-${page.pageNumber}`}
+          className="shadow-lg"
+        >
+          <RefreshCw className={`w-4 h-4 mr-1 ${isRegenerating ? 'animate-spin' : ''}`} />
+          {isRegenerating ? 'Regenerating...' : 'Regenerate'}
+        </Button>
+      </div>
+    )}
     <div className="absolute bottom-6 right-6 w-16 h-16 bg-gradient-to-tl from-amber-100/30 to-transparent rounded-full pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity" />
     <span className="absolute bottom-4 right-8 text-sm font-serif text-slate-600">
       {pageNum}
@@ -158,7 +216,7 @@ const EndPage = ({ totalPages, backCoverImageUrl }: { totalPages: number; backCo
   );
 };
 
-export function FlipbookViewer({ pages, title, author = "AI Author", coverImageUrl, backCoverImageUrl }: FlipbookViewerProps) {
+export function FlipbookViewer({ pages, title, author = "AI Author", coverImageUrl, backCoverImageUrl, isOwner = false, onRegeneratePage, regeneratingPageNumber }: FlipbookViewerProps) {
   const numPages = pages.length;
   const numSheets = numPages + 1;
   const [currentPage, setCurrentPage] = useState(0);
@@ -215,21 +273,47 @@ export function FlipbookViewer({ pages, title, author = "AI Author", coverImageU
 
     sheets.push({
       front: <Cover title={title} author={author} coverImageUrl={coverImageUrl} />,
-      back: pages.length > 0 ? <ImagePage page={pages[0]} pageNum={1} /> : <EndPage totalPages={0} backCoverImageUrl={backCoverImageUrl} />,
+      back: pages.length > 0 ? (
+        <ImagePage 
+          page={pages[0]} 
+          pageNum={1} 
+          isOwner={isOwner}
+          onRegeneratePage={onRegeneratePage}
+          isRegenerating={regeneratingPageNumber === pages[0].pageNumber}
+        />
+      ) : <EndPage totalPages={0} backCoverImageUrl={backCoverImageUrl} />,
     });
 
     for (let i = 0; i < numPages; i++) {
       const page = pages[i];
-      const frontContent = <TextPage page={page} author={author} pageNum={i + 1} onTurn={goToNextPage} />;
+      const frontContent = (
+        <TextPage 
+          page={page} 
+          author={author} 
+          pageNum={i + 1} 
+          onTurn={goToNextPage}
+          isOwner={isOwner}
+          onRegeneratePage={onRegeneratePage}
+          isRegenerating={regeneratingPageNumber === page.pageNumber}
+        />
+      );
       const backContent = (i < numPages - 1)
-        ? <ImagePage page={pages[i + 1]} pageNum={i + 2} />
+        ? (
+          <ImagePage 
+            page={pages[i + 1]} 
+            pageNum={i + 2}
+            isOwner={isOwner}
+            onRegeneratePage={onRegeneratePage}
+            isRegenerating={regeneratingPageNumber === pages[i + 1].pageNumber}
+          />
+        )
         : <EndPage totalPages={numPages * 2} backCoverImageUrl={backCoverImageUrl} />;
 
       sheets.push({ front: frontContent, back: backContent });
     }
 
     return sheets;
-  }, [pages, title, author, coverImageUrl, backCoverImageUrl, goToNextPage, numPages]);
+  }, [pages, title, author, coverImageUrl, backCoverImageUrl, goToNextPage, numPages, isOwner, onRegeneratePage, regeneratingPageNumber]);
 
   const isBookOpen = currentPage > 0;
 
@@ -277,10 +361,28 @@ export function FlipbookViewer({ pages, title, author = "AI Author", coverImageU
       
       if (isTextPage) {
         // Show text page
-        return <TextPage page={page} author={author} pageNum={storyPageIndex + 1} onTurn={goToNextPage} />;
+        return (
+          <TextPage 
+            page={page} 
+            author={author} 
+            pageNum={storyPageIndex + 1} 
+            onTurn={goToNextPage}
+            isOwner={isOwner}
+            onRegeneratePage={onRegeneratePage}
+            isRegenerating={regeneratingPageNumber === page.pageNumber}
+          />
+        );
       } else {
         // Show image page
-        return <ImagePage page={page} pageNum={storyPageIndex + 1} />;
+        return (
+          <ImagePage 
+            page={page} 
+            pageNum={storyPageIndex + 1}
+            isOwner={isOwner}
+            onRegeneratePage={onRegeneratePage}
+            isRegenerating={regeneratingPageNumber === page.pageNumber}
+          />
+        );
       }
     };
 

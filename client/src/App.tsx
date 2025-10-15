@@ -12,6 +12,7 @@ import Home from "@/pages/home"; // Eagerly load home page to avoid Suspense on 
 const Create = lazy(() => import("@/pages/create"));
 const View = lazy(() => import("@/pages/view"));
 const Library = lazy(() => import("@/pages/library"));
+const Gallery = lazy(() => import("@/pages/gallery"));
 const Cart = lazy(() => import("@/pages/cart"));
 const Checkout = lazy(() => import("@/pages/checkout"));
 const Purchases = lazy(() => import("@/pages/purchases"));
@@ -22,6 +23,7 @@ const ResetPassword = lazy(() => import("@/pages/reset-password"));
 const NotFound = lazy(() => import("@/pages/not-found"));
 const AdminLogin = lazy(() => import("@/pages/admin-login"));
 const AdminDashboard = lazy(() => import("@/pages/admin/dashboard"));
+const AdminAnalytics = lazy(() => import("@/pages/admin/analytics"));
 const AdminSettings = lazy(() => import("@/pages/admin/settings"));
 const AdminHeroManagement = lazy(() => import("@/pages/admin/hero-management"));
 const AdminFeatured = lazy(() => import("@/pages/admin/featured"));
@@ -51,6 +53,7 @@ function Router() {
         <Route path="/reset-password" component={ResetPassword} />
         <Route path="/create" component={Create} />
         <Route path="/library" component={Library} />
+        <Route path="/gallery" component={Gallery} />
         <Route path="/cart" component={Cart} />
         <Route path="/checkout" component={Checkout} />
         <Route path="/purchases" component={Purchases} />
@@ -60,6 +63,7 @@ function Router() {
         {/* Admin Routes */}
         <Route path="/admin/login" component={AdminLogin} />
         <Route path="/admin/dashboard" component={AdminDashboard} />
+        <Route path="/admin/analytics" component={AdminAnalytics} />
         <Route path="/admin/settings" component={AdminSettings} />
         <Route path="/admin/hero" component={AdminHeroManagement} />
         <Route path="/admin/featured" component={AdminFeatured} />

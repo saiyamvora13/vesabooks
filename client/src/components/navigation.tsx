@@ -78,6 +78,11 @@ export default function Navigation() {
                 {t('navigation.create')}
               </span>
             </Link>
+            <Link href="/gallery">
+              <span className={`text-foreground/70 hover:text-foreground transition-colors cursor-pointer font-medium ${location === '/gallery' ? 'text-primary' : ''}`} data-testid="link-gallery">
+                Gallery
+              </span>
+            </Link>
             {isAuthenticated && (
               <>
                 <Link href="/library">
@@ -214,6 +219,11 @@ export default function Navigation() {
               <Link href="/create" onClick={() => setMobileMenuOpen(false)}>
                 <div className={`text-base px-3 py-2 rounded-lg ${location === '/create' ? 'bg-primary/10 text-primary font-medium' : 'text-foreground/70 font-medium'}`}>
                   {t('navigation.createStory')}
+                </div>
+              </Link>
+              <Link href="/gallery" onClick={() => setMobileMenuOpen(false)}>
+                <div className={`text-base px-3 py-2 rounded-lg ${location === '/gallery' ? 'bg-primary/10 text-primary font-medium' : 'text-foreground/70 font-medium'}`} data-testid="link-gallery-mobile">
+                  Gallery
                 </div>
               </Link>
               {isAuthenticated && (

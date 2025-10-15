@@ -14,6 +14,7 @@ import { isAdmin } from "./adminAuth";
 import Stripe from "stripe";
 import { z } from "zod";
 import rateLimit from "express-rate-limit";
+import * as analytics from "./services/analytics";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', {
   apiVersion: "2025-09-30.clover",
@@ -1342,6 +1343,211 @@ Sitemap: ${baseUrl}/sitemap.xml`;
     }
   });
 
+  // GET /api/analytics/completion-rate - Get story completion rate (admin only)
+  app.get('/api/analytics/completion-rate', isAdmin, async (req, res) => {
+    try {
+      const completionRate = await storage.getCompletionRate();
+      res.json({ completionRate });
+    } catch (error) {
+      console.error('Get completion rate error:', error);
+      res.status(500).json({ message: 'Internal server error' });
+    }
+  });
+
+  // GET /api/analytics/popular-prompts - Get popular prompts (admin only)
+  app.get('/api/analytics/popular-prompts', isAdmin, async (req, res) => {
+    try {
+      const { limit } = req.query;
+      const parsedLimit = limit ? parseInt(limit as string) : 10;
+      const popularPrompts = await storage.getPopularPrompts(parsedLimit);
+      res.json(popularPrompts);
+    } catch (error) {
+      console.error('Get popular prompts error:', error);
+      res.status(500).json({ message: 'Internal server error' });
+    }
+  });
+
+  // GET /api/admin/analytics/overview - Get overview metrics (admin only)
+  app.get('/api/admin/analytics/overview', isAdmin, async (req, res) => {
+    try {
+      const { db } = await import('./db');
+      const { purchases, storybooks, users, storyRatings } = await import('@shared/schema');
+      const { sql, sum, countDistinct, count, avg, isNull } = await import('drizzle-orm');
+
+      // Get total revenue and revenue by type
+      const revenueResult = await db
+        .select({
+          totalRevenue: sum(purchases.price),
+          type: purchases.type
+        })
+        .from(purchases)
+        .where(sql`${purchases.status} = 'completed'`)
+        .groupBy(purchases.type);
+
+      const totalRevenue = revenueResult.reduce((acc, r) => acc + Number(r.totalRevenue || 0), 0);
+      const digitalRevenue = revenueResult.find(r => r.type === 'digital')?.totalRevenue || 0;
+      const printRevenue = revenueResult.find(r => r.type === 'print')?.totalRevenue || 0;
+
+      // Get total stories created (excluding deleted)
+      const [storiesResult] = await db
+        .select({ count: count() })
+        .from(storybooks)
+        .where(isNull(storybooks.deletedAt));
+
+      // Get total active users (users with storybooks)
+      const [activeUsersResult] = await db
+        .select({ count: countDistinct(storybooks.userId) })
+        .from(storybooks)
+        .where(isNull(storybooks.deletedAt));
+
+      // Get completion rate from existing analytics
+      const completionRate = await storage.getCompletionRate();
+
+      // Get average rating across all storybooks
+      const [avgRatingResult] = await db
+        .select({ avgRating: avg(storyRatings.rating) })
+        .from(storyRatings);
+
+      res.json({
+        totalRevenue: Number(totalRevenue) / 100, // Convert cents to dollars
+        revenueByType: {
+          digital: Number(digitalRevenue) / 100,
+          print: Number(printRevenue) / 100
+        },
+        totalStories: storiesResult.count,
+        activeUsers: activeUsersResult.count,
+        completionRate,
+        averageRating: avgRatingResult.avgRating ? Number(avgRatingResult.avgRating) : null
+      });
+    } catch (error) {
+      console.error('Get analytics overview error:', error);
+      res.status(500).json({ message: 'Internal server error' });
+    }
+  });
+
+  // GET /api/admin/analytics/revenue-trends - Revenue over time (admin only)
+  app.get('/api/admin/analytics/revenue-trends', isAdmin, async (req, res) => {
+    try {
+      const { db } = await import('./db');
+      const { purchases } = await import('@shared/schema');
+      const { sql } = await import('drizzle-orm');
+
+      // Get revenue for last 30 days grouped by date
+      const trends = await db.execute(sql`
+        SELECT 
+          DATE(created_at) as date,
+          type,
+          SUM(CAST(price AS NUMERIC)) as revenue
+        FROM ${purchases}
+        WHERE created_at >= NOW() - INTERVAL '30 days'
+          AND status = 'completed'
+        GROUP BY DATE(created_at), type
+        ORDER BY DATE(created_at) ASC
+      `);
+
+      res.json(trends.rows);
+    } catch (error) {
+      console.error('Get revenue trends error:', error);
+      res.status(500).json({ message: 'Internal server error' });
+    }
+  });
+
+  // GET /api/admin/analytics/popular-themes - Popular themes/styles (admin only)
+  app.get('/api/admin/analytics/popular-themes', isAdmin, async (req, res) => {
+    try {
+      const { db } = await import('./db');
+      const { storybooks } = await import('@shared/schema');
+      const { isNull } = await import('drizzle-orm');
+
+      // Get all prompts
+      const allStorybooks = await db
+        .select({ prompt: storybooks.prompt })
+        .from(storybooks)
+        .where(isNull(storybooks.deletedAt));
+
+      // Simple keyword extraction
+      const keywords = [
+        'princess', 'prince', 'dragon', 'fairy', 'magic', 'adventure', 
+        'space', 'robot', 'dinosaur', 'pirate', 'unicorn', 'superhero',
+        'ocean', 'forest', 'castle', 'treasure', 'monster', 'friendship',
+        'family', 'school', 'animal', 'pet', 'car', 'train'
+      ];
+
+      const themeCount: Record<string, number> = {};
+      keywords.forEach(keyword => themeCount[keyword] = 0);
+
+      allStorybooks.forEach(story => {
+        const promptLower = story.prompt.toLowerCase();
+        keywords.forEach(keyword => {
+          if (promptLower.includes(keyword)) {
+            themeCount[keyword]++;
+          }
+        });
+      });
+
+      // Convert to array and sort by count
+      const themes = Object.entries(themeCount)
+        .map(([theme, count]) => ({ theme, count }))
+        .filter(t => t.count > 0)
+        .sort((a, b) => b.count - a.count)
+        .slice(0, 10);
+
+      res.json(themes);
+    } catch (error) {
+      console.error('Get popular themes error:', error);
+      res.status(500).json({ message: 'Internal server error' });
+    }
+  });
+
+  // GET /api/admin/analytics/user-retention - User retention (admin only)
+  app.get('/api/admin/analytics/user-retention', isAdmin, async (req, res) => {
+    try {
+      const { db } = await import('./db');
+      const { users, storybooks } = await import('@shared/schema');
+      const { sql, count } = await import('drizzle-orm');
+
+      // Get new users per day for last 30 days
+      const newUsersTrend = await db.execute(sql`
+        SELECT 
+          DATE(created_at) as date,
+          COUNT(*) as new_users
+        FROM ${users}
+        WHERE created_at >= NOW() - INTERVAL '30 days'
+        GROUP BY DATE(created_at)
+        ORDER BY DATE(created_at) ASC
+      `);
+
+      // Get returning users (users with multiple storybooks)
+      const [returningUsersResult] = await db.execute(sql`
+        SELECT COUNT(DISTINCT user_id) as returning_users
+        FROM (
+          SELECT user_id, COUNT(*) as story_count
+          FROM ${storybooks}
+          WHERE deleted_at IS NULL
+          GROUP BY user_id
+          HAVING COUNT(*) > 1
+        ) as multi_story_users
+      `);
+
+      // Get total users
+      const [totalUsersResult] = await db
+        .select({ count: count() })
+        .from(users);
+
+      res.json({
+        newUsersTrend: newUsersTrend.rows,
+        returningUsers: returningUsersResult.returning_users || 0,
+        totalUsers: totalUsersResult.count,
+        retentionRate: totalUsersResult.count > 0 
+          ? ((returningUsersResult.returning_users || 0) / totalUsersResult.count) * 100 
+          : 0
+      });
+    } catch (error) {
+      console.error('Get user retention error:', error);
+      res.status(500).json({ message: 'Internal server error' });
+    }
+  });
+
   // GET /api/metrics (public - no auth required)
   app.get('/api/metrics', async (req, res) => {
     try {
@@ -1388,6 +1594,11 @@ Sitemap: ${baseUrl}/sitemap.xml`;
       const validatedPagesPerBook = Math.max(1, Math.min(10, pagesPerBook));
 
       const sessionId = randomUUID();
+
+      // Track story generation start (non-blocking)
+      analytics.trackStoryStarted(userId, prompt, imageFilenames).catch(err => {
+        console.error('Failed to track story_started event:', err);
+      });
 
       // Start generation in background with userId, author, and pagesPerBook
       generateStorybookAsync(sessionId, userId, prompt, authorName, imagePaths, validatedPagesPerBook)
@@ -1562,20 +1773,42 @@ Sitemap: ${baseUrl}/sitemap.xml`;
     }
   });
 
-  // Generate share URL
+  // Generate share URL and track share event
   app.post("/api/storybooks/:id/share", async (req, res) => {
     try {
       const { id } = req.params;
+      const { platform } = req.body; // Track which platform was used for sharing
       const storybook = await storage.getStorybook(id);
       
       if (!storybook) {
         return res.status(404).json({ message: "Storybook not found" });
       }
 
-      const shareUrl = randomUUID().replace(/-/g, '').substring(0, 12);
-      await storage.updateStorybookShareUrl(id, shareUrl);
+      // Generate share URL if it doesn't exist
+      let shareUrl = storybook.shareUrl;
+      if (!shareUrl) {
+        shareUrl = randomUUID().replace(/-/g, '').substring(0, 12);
+        await storage.updateStorybookShareUrl(id, shareUrl);
+      }
 
-      res.json({ shareUrl: `${req.protocol}://${req.get('host')}/shared/${shareUrl}` });
+      // Increment share count
+      await storage.incrementShareCount(id);
+
+      // Track share event with analytics
+      await storage.trackEvent({
+        userId: storybook.userId,
+        storybookId: id,
+        eventType: 'storybook_shared',
+        eventData: {
+          platform: platform || 'unknown',
+          timestamp: new Date().toISOString(),
+        },
+      });
+
+      res.json({ 
+        shareUrl: `${req.protocol}://${req.get('host')}/shared/${shareUrl}`,
+        shareCount: Number(storybook.shareCount) + 1
+      });
     } catch (error) {
       console.error("Generate share URL error:", error);
       res.status(500).json({ message: "Internal server error" });
@@ -1640,6 +1873,303 @@ Sitemap: ${baseUrl}/sitemap.xml`;
     } catch (error) {
       console.error('Error generating print PDF:', error);
       res.status(500).json({ message: 'Failed to generate PDF' });
+    }
+  });
+
+  // Rating Routes
+
+  // Create or update a rating for a storybook (requires authentication)
+  app.post("/api/storybooks/:id/rating", isAuthenticated, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const userId = req.user.id || req.user.claims?.sub;
+      const { rating, feedback } = req.body;
+
+      // Validate rating
+      if (!rating || typeof rating !== 'number' || rating < 1 || rating > 5) {
+        return res.status(400).json({ message: "Rating must be a number between 1 and 5" });
+      }
+
+      // Check if storybook exists
+      const storybook = await storage.getStorybook(id);
+      if (!storybook) {
+        return res.status(404).json({ message: "Storybook not found" });
+      }
+
+      // Create or update rating (upsert)
+      const newRating = await storage.createRating({
+        storybookId: id,
+        userId,
+        rating: rating.toString(),
+        feedback: feedback || null,
+      });
+
+      // Track rating event with analytics
+      await storage.trackEvent({
+        userId,
+        storybookId: id,
+        eventType: 'rating_submitted',
+        eventData: {
+          rating,
+          hasFeedback: !!feedback,
+          timestamp: new Date().toISOString(),
+        },
+      });
+
+      res.json(newRating);
+    } catch (error) {
+      console.error("Rating creation error:", error);
+      res.status(500).json({ message: "Failed to create rating" });
+    }
+  });
+
+  // Get user's rating for a storybook (requires authentication)
+  app.get("/api/storybooks/:id/rating", isAuthenticated, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const userId = req.user.id || req.user.claims?.sub;
+
+      const rating = await storage.getRating(id, userId);
+      res.json(rating);
+    } catch (error) {
+      console.error("Get rating error:", error);
+      res.status(500).json({ message: "Failed to get rating" });
+    }
+  });
+
+  // Get all ratings for a storybook (public)
+  app.get("/api/storybooks/:id/ratings", async (req, res) => {
+    try {
+      const { id } = req.params;
+
+      const ratings = await storage.getStorybookRatings(id);
+      res.json(ratings);
+    } catch (error) {
+      console.error("Get ratings error:", error);
+      res.status(500).json({ message: "Failed to get ratings" });
+    }
+  });
+
+  // Get average rating for a storybook (public)
+  app.get("/api/storybooks/:id/average-rating", async (req, res) => {
+    try {
+      const { id } = req.params;
+
+      const averageRating = await storage.getAverageRating(id);
+      const ratings = await storage.getStorybookRatings(id);
+
+      res.json({
+        averageRating,
+        count: ratings.length,
+      });
+    } catch (error) {
+      console.error("Get average rating error:", error);
+      res.status(500).json({ message: "Failed to get average rating" });
+    }
+  });
+
+  // Social Features
+
+  // Toggle public status of a storybook (requires authentication and ownership)
+  app.post("/api/storybooks/:id/toggle-public", isAuthenticated, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const userId = req.user.id || req.user.claims?.sub;
+
+      const newStatus = await storage.togglePublicStatus(id, userId);
+
+      res.json({ isPublic: newStatus });
+    } catch (error: any) {
+      if (error.message === 'Unauthorized') {
+        return res.status(403).json({ message: "You don't have permission to modify this storybook" });
+      }
+      console.error("Toggle public status error:", error);
+      res.status(500).json({ message: "Failed to toggle public status" });
+    }
+  });
+
+  // Regenerate a single page in a storybook (requires authentication and ownership)
+  app.post("/api/storybooks/:id/regenerate-page", isAuthenticated, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const { pageNumber } = req.body;
+      const userId = req.user.id || req.user.claims?.sub;
+
+      // Validate pageNumber
+      if (!pageNumber || typeof pageNumber !== 'number') {
+        return res.status(400).json({ message: "Valid page number is required" });
+      }
+
+      // Get the storybook
+      const storybook = await storage.getStorybook(id);
+      if (!storybook) {
+        return res.status(404).json({ message: "Storybook not found" });
+      }
+
+      // Check ownership
+      if (storybook.userId !== userId) {
+        return res.status(403).json({ message: "You don't have permission to modify this storybook" });
+      }
+
+      // Validate that the page exists
+      const pageExists = storybook.pages.some(p => p.pageNumber === pageNumber);
+      if (!pageExists) {
+        return res.status(400).json({ message: `Page ${pageNumber} does not exist in this storybook` });
+      }
+
+      // Generate new page content using Gemini
+      const { regenerateSinglePage } = await import("./services/gemini");
+      const newPageContent = await regenerateSinglePage({
+        title: storybook.title,
+        pages: storybook.pages,
+        mainCharacterDescription: storybook.mainCharacterDescription || '',
+        defaultClothing: storybook.defaultClothing || '',
+        storyArc: storybook.storyArc || '',
+      }, pageNumber);
+
+      // Generate the image for the new page
+      const { generateIllustration, optimizeImageForWeb } = await import("./services/gemini");
+      const { ObjectStorageService } = await import("./objectStorage");
+      const objectStorage = new ObjectStorageService();
+
+      // Build the full image prompt with character description
+      const characterPrefix = storybook.mainCharacterDescription 
+        ? `${storybook.mainCharacterDescription}, ${storybook.defaultClothing || ''}. `
+        : '';
+      const fullImagePrompt = characterPrefix + newPageContent.imagePrompt;
+
+      // Generate image to temp location
+      const tempImagePath = path.join("uploads", `${randomUUID()}_temp_page_${pageNumber}.png`);
+      await generateIllustration(fullImagePrompt, tempImagePath);
+
+      // Upload to object storage
+      const date = new Date();
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      const filename = `${randomUUID()}_page_${pageNumber}.jpg`;
+      const objectPath = `${year}/${month}/${day}/${filename}`;
+
+      await objectStorage.uploadPublicObject(objectPath, tempImagePath);
+      const imageUrl = `/api/storage/${objectPath}`;
+
+      // Clean up temp file
+      try {
+        fs.unlinkSync(tempImagePath);
+      } catch (err) {
+        console.warn("Failed to delete temp file:", err);
+      }
+
+      // Update the page in storage
+      await storage.updatePage(id, pageNumber, {
+        text: newPageContent.text,
+        imageUrl,
+        imagePrompt: newPageContent.imagePrompt,
+      });
+
+      // Track analytics
+      await analytics.trackPageRegenerated(userId, id, pageNumber);
+
+      // Get and return the updated storybook
+      const updatedStorybook = await storage.getStorybook(id);
+      res.json(updatedStorybook);
+    } catch (error: any) {
+      console.error("Regenerate page error:", error);
+      res.status(500).json({ message: error.message || "Failed to regenerate page" });
+    }
+  });
+
+  // Get public gallery of storybooks (public, paginated)
+  app.get("/api/gallery", async (req, res) => {
+    try {
+      const page = parseInt(req.query.page as string) || 1;
+      const limit = 20;
+      const offset = (page - 1) * limit;
+
+      const storybooks = await storage.getPublicStorybooks(limit, offset);
+      const totalCount = await storage.getPublicStorybookCount();
+
+      // Enrich with user info and rating data
+      const enrichedStorybooks = await Promise.all(
+        storybooks.map(async (storybook) => {
+          const user = await storage.getUser(storybook.userId);
+          const averageRating = await storage.getAverageRating(storybook.id);
+          const ratings = await storage.getStorybookRatings(storybook.id);
+
+          return {
+            ...storybook,
+            author: user?.firstName || 'Unknown',
+            averageRating,
+            ratingCount: ratings.length,
+          };
+        })
+      );
+
+      res.json({
+        storybooks: enrichedStorybooks,
+        totalCount,
+        currentPage: page,
+        totalPages: Math.ceil(totalCount / limit),
+      });
+    } catch (error) {
+      console.error("Get gallery error:", error);
+      res.status(500).json({ message: "Failed to get gallery" });
+    }
+  });
+
+  // Get shareable preview image for a storybook (public)
+  app.get("/api/storybooks/:id/preview", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const storybook = await storage.getStorybook(id);
+
+      if (!storybook) {
+        return res.status(404).json({ message: "Storybook not found" });
+      }
+
+      // Return the cover image URL for social preview
+      // In a more advanced implementation, this could generate a custom social preview image
+      if (storybook.coverImageUrl) {
+        // Redirect to the actual cover image
+        return res.redirect(storybook.coverImageUrl);
+      }
+
+      res.status(404).json({ message: "No preview image available" });
+    } catch (error) {
+      console.error("Get preview error:", error);
+      res.status(500).json({ message: "Failed to get preview" });
+    }
+  });
+
+  // Track view event for public storybooks
+  app.post("/api/storybooks/:id/view", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const storybook = await storage.getStorybook(id);
+
+      if (!storybook) {
+        return res.status(404).json({ message: "Storybook not found" });
+      }
+
+      // Only track views for public storybooks
+      if (storybook.isPublic) {
+        await storage.incrementViewCount(id);
+
+        // Track view event with analytics
+        await storage.trackEvent({
+          userId: storybook.userId,
+          storybookId: id,
+          eventType: 'storybook_viewed',
+          eventData: {
+            timestamp: new Date().toISOString(),
+          },
+        });
+      }
+
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Track view error:", error);
+      res.status(500).json({ message: "Failed to track view" });
     }
   });
 
@@ -2409,6 +2939,11 @@ async function generateStorybookAsync(
       mainCharacterDescription: generatedStory.mainCharacterDescription,
       defaultClothing: generatedStory.defaultClothing,
       storyArc: generatedStory.storyArc,
+    });
+
+    // Track story completion (non-blocking)
+    analytics.trackStoryCompleted(userId, storybook.id, pages.length).catch(err => {
+      console.error('Failed to track story_completed event:', err);
     });
 
     // Complete

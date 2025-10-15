@@ -1,6 +1,6 @@
-import { type Storybook, type InsertStorybook, type StoryGenerationProgress, storybooks, users, type User, type UpsertUser, type Purchase, type InsertPurchase, purchases, passwordResetTokens, type PasswordResetToken, type AdminUser, type InsertAdminUser, adminUsers, type SiteSetting, siteSettings, type HeroStorybookSlot, type InsertHeroStorybookSlot, heroStorybookSlots, type FeaturedStorybook, type InsertFeaturedStorybook, featuredStorybooks, type AdminAuditLog, type InsertAdminAuditLog, adminAuditLogs, type SamplePrompt, type InsertSamplePrompt, samplePrompts } from "@shared/schema";
+import { type Storybook, type InsertStorybook, type StoryGenerationProgress, storybooks, users, type User, type UpsertUser, type Purchase, type InsertPurchase, purchases, passwordResetTokens, type PasswordResetToken, type AdminUser, type InsertAdminUser, adminUsers, type SiteSetting, siteSettings, type HeroStorybookSlot, type InsertHeroStorybookSlot, heroStorybookSlots, type FeaturedStorybook, type InsertFeaturedStorybook, featuredStorybooks, type AdminAuditLog, type InsertAdminAuditLog, adminAuditLogs, type SamplePrompt, type InsertSamplePrompt, samplePrompts, type AnalyticsEvent, type InsertAnalyticsEvent, analyticsEvents, type StoryRating, type InsertStoryRating, storyRatings } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc, count, countDistinct, isNull, and, lt } from "drizzle-orm";
+import { eq, desc, count, countDistinct, isNull, and, lt, sql } from "drizzle-orm";
 import { normalizeEmail } from "./auth";
 
 export interface IStorage {
@@ -22,6 +22,7 @@ export interface IStorage {
   getExampleStorybooks(limit: number): Promise<Storybook[]>;
   updateStorybookShareUrl(id: string, shareUrl: string): Promise<void>;
   updateStorybookImages(id: string, coverImageUrl: string, pages: Storybook['pages']): Promise<void>;
+  updatePage(storybookId: string, pageNumber: number, pageData: { text: string; imageUrl: string; imagePrompt: string }): Promise<void>;
   deleteStorybook(id: string): Promise<void>;
   
   // Progress tracking (kept in-memory for real-time updates)
@@ -76,6 +77,27 @@ export interface IStorage {
   createSamplePrompt(data: InsertSamplePrompt): Promise<SamplePrompt>;
   updateSamplePrompt(id: string, data: Partial<InsertSamplePrompt>): Promise<SamplePrompt>;
   deleteSamplePrompt(id: string): Promise<void>;
+  
+  // Analytics operations
+  trackEvent(event: InsertAnalyticsEvent): Promise<void>;
+  getEventsByType(eventType: string, limit?: number): Promise<AnalyticsEvent[]>;
+  getEventsByUser(userId: string, limit?: number): Promise<AnalyticsEvent[]>;
+  getCompletionRate(): Promise<number>;
+  getPopularPrompts(limit: number): Promise<Array<{ prompt: string; count: number }>>;
+  
+  // Rating operations
+  createRating(rating: InsertStoryRating): Promise<StoryRating>;
+  updateRating(id: string, rating: number, feedback?: string): Promise<void>;
+  getRating(storybookId: string, userId: string): Promise<StoryRating | null>;
+  getStorybookRatings(storybookId: string): Promise<StoryRating[]>;
+  getAverageRating(storybookId: string): Promise<number | null>;
+  
+  // Social features
+  togglePublicStatus(storybookId: string, userId: string): Promise<boolean>;
+  incrementShareCount(storybookId: string): Promise<void>;
+  incrementViewCount(storybookId: string): Promise<void>;
+  getPublicStorybooks(limit: number, offset: number): Promise<Storybook[]>;
+  getPublicStorybookCount(): Promise<number>;
 }
 
 // Database storage for persistent data
@@ -237,6 +259,24 @@ export class DatabaseStorage implements IStorage {
       .update(storybooks)
       .set({ coverImageUrl, pages })
       .where(eq(storybooks.id, id));
+  }
+
+  async updatePage(storybookId: string, pageNumber: number, pageData: { text: string; imageUrl: string; imagePrompt: string }): Promise<void> {
+    const storybook = await this.getStorybook(storybookId);
+    if (!storybook) {
+      throw new Error('Storybook not found');
+    }
+
+    const updatedPages = storybook.pages.map(page => 
+      page.pageNumber === pageNumber 
+        ? { ...page, ...pageData }
+        : page
+    );
+
+    await db
+      .update(storybooks)
+      .set({ pages: updatedPages })
+      .where(eq(storybooks.id, storybookId));
   }
 
   async deleteStorybook(id: string): Promise<void> {
@@ -564,6 +604,185 @@ export class DatabaseStorage implements IStorage {
     await db
       .delete(samplePrompts)
       .where(eq(samplePrompts.id, id));
+  }
+
+  // Analytics operations
+  async trackEvent(event: InsertAnalyticsEvent): Promise<void> {
+    try {
+      await db
+        .insert(analyticsEvents)
+        .values(event);
+    } catch (error) {
+      console.error('Error tracking analytics event:', error);
+    }
+  }
+
+  async getEventsByType(eventType: string, limit: number = 100): Promise<AnalyticsEvent[]> {
+    const events = await db
+      .select()
+      .from(analyticsEvents)
+      .where(eq(analyticsEvents.eventType, eventType))
+      .orderBy(desc(analyticsEvents.createdAt))
+      .limit(limit);
+    return events;
+  }
+
+  async getEventsByUser(userId: string, limit: number = 100): Promise<AnalyticsEvent[]> {
+    const events = await db
+      .select()
+      .from(analyticsEvents)
+      .where(eq(analyticsEvents.userId, userId))
+      .orderBy(desc(analyticsEvents.createdAt))
+      .limit(limit);
+    return events;
+  }
+
+  async getCompletionRate(): Promise<number> {
+    const [startedResult] = await db
+      .select({ count: count() })
+      .from(analyticsEvents)
+      .where(eq(analyticsEvents.eventType, 'story_started'));
+    
+    const [completedResult] = await db
+      .select({ count: count() })
+      .from(analyticsEvents)
+      .where(eq(analyticsEvents.eventType, 'story_completed'));
+    
+    const started = startedResult?.count || 0;
+    const completed = completedResult?.count || 0;
+    
+    if (started === 0) return 0;
+    return (completed / started) * 100;
+  }
+
+  async getPopularPrompts(limit: number): Promise<Array<{ prompt: string; count: number }>> {
+    const results = await db
+      .select({
+        prompt: sql<string>`event_data->>'prompt'`,
+        count: count(),
+      })
+      .from(analyticsEvents)
+      .where(eq(analyticsEvents.eventType, 'story_started'))
+      .groupBy(sql`event_data->>'prompt'`)
+      .orderBy(desc(count()))
+      .limit(limit);
+    
+    return results.map(r => ({
+      prompt: r.prompt,
+      count: Number(r.count),
+    }));
+  }
+
+  // Rating operations
+  async createRating(rating: InsertStoryRating): Promise<StoryRating> {
+    const [newRating] = await db
+      .insert(storyRatings)
+      .values(rating)
+      .onConflictDoUpdate({
+        target: [storyRatings.storybookId, storyRatings.userId],
+        set: {
+          rating: rating.rating,
+          feedback: rating.feedback,
+          updatedAt: new Date(),
+        },
+      })
+      .returning();
+    return newRating;
+  }
+
+  async updateRating(id: string, rating: number, feedback?: string): Promise<void> {
+    await db
+      .update(storyRatings)
+      .set({
+        rating: rating.toString(),
+        feedback,
+        updatedAt: new Date(),
+      })
+      .where(eq(storyRatings.id, id));
+  }
+
+  async getRating(storybookId: string, userId: string): Promise<StoryRating | null> {
+    const [rating] = await db
+      .select()
+      .from(storyRatings)
+      .where(
+        and(
+          eq(storyRatings.storybookId, storybookId),
+          eq(storyRatings.userId, userId)
+        )
+      );
+    return rating || null;
+  }
+
+  async getStorybookRatings(storybookId: string): Promise<StoryRating[]> {
+    const ratings = await db
+      .select()
+      .from(storyRatings)
+      .where(eq(storyRatings.storybookId, storybookId))
+      .orderBy(desc(storyRatings.createdAt));
+    return ratings;
+  }
+
+  async getAverageRating(storybookId: string): Promise<number | null> {
+    const [result] = await db
+      .select({
+        avg: sql<string>`AVG(CAST(${storyRatings.rating} AS DECIMAL))`,
+      })
+      .from(storyRatings)
+      .where(eq(storyRatings.storybookId, storybookId));
+    
+    if (!result?.avg) return null;
+    return parseFloat(result.avg);
+  }
+
+  // Social features
+  async togglePublicStatus(storybookId: string, userId: string): Promise<boolean> {
+    // Verify ownership
+    const storybook = await this.getStorybook(storybookId);
+    if (!storybook || storybook.userId !== userId) {
+      throw new Error('Unauthorized');
+    }
+
+    const newStatus = !storybook.isPublic;
+    await db
+      .update(storybooks)
+      .set({ isPublic: newStatus })
+      .where(eq(storybooks.id, storybookId));
+    
+    return newStatus;
+  }
+
+  async incrementShareCount(storybookId: string): Promise<void> {
+    await db
+      .update(storybooks)
+      .set({ shareCount: sql`CAST(${storybooks.shareCount} AS INTEGER) + 1` })
+      .where(eq(storybooks.id, storybookId));
+  }
+
+  async incrementViewCount(storybookId: string): Promise<void> {
+    await db
+      .update(storybooks)
+      .set({ viewCount: sql`CAST(${storybooks.viewCount} AS INTEGER) + 1` })
+      .where(eq(storybooks.id, storybookId));
+  }
+
+  async getPublicStorybooks(limit: number, offset: number): Promise<Storybook[]> {
+    const publicStorybooks = await db
+      .select()
+      .from(storybooks)
+      .where(and(eq(storybooks.isPublic, true), isNull(storybooks.deletedAt)))
+      .orderBy(desc(storybooks.createdAt))
+      .limit(limit)
+      .offset(offset);
+    return publicStorybooks;
+  }
+
+  async getPublicStorybookCount(): Promise<number> {
+    const [result] = await db
+      .select({ count: count() })
+      .from(storybooks)
+      .where(and(eq(storybooks.isPublic, true), isNull(storybooks.deletedAt)));
+    return result?.count || 0;
   }
 }
 

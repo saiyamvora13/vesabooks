@@ -1,19 +1,31 @@
 import { useParams, useLocation } from "wouter";
-import { useQuery } from "@tanstack/react-query";
-import { useState } from "react";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
+import { Helmet } from "react-helmet-async";
 import Navigation from "@/components/navigation";
 import { FlipbookViewer } from "@/components/ui/flipbook-3d";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { type Storybook } from "@shared/schema";
-import { ShoppingCart } from "lucide-react";
+import { ShoppingCart, Star, Share2 } from "lucide-react";
 import { addToCart } from "@/lib/cartUtils";
 import { useAuth } from "@/hooks/useAuth";
+import { RatingDialog } from "@/components/rating-dialog";
+import { ShareDialog } from "@/components/share-dialog";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 
 export default function View() {
   const { t } = useTranslation();
@@ -21,8 +33,12 @@ export default function View() {
   const [, setLocation] = useLocation();
   const [shareUrl, setShareUrl] = useState<string>("");
   const [isDownloading, setIsDownloading] = useState(false);
+  const [ratingDialogOpen, setRatingDialogOpen] = useState(false);
+  const [shareDialogOpen, setShareDialogOpen] = useState(false);
+  const [regenerateDialogOpen, setRegenerateDialogOpen] = useState(false);
+  const [pageToRegenerate, setPageToRegenerate] = useState<number | null>(null);
   const { toast } = useToast();
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
 
   // Determine if viewing by ID or share URL
   const storybookId = params.id;
@@ -48,6 +64,64 @@ export default function View() {
     },
     enabled: !!isAuthenticated && !!storybookId,
   });
+
+  const { data: averageRatingData } = useQuery<{ averageRating: number | null; count: number }>({
+    queryKey: ['/api/storybooks', storybookId, 'average-rating'],
+    enabled: !!storybookId,
+  });
+
+  // Regenerate page mutation
+  const regeneratePageMutation = useMutation({
+    mutationFn: async (pageNumber: number) => {
+      if (!storybookId) throw new Error('No storybook ID');
+      return apiRequest<Storybook>(`/api/storybooks/${storybookId}/regenerate-page`, {
+        method: 'POST',
+        body: JSON.stringify({ pageNumber }),
+      });
+    },
+    onSuccess: () => {
+      // Invalidate and refetch the storybook
+      queryClient.invalidateQueries({ queryKey: ['/api/storybooks', storybookId] });
+      toast({
+        title: "Page regenerated successfully!",
+        description: "The page has been updated with new content.",
+      });
+      setRegenerateDialogOpen(false);
+      setPageToRegenerate(null);
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Failed to regenerate page",
+        description: error.message || "An error occurred while regenerating the page.",
+        variant: "destructive",
+      });
+      setRegenerateDialogOpen(false);
+      setPageToRegenerate(null);
+    },
+  });
+
+  const handleRegeneratePage = (pageNumber: number) => {
+    setPageToRegenerate(pageNumber);
+    setRegenerateDialogOpen(true);
+  };
+
+  const confirmRegenerate = () => {
+    if (pageToRegenerate !== null) {
+      regeneratePageMutation.mutate(pageToRegenerate);
+    }
+  };
+
+  // Track view count and analytics when viewing public storybook
+  useEffect(() => {
+    if (!storybook || !storybookId) return;
+    
+    // Increment view count for public storybooks
+    if (storybook.isPublic) {
+      fetch(`/api/storybooks/${storybookId}/view`, {
+        method: 'POST',
+      }).catch(console.error);
+    }
+  }, [storybook, storybookId]);
 
   const generateShareUrl = async () => {
     if (!storybook) return;
@@ -185,8 +259,31 @@ export default function View() {
     );
   }
 
+  const isOwner = user?.id === storybook?.userId;
+  const pageUrl = `${window.location.origin}/view/${storybookId}`;
+  const previewImageUrl = storybook?.coverImageUrl || `${window.location.origin}/api/storybooks/${storybookId}/preview`;
+
   return (
     <div className="min-h-screen bg-muted/30">
+      <Helmet>
+        <title>{storybook.title} - AI Storybook Builder</title>
+        <meta name="description" content={`Read "${storybook.title}" - an AI-generated storybook. ${storybook.pages[0]?.text?.substring(0, 150) || 'A creative story for all ages.'}`} />
+        
+        {/* Open Graph / Facebook */}
+        <meta property="og:type" content="article" />
+        <meta property="og:url" content={pageUrl} />
+        <meta property="og:title" content={storybook.title} />
+        <meta property="og:description" content={`Read "${storybook.title}" - an AI-generated storybook created with AI Storybook Builder.`} />
+        <meta property="og:image" content={previewImageUrl} />
+        
+        {/* Twitter */}
+        <meta property="twitter:card" content="summary_large_image" />
+        <meta property="twitter:url" content={pageUrl} />
+        <meta property="twitter:title" content={storybook.title} />
+        <meta property="twitter:description" content={`Read "${storybook.title}" - an AI-generated storybook created with AI Storybook Builder.`} />
+        <meta property="twitter:image" content={previewImageUrl} />
+      </Helmet>
+      
       <Navigation />
       
       <section className="py-8 md:py-20">
@@ -195,44 +292,45 @@ export default function View() {
           <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 md:mb-8 px-2">
             <div>
               <h2 className="text-2xl md:text-3xl font-bold mb-2" data-testid="text-story-title">{storybook.title}</h2>
-              <p className="text-sm md:text-base text-muted-foreground">
-                {t('storybook.viewer.created', { date: storybook.createdAt ? new Date(storybook.createdAt).toLocaleDateString() : 'Unknown' })}
-              </p>
+              <div className="flex items-center gap-4">
+                <p className="text-sm md:text-base text-muted-foreground">
+                  {t('storybook.viewer.created', { date: storybook.createdAt ? new Date(storybook.createdAt).toLocaleDateString() : 'Unknown' })}
+                </p>
+                {averageRatingData && averageRatingData.count > 0 && (
+                  <div className="flex items-center gap-1" data-testid="text-average-rating">
+                    <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
+                    <span className="text-sm font-medium">
+                      {averageRatingData.averageRating?.toFixed(1)}
+                    </span>
+                    <span className="text-sm text-muted-foreground">
+                      ({averageRatingData.count} {averageRatingData.count === 1 ? 'rating' : 'ratings'})
+                    </span>
+                  </div>
+                )}
+              </div>
             </div>
             <div className="flex flex-wrap gap-3">
-              <Dialog>
-                <DialogTrigger asChild>
-                  <Button variant="outline" className="rounded-xl" data-testid="button-share">
-                    <i className="fas fa-share-alt mr-2"></i>{t('storybook.viewer.share.button')}
-                  </Button>
-                </DialogTrigger>
-                <DialogContent className="max-w-lg">
-                  <DialogHeader>
-                    <DialogTitle>{t('storybook.viewer.share.title')}</DialogTitle>
-                  </DialogHeader>
-                  <div className="space-y-4">
-                    <p className="text-muted-foreground">
-                      {t('storybook.viewer.share.description')}
-                    </p>
-                    {shareUrl ? (
-                      <div className="flex items-center space-x-2">
-                        <Input value={shareUrl} readOnly className="font-mono text-sm" />
-                        <Button
-                          onClick={() => navigator.clipboard.writeText(shareUrl)}
-                          size="sm"
-                          data-testid="button-copy-url"
-                        >
-                          <i className="fas fa-copy"></i>
-                        </Button>
-                      </div>
-                    ) : (
-                      <Button onClick={generateShareUrl} className="w-full" data-testid="button-generate-share">
-                        {t('storybook.viewer.share.generateButton')}
-                      </Button>
-                    )}
-                  </div>
-                </DialogContent>
-              </Dialog>
+              <Button 
+                variant="outline" 
+                className="rounded-xl" 
+                onClick={() => setShareDialogOpen(true)}
+                data-testid="button-share"
+              >
+                <Share2 className="h-4 w-4 mr-2" />
+                Share
+              </Button>
+
+              {isAuthenticated && (
+                <Button 
+                  variant="outline" 
+                  className="rounded-xl" 
+                  onClick={() => setRatingDialogOpen(true)}
+                  data-testid="button-rate-story"
+                >
+                  <Star className="h-4 w-4 mr-2" />
+                  Rate this Story
+                </Button>
+              )}
               
               {digitalPurchase?.owned ? (
                 <Button 
@@ -287,9 +385,34 @@ export default function View() {
               title={storybook.title}
               author={storybook.author || "AI Storyteller"}
               coverImageUrl={storybook.coverImageUrl || storybook.pages[0]?.imageUrl}
-              backCoverImageUrl={storybook.backCoverImageUrl}
+              backCoverImageUrl={storybook.backCoverImageUrl || undefined}
+              isOwner={isAuthenticated && user?.id === storybook.userId}
+              onRegeneratePage={handleRegeneratePage}
+              regeneratingPageNumber={regeneratePageMutation.isPending ? pageToRegenerate : null}
             />
           </div>
+
+          {/* Regenerate Page Confirmation Dialog */}
+          <AlertDialog open={regenerateDialogOpen} onOpenChange={setRegenerateDialogOpen}>
+            <AlertDialogContent data-testid="dialog-regenerate-confirm">
+              <AlertDialogHeader>
+                <AlertDialogTitle>Regenerate Page {pageToRegenerate}?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  This will replace the current page with new AI-generated content. The current text and image will be permanently replaced. This action cannot be undone.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel data-testid="button-cancel-regenerate">Cancel</AlertDialogCancel>
+                <AlertDialogAction 
+                  onClick={confirmRegenerate}
+                  data-testid="button-confirm-regenerate"
+                  disabled={regeneratePageMutation.isPending}
+                >
+                  {regeneratePageMutation.isPending ? 'Regenerating...' : 'Continue'}
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
 
           {/* Back to Create */}
           <div className="text-center mt-8 md:mt-12">
@@ -305,6 +428,24 @@ export default function View() {
           </div>
         </div>
       </section>
+
+      {/* Rating Dialog */}
+      {storybookId && (
+        <RatingDialog
+          storybookId={storybookId}
+          storybookTitle={storybook.title}
+          open={ratingDialogOpen}
+          onOpenChange={setRatingDialogOpen}
+        />
+      )}
+
+      {/* Share Dialog */}
+      <ShareDialog
+        storybook={storybook}
+        isOpen={shareDialogOpen}
+        onClose={() => setShareDialogOpen(false)}
+        isOwner={isOwner}
+      />
     </div>
   );
 }

@@ -10,7 +10,8 @@ import {
   FileText, 
   LogOut,
   ChevronRight,
-  Home
+  Home,
+  TrendingUp
 } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -22,6 +23,7 @@ interface AdminLayoutProps {
 
 const navItems = [
   { icon: LayoutDashboard, label: "Dashboard", path: "/admin/dashboard", testId: "nav-dashboard" },
+  { icon: TrendingUp, label: "Analytics", path: "/admin/analytics", testId: "nav-analytics" },
   { icon: Settings, label: "Settings", path: "/admin/settings", testId: "nav-settings" },
   { icon: Star, label: "Hero Management", path: "/admin/hero", testId: "nav-hero" },
   { icon: Sparkles, label: "Featured Content", path: "/admin/featured", testId: "nav-featured" },

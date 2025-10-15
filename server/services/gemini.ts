@@ -371,3 +371,88 @@ export async function generateIllustration(
   
   throw new Error("Image generation failed after all retries.");
 }
+
+export async function regenerateSinglePage(
+  storybook: {
+    title: string;
+    pages: Array<{ pageNumber: number; text: string; imagePrompt: string }>;
+    mainCharacterDescription: string;
+    defaultClothing: string;
+    storyArc: string;
+  },
+  pageNumber: number
+): Promise<{ text: string; imagePrompt: string }> {
+  try {
+    const totalPages = storybook.pages.length;
+    
+    // Get surrounding pages for context
+    const previousPage = storybook.pages.find(p => p.pageNumber === pageNumber - 1);
+    const nextPage = storybook.pages.find(p => p.pageNumber === pageNumber + 1);
+    
+    // Build context from surrounding pages
+    let contextInfo = '';
+    if (previousPage) {
+      contextInfo += `\n\nPrevious page (${previousPage.pageNumber}): ${previousPage.text}`;
+    }
+    if (nextPage) {
+      contextInfo += `\n\nNext page (${nextPage.pageNumber}): ${nextPage.text}`;
+    }
+    
+    const systemInstruction = `You are regenerating page ${pageNumber} of a ${totalPages}-page storybook titled "${storybook.title}".
+
+CRITICAL REQUIREMENTS:
+1. MAINTAIN STORY CONTINUITY - The regenerated page MUST fit naturally between the surrounding pages
+2. CHARACTER CONSISTENCY - Use the existing character description and default clothing (they will be prepended to image prompts automatically)
+3. PRESERVE STORY ARC - Follow the established story arc: ${storybook.storyArc}
+
+CONTEXT:
+- Total pages: ${totalPages}
+- Regenerating page: ${pageNumber}${contextInfo}
+
+INSTRUCTIONS:
+- Generate NEW content that flows naturally from the previous page (if exists) to the next page (if exists)
+- The text should be 100-150 words, appropriate for the story's tone
+- For the imagePrompt: Describe ONLY the scene, action, and setting
+- Do NOT describe the character's physical features or default clothing in imagePrompt - they will be added automatically
+- Only specify different clothing if the scene REQUIRES it (e.g., "wearing pajamas" for bedtime, "wearing a swimsuit" at the pool)
+
+Return JSON with "text" and "imagePrompt" fields.`;
+
+    const pageSchema = {
+      type: Type.OBJECT,
+      properties: {
+        text: {
+          type: Type.STRING,
+          description: `The narrative text for page ${pageNumber} (100-150 words). Must flow naturally from the previous page and lead smoothly to the next page if they exist.`,
+        },
+        imagePrompt: {
+          type: Type.STRING,
+          description: "A detailed image generation prompt. Describe the specific scene, action, setting, and any other characters/objects. The character's appearance and default clothing will be added automatically. Only specify different clothing if the scene REQUIRES it.",
+        },
+      },
+      required: ["text", "imagePrompt"],
+    };
+
+    const response = await ai.models.generateContent({
+      model: "gemini-2.5-flash",
+      contents: {
+        parts: [{ text: `Generate a new version of page ${pageNumber}.` }],
+      },
+      config: {
+        systemInstruction: systemInstruction,
+        responseMimeType: "application/json",
+        responseSchema: pageSchema,
+      },
+    });
+
+    const rawJson = response.text?.trim();
+    if (!rawJson) {
+      throw new Error("Empty response from Gemini");
+    }
+
+    const parsedJson = JSON.parse(rawJson);
+    return parsedJson;
+  } catch (error) {
+    throw new Error(`Failed to regenerate page: ${error}`);
+  }
+}

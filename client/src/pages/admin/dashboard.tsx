@@ -101,6 +101,14 @@ export default function AdminDashboard() {
             <CardContent>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <a
+                  href="/admin/analytics"
+                  className="p-4 rounded-lg border border-slate-800 bg-slate-950 hover:bg-slate-800 transition-colors"
+                  data-testid="link-analytics"
+                >
+                  <h3 className="font-semibold text-slate-100 mb-1">Analytics Dashboard</h3>
+                  <p className="text-sm text-slate-400">View detailed insights and metrics</p>
+                </a>
+                <a
                   href="/admin/settings"
                   className="p-4 rounded-lg border border-slate-800 bg-slate-950 hover:bg-slate-800 transition-colors"
                 >

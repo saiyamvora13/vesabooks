@@ -53,11 +53,15 @@ export const storybooks = pgTable("storybooks", {
   mainCharacterDescription: text("main_character_description"),
   defaultClothing: text("default_clothing"),
   storyArc: text("story_arc"),
+  isPublic: boolean("is_public").notNull().default(false),
+  shareCount: numeric("share_count").notNull().default('0'),
+  viewCount: numeric("view_count").notNull().default('0'),
   createdAt: timestamp("created_at").defaultNow(),
   shareUrl: text("share_url"),
   deletedAt: timestamp("deleted_at"),
 }, (table) => [
   index("idx_storybooks_user_deleted").on(table.userId, table.deletedAt),
+  index("idx_storybooks_public").on(table.isPublic, table.createdAt),
 ]);
 
 export const insertStorybookSchema = createInsertSchema(storybooks).omit({
@@ -65,6 +69,9 @@ export const insertStorybookSchema = createInsertSchema(storybooks).omit({
   createdAt: true,
   shareUrl: true,
   deletedAt: true,
+  isPublic: true,
+  shareCount: true,
+  viewCount: true,
 });
 
 export const createStorybookSchema = z.object({
@@ -228,3 +235,50 @@ export const insertSamplePromptSchema = createInsertSchema(samplePrompts).omit({
 
 export type SamplePrompt = typeof samplePrompts.$inferSelect;
 export type InsertSamplePrompt = z.infer<typeof insertSamplePromptSchema>;
+
+// Analytics Events - track user actions and engagement
+export const analyticsEvents = pgTable("analytics_events", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").references(() => users.id, { onDelete: 'cascade' }),
+  storybookId: varchar("storybook_id").references(() => storybooks.id, { onDelete: 'cascade' }),
+  eventType: varchar("event_type").notNull(),
+  eventData: jsonb("event_data"),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("idx_analytics_events_user").on(table.userId),
+  index("idx_analytics_events_type").on(table.eventType),
+  index("idx_analytics_events_storybook").on(table.storybookId),
+  index("idx_analytics_events_created").on(table.createdAt),
+]);
+
+export const insertAnalyticsEventSchema = createInsertSchema(analyticsEvents).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type AnalyticsEvent = typeof analyticsEvents.$inferSelect;
+export type InsertAnalyticsEvent = z.infer<typeof insertAnalyticsEventSchema>;
+
+// Story Ratings - user feedback and ratings
+export const storyRatings = pgTable("story_ratings", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  storybookId: varchar("storybook_id").notNull().references(() => storybooks.id, { onDelete: 'cascade' }),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
+  rating: numeric("rating").notNull(),
+  feedback: text("feedback"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("idx_story_ratings_storybook").on(table.storybookId),
+  index("idx_story_ratings_user").on(table.userId),
+  unique().on(table.storybookId, table.userId),
+]);
+
+export const insertStoryRatingSchema = createInsertSchema(storyRatings).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type StoryRating = typeof storyRatings.$inferSelect;
+export type InsertStoryRating = z.infer<typeof insertStoryRatingSchema>;
