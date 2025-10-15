@@ -25,7 +25,7 @@ type SettingsForm = z.infer<typeof settingsSchema>;
 export default function AdminSettings() {
   const { toast } = useToast();
 
-  const { data: settings, isLoading } = useQuery<SiteSetting[]>({
+  const { data: settings, isLoading, error } = useQuery<SiteSetting[]>({
     queryKey: ["/api/admin/settings"],
   });
 
@@ -98,6 +98,13 @@ export default function AdminSettings() {
                   <Skeleton className="h-20 bg-slate-800" />
                   <Skeleton className="h-20 bg-slate-800" />
                   <Skeleton className="h-20 bg-slate-800" />
+                </div>
+              ) : error ? (
+                <div className="text-center py-8">
+                  <p className="text-red-400 mb-4">Failed to load settings: {error instanceof Error ? error.message : 'Unknown error'}</p>
+                  <Button onClick={() => queryClient.invalidateQueries({ queryKey: ["/api/admin/settings"] })} variant="outline" className="border-slate-700 text-slate-300">
+                    Retry
+                  </Button>
                 </div>
               ) : (
                 <Form {...form}>

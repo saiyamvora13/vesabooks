@@ -13,6 +13,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useQuery } from "@tanstack/react-query";
 import type { Storybook } from "@shared/schema";
 import { apiRequest } from "@/lib/queryClient";
+import { SEO } from "@/components/SEO";
 
 interface PricedCartItem extends CartItem {
   originalPrice?: number;
@@ -209,6 +210,11 @@ export default function Cart() {
 
   return (
     <div className="min-h-screen bg-background">
+      <SEO 
+        title="Shopping Cart - AI Storybook Builder"
+        description="Review your selected storybooks before checkout. Purchase digital downloads or print copies of your AI-generated children's stories."
+        path="/cart"
+      />
       <Navigation />
       
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">

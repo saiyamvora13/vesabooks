@@ -24,6 +24,7 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useState, useEffect } from "react";
 import { addToCart, isInCart, removeFromCart } from "@/lib/cartUtils";
+import { SEO } from "@/components/SEO";
 import { loadStripe } from "@stripe/stripe-js";
 import { Elements, PaymentElement, useStripe, useElements } from "@stripe/react-stripe-js";
 
@@ -506,6 +507,11 @@ export default function Library() {
   if (authLoading) {
     return (
       <div className="min-h-screen bg-background">
+        <SEO 
+          title="My Library - AI Storybook Builder"
+          description="Access your collection of personalized AI-generated children's storybooks. View, share, and download your stories."
+          path="/library"
+        />
         <Navigation />
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
           <div className="flex items-center justify-center h-64">
@@ -522,6 +528,11 @@ export default function Library() {
   if (!isAuthenticated) {
     return (
       <div className="min-h-screen bg-background">
+        <SEO 
+          title="My Library - AI Storybook Builder"
+          description="Access your collection of personalized AI-generated children's storybooks. View, share, and download your stories."
+          path="/library"
+        />
         <Navigation />
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
           <div className="text-center py-20">
@@ -541,6 +552,11 @@ export default function Library() {
 
   return (
     <div className="min-h-screen bg-background">
+      <SEO 
+        title="My Library - AI Storybook Builder"
+        description="Access your collection of personalized AI-generated children's storybooks. View, share, and download your stories."
+        path="/library"
+      />
       <Navigation />
       
       <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-8 py-6 sm:py-8 lg:py-12">

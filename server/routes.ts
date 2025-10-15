@@ -13,9 +13,27 @@ import passport, { normalizeEmail, validateEmail, hashPassword } from "./auth";
 import { isAdmin } from "./adminAuth";
 import Stripe from "stripe";
 import { z } from "zod";
+import rateLimit from "express-rate-limit";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', {
   apiVersion: "2025-09-30.clover",
+});
+
+// Rate limiting configurations for authentication endpoints
+const authRateLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 5, // Limit each IP to 5 requests per windowMs
+  message: 'Too many authentication attempts, please try again later',
+  standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
+  legacyHeaders: false, // Disable the `X-RateLimit-*` headers
+});
+
+const passwordResetRateLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 hour
+  max: 3, // Limit each IP to 3 password reset requests per hour
+  message: 'Too many password reset attempts, please try again later',
+  standardHeaders: true,
+  legacyHeaders: false,
 });
 
 // Price constants - server is the source of truth for pricing
@@ -44,6 +62,60 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Replit Auth: Setup authentication middleware
   await setupAuth(app);
 
+  // Sitemap.xml for SEO
+  app.get('/sitemap.xml', (req, res) => {
+    const baseUrl = req.protocol + '://' + req.get('host');
+    const sitemap = `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url>
+    <loc>${baseUrl}/</loc>
+    <changefreq>daily</changefreq>
+    <priority>1.0</priority>
+  </url>
+  <url>
+    <loc>${baseUrl}/create</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+  <url>
+    <loc>${baseUrl}/login</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.5</priority>
+  </url>
+  <url>
+    <loc>${baseUrl}/signup</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.5</priority>
+  </url>
+  <url>
+    <loc>${baseUrl}/forgot-password</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.3</priority>
+  </url>
+</urlset>`;
+    
+    res.header('Content-Type', 'application/xml');
+    res.send(sitemap);
+  });
+
+  // Robots.txt for SEO
+  app.get('/robots.txt', (req, res) => {
+    const baseUrl = req.protocol + '://' + req.get('host');
+    const robots = `User-agent: *
+Allow: /
+Disallow: /admin
+Disallow: /api/
+Disallow: /library
+Disallow: /cart
+Disallow: /checkout
+Disallow: /purchases
+
+Sitemap: ${baseUrl}/sitemap.xml`;
+    
+    res.header('Content-Type', 'text/plain');
+    res.send(robots);
+  });
+
   // Get authenticated user (or null for anonymous users)
   app.get('/api/auth/user', async (req: any, res) => {
     try {
@@ -65,7 +137,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Traditional Email/Password Authentication Endpoints
 
   // POST /api/auth/signup - Create new user account
-  app.post('/api/auth/signup', async (req, res) => {
+  app.post('/api/auth/signup', authRateLimiter, async (req, res) => {
     try {
       const { email, password, firstName, lastName } = req.body;
 
@@ -122,7 +194,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // POST /api/auth/login - Login with email and password
-  app.post('/api/auth/login', (req, res, next) => {
+  app.post('/api/auth/login', authRateLimiter, (req, res, next) => {
     passport.authenticate('local', (err: any, user: User | false, info: any) => {
       if (err) {
         console.error('Login error:', err);
@@ -178,7 +250,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // POST /api/auth/forgot-password - Request password reset
-  app.post('/api/auth/forgot-password', async (req, res) => {
+  app.post('/api/auth/forgot-password', passwordResetRateLimiter, async (req, res) => {
     try {
       const { email } = req.body;
 
@@ -317,7 +389,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Admin API Routes
 
   // POST /api/admin/login - Admin login
-  app.post('/api/admin/login', (req, res, next) => {
+  app.post('/api/admin/login', authRateLimiter, (req, res, next) => {
     passport.authenticate('admin-local', (err: any, admin: AdminUser | false, info: any) => {
       if (err) {
         console.error('Admin login error:', err);

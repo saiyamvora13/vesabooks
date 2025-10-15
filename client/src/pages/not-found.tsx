@@ -1,9 +1,15 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { AlertCircle } from "lucide-react";
+import { SEO } from "@/components/SEO";
 
 export default function NotFound() {
   return (
     <div className="min-h-screen w-full flex items-center justify-center bg-gray-50">
+      <SEO 
+        title="Page Not Found - AI Storybook Builder"
+        description="The page you're looking for doesn't exist. Return to the AI Storybook Builder homepage to create magical children's stories."
+        path="/404"
+      />
       <Card className="w-full max-w-md mx-4">
         <CardContent className="pt-6">
           <div className="flex mb-4 gap-2">

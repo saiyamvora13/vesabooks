@@ -19,7 +19,7 @@ export default function FeaturedContent() {
   const { toast } = useToast();
   const [selectorOpen, setSelectorOpen] = useState(false);
 
-  const { data: featuredList, isLoading: featuredLoading } = useQuery<FeaturedStorybook[]>({
+  const { data: featuredList, isLoading: featuredLoading, error: featuredError } = useQuery<FeaturedStorybook[]>({
     queryKey: ["/api/admin/featured"],
   });
 
@@ -144,6 +144,13 @@ export default function FeaturedContent() {
                   {[...Array(3)].map((_, i) => (
                     <Skeleton key={i} className="h-24 bg-slate-800" />
                   ))}
+                </div>
+              ) : featuredError ? (
+                <div className="text-center py-8">
+                  <p className="text-red-400 mb-4">Failed to load featured content: {featuredError instanceof Error ? featuredError.message : 'Unknown error'}</p>
+                  <Button onClick={() => queryClient.invalidateQueries({ queryKey: ["/api/admin/featured"] })} variant="outline" className="border-slate-700 text-slate-300">
+                    Retry
+                  </Button>
                 </div>
               ) : featuredWithStorybooks.length === 0 ? (
                 <div className="text-center py-12">

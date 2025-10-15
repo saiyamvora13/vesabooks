@@ -17,6 +17,7 @@ import Navigation from "@/components/navigation";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { isUnauthorizedError } from "@/lib/authUtils";
+import { SEO } from "@/components/SEO";
 import {
   Dialog,
   DialogContent,
@@ -144,6 +145,11 @@ export default function Create() {
   if (isGenerating && sessionId) {
     return (
       <div className="min-h-screen bg-background">
+        <SEO 
+          title="Creating Your Storybook - AI Storybook Builder"
+          description="Your personalized AI-generated storybook is being created with custom illustrations and characters."
+          path="/create"
+        />
         <Navigation />
         <div className="py-20">
           <ProgressTracker 
@@ -160,6 +166,11 @@ export default function Create() {
 
   return (
     <div className="min-h-screen bg-background">
+      <SEO 
+        title="Create Your Story - AI Storybook Builder"
+        description="Create magical, personalized children's storybooks with AI. Describe your story and get beautiful custom illustrations with consistent characters."
+        path="/create"
+      />
       <Navigation />
       
       <section className="py-8 sm:py-12 lg:py-20">

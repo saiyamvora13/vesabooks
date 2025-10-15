@@ -4,6 +4,8 @@ import AdminLayout from "@/components/admin/AdminLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Button } from "@/components/ui/button";
+import { queryClient } from "@/lib/queryClient";
 import { AdminAuditLog, AdminUser } from "@shared/schema";
 import { FileText, User } from "lucide-react";
 import { format } from "date-fns";
@@ -13,7 +15,7 @@ interface AuditLogWithAdmin extends AdminAuditLog {
 }
 
 export default function AuditLogs() {
-  const { data: logs, isLoading } = useQuery<AdminAuditLog[]>({
+  const { data: logs, isLoading, error } = useQuery<AdminAuditLog[]>({
     queryKey: ["/api/admin/audit-logs"],
   });
 
@@ -52,6 +54,13 @@ export default function AuditLogs() {
                   {[...Array(5)].map((_, i) => (
                     <Skeleton key={i} className="h-16 bg-slate-800" />
                   ))}
+                </div>
+              ) : error ? (
+                <div className="text-center py-8">
+                  <p className="text-red-400 mb-4">Failed to load audit logs: {error instanceof Error ? error.message : 'Unknown error'}</p>
+                  <Button onClick={() => queryClient.invalidateQueries({ queryKey: ["/api/admin/audit-logs"] })} variant="outline" className="border-slate-700 text-slate-300">
+                    Retry
+                  </Button>
                 </div>
               ) : logsWithAdmins.length === 0 ? (
                 <div className="text-center py-12">

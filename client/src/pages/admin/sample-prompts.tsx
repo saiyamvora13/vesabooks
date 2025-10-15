@@ -33,7 +33,7 @@ export default function AdminSamplePrompts() {
     displayOrder: '0',
   });
 
-  const { data: prompts, isLoading } = useQuery<SamplePrompt[]>({
+  const { data: prompts, isLoading, error } = useQuery<SamplePrompt[]>({
     queryKey: ["/api/admin/sample-prompts"],
   });
 
@@ -205,6 +205,13 @@ export default function AdminSamplePrompts() {
                   {[...Array(3)].map((_, i) => (
                     <Skeleton key={i} className="h-24 bg-slate-800" />
                   ))}
+                </div>
+              ) : error ? (
+                <div className="text-center py-8">
+                  <p className="text-red-400 mb-4">Failed to load sample prompts: {error instanceof Error ? error.message : 'Unknown error'}</p>
+                  <Button onClick={() => queryClient.invalidateQueries({ queryKey: ["/api/admin/sample-prompts"] })} variant="outline" className="border-slate-700 text-slate-300">
+                    Retry
+                  </Button>
                 </div>
               ) : !sortedPrompts || sortedPrompts.length === 0 ? (
                 <div className="text-center py-12">

@@ -4,7 +4,7 @@ import { Strategy as LocalStrategy } from 'passport-local';
 import { storage } from './storage';
 import type { User, UpsertUser } from '@shared/schema';
 
-const SALT_ROUNDS = 10;
+const SALT_ROUNDS = 12;
 const MIN_PASSWORD_LENGTH = 8;
 
 export function normalizeEmail(email: string): string {

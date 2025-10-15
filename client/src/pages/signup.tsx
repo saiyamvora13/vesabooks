@@ -12,6 +12,7 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { Link } from "wouter";
 import { useTranslation } from 'react-i18next';
+import { SEO } from "@/components/SEO";
 
 export default function Signup() {
   const { t, i18n } = useTranslation();
@@ -66,6 +67,11 @@ export default function Signup() {
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center px-4">
+      <SEO 
+        title="Sign Up - AI Storybook Builder"
+        description="Create your free account to start making magical, personalized children's storybooks with AI-generated illustrations."
+        path="/signup"
+      />
       <Card className="w-full max-w-md rounded-2xl shadow-xl">
         <CardContent className="p-8">
           <div className="text-center mb-8">
