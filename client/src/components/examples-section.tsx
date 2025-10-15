@@ -47,7 +47,8 @@ export default function ExamplesSection() {
               <img 
                 src={book.image} 
                 alt={t('home.examples.imageAlt')} 
-                className="w-full h-48 object-cover" 
+                className="w-full h-48 object-cover"
+                loading="lazy"
               />
               <CardContent className="p-6">
                 <h3 className="text-xl font-bold mb-2">{book.title}</h3>

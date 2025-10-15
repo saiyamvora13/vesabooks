@@ -92,6 +92,7 @@ export default function StorybookSelector({ open, onOpenChange, onSelect }: Stor
                         src={storybook.coverImageUrl}
                         alt={storybook.title}
                         className="w-full h-40 object-cover"
+                        loading="lazy"
                       />
                     ) : (
                       <div className="w-full h-40 bg-slate-800 flex items-center justify-center">

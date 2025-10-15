@@ -43,6 +43,7 @@ const Cover = ({ title, author, coverImageUrl }: { title: string; author: string
         src={coverImageUrl} 
         alt="Story cover" 
         className="absolute inset-0 w-full h-full object-cover" 
+        loading="lazy"
       />
     )}
     {/* Top gradient overlay for title */}
@@ -68,6 +69,7 @@ const ImagePage = ({ page, pageNum }: { page: StoryPage; pageNum: number }) => (
         src={page.imageUrl} 
         alt={`Illustration for page ${pageNum}`} 
         className="w-full h-full object-cover" 
+        loading="lazy"
       />
     ) : (
       <div className="w-full h-full flex items-center justify-center p-4 bg-slate-100 dark:bg-slate-800">
@@ -123,6 +125,7 @@ const EndPage = ({ totalPages, backCoverImageUrl }: { totalPages: number; backCo
           src={backCoverImageUrl} 
           alt="Story back cover" 
           className="w-full h-full object-cover" 
+          loading="lazy"
         />
         {totalPages > 0 && (
           <span className="absolute bottom-4 left-8 text-sm font-serif text-slate-600 bg-white/80 px-2 py-1 rounded">

@@ -64,6 +64,7 @@ export function Flipbook({ pages, title, className, "data-testid": testId }: Fli
             src={pages[currentPage]?.imageUrl}
             alt={`${title} page ${currentPage + 1}`}
             className="max-h-full max-w-full object-contain rounded-xl shadow-2xl"
+            loading="lazy"
             data-testid={`img-page-${currentPage + 1}`}
           />
         </div>
@@ -134,6 +135,7 @@ export function Flipbook({ pages, title, className, "data-testid": testId }: Fli
                 src={page.imageUrl}
                 alt={`Page ${page.pageNumber}`}
                 className="w-full h-full object-cover"
+                loading="lazy"
               />
             </Button>
           ))}

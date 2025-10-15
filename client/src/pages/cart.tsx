@@ -41,6 +41,7 @@ function CartItemCard({ item, onRemove }: { item: PricedCartItem; onRemove: (sto
               alt={`${item.title} cover`}
               className="w-20 h-28 object-cover rounded-lg flex-shrink-0"
               data-testid={`img-cover-${item.storybookId}-${item.type}`}
+              loading="lazy"
             />
           ) : (
             <div className="w-20 h-28 bg-muted rounded-lg flex-shrink-0 flex items-center justify-center">

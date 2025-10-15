@@ -117,6 +117,7 @@ export function FileUpload({
                 src={URL.createObjectURL(file)}
                 alt={`Preview ${index + 1}`}
                 className="w-full h-40 object-cover rounded-xl border-2 border-border"
+                loading="lazy"
               />
               <Button
                 onClick={(e) => {

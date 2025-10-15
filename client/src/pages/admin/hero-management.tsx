@@ -108,6 +108,7 @@ export default function HeroManagement() {
                               src={storybook.coverImageUrl}
                               alt={storybook.title}
                               className="w-full h-64 object-cover rounded-lg"
+                              loading="lazy"
                             />
                           ) : (
                             <div className="w-full h-64 bg-slate-800 rounded-lg flex items-center justify-center">

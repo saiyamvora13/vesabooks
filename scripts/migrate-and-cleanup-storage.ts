@@ -1,19 +1,9 @@
 // Script to migrate PNG images to JPG and cleanup orphaned files
 import { ObjectStorageService } from "../server/objectStorage";
 import { storage } from "../server/storage";
+import { optimizeImageForWeb } from "../server/utils/imageOptimization";
 import * as fs from "fs";
 import * as path from "path";
-import sharp from "sharp";
-
-async function optimizeImageForWeb(imageBuffer: Buffer): Promise<Buffer> {
-  return sharp(imageBuffer)
-    .resize(1200, 1200, {
-      fit: 'inside',
-      withoutEnlargement: true
-    })
-    .jpeg({ quality: 90 })
-    .toBuffer();
-}
 
 async function runStorageAnalysis() {
   console.log("\n=== STORAGE ANALYSIS ===\n");

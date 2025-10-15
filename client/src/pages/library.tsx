@@ -627,6 +627,7 @@ export default function Library() {
                         alt={storybook.title}
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                         data-testid={`img-cover-${storybook.id}`}
+                        loading="lazy"
                       />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center">

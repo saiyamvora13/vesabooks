@@ -191,6 +191,7 @@ export default function FeaturedContent() {
                           src={item.storybook.coverImageUrl}
                           alt={item.storybook.title}
                           className="w-16 h-20 object-cover rounded"
+                          loading="lazy"
                         />
                       ) : (
                         <div className="w-16 h-20 bg-slate-800 rounded flex items-center justify-center">

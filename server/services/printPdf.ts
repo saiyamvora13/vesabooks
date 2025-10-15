@@ -53,23 +53,8 @@ export async function generatePrintReadyPDF(storybook: Storybook): Promise<Buffe
   const font = await pdfDoc.embedFont(cachedComicNeueFontBytes);
   const boldFont = await pdfDoc.embedFont(StandardFonts.HelveticaBold); // Keep bold for titles
   
-  // Helper function to optimize image for PDF (reduce file size without quality loss)
-  async function optimizeImageForPDF(imageBuffer: Buffer): Promise<Buffer> {
-    // Optimal print resolution: 300 DPI for 6" × 9" page = 1800 × 2700 pixels
-    // Convert to JPEG at 90% quality for significant size reduction with no visible quality loss
-    // Flatten transparency with white background (standard for print)
-    return await sharp(imageBuffer)
-      .resize(1800, 2700, { 
-        fit: 'inside', // Maintain aspect ratio, fit within dimensions
-        withoutEnlargement: true // Don't upscale smaller images
-      })
-      .flatten({ background: '#ffffff' }) // Replace transparency with white (print standard)
-      .jpeg({ 
-        quality: 90, // High quality (visually identical to original)
-        mozjpeg: true // Use mozjpeg for better compression
-      })
-      .toBuffer();
-  }
+  // Import from shared utility
+  const { optimizeImageForPDF } = await import('../utils/imageOptimization');
   
   // Helper function to fetch and embed image
   async function embedImage(imageUrl: string): Promise<any> {

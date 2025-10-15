@@ -151,6 +151,7 @@ export default function HeroSection() {
                     src={exampleBooks[0].pages[0].imageUrl} 
                     alt={exampleBooks[0].title}
                     className="rounded-2xl sm:rounded-3xl shadow-2xl w-full object-cover aspect-[4/5]" 
+                    loading="lazy"
                   />
                   {/* Top gradient overlay for title */}
                   <div className="absolute top-0 left-0 right-0 h-[25%] bg-gradient-to-b from-black/70 to-transparent rounded-t-2xl sm:rounded-t-3xl"></div>
@@ -173,6 +174,7 @@ export default function HeroSection() {
                       src={exampleBooks[1].pages[0].imageUrl} 
                       alt={exampleBooks[1].title}
                       className="rounded-xl shadow-xl w-full object-cover aspect-[4/5]" 
+                      loading="lazy"
                     />
                   </div>
                 )}
@@ -184,6 +186,7 @@ export default function HeroSection() {
                       src={exampleBooks[2].pages[0].imageUrl} 
                       alt={exampleBooks[2].title}
                       className="rounded-xl shadow-xl w-full object-cover aspect-[4/5]" 
+                      loading="lazy"
                     />
                   </div>
                 )}

@@ -60,23 +60,9 @@ function extractArtStyle(prompt: string): string | undefined {
   return "custom";
 }
 
-// Optimize image for web display - reduces file size by ~90% with no visible quality loss
-export async function optimizeImageForWeb(imageBuffer: Buffer): Promise<Buffer> {
-  // Optimal web resolution: resize to max 1200px width while maintaining aspect ratio
-  // Convert to JPEG at 90% quality for significant size reduction (2-5MB → 200-500KB)
-  // Flatten transparency with white background (standard for web)
-  return await sharp(imageBuffer)
-    .resize(1200, null, { 
-      fit: 'inside', // Maintain aspect ratio, fit within width
-      withoutEnlargement: true // Don't upscale smaller images
-    })
-    .flatten({ background: '#ffffff' }) // Replace transparency with white
-    .jpeg({ 
-      quality: 90, // High quality (visually identical to original)
-      mozjpeg: true // Use mozjpeg for better compression
-    })
-    .toBuffer();
-}
+// Import and re-export from shared utility
+import { optimizeImageForWeb } from '../utils/imageOptimization';
+export { optimizeImageForWeb };
 
 export async function generateStoryFromPrompt(
   prompt: string,
