@@ -126,21 +126,30 @@ export async function generatePrintReadyPDF(storybook: Storybook): Promise<Buffe
       });
     }
     
-    // Add title overlay at bottom (within safe area from trim)
-    const titleBoxHeight = 90;
-    const titleBoxY = BLEED + SAFE_MARGIN; // Position box within safe area from trim
-    
-    // Semi-transparent white background for title
+    // Add transparent overlays at top and bottom
+    // Top gradient overlay for title
+    const topOverlayHeight = 120;
     coverPage.drawRectangle({
       x: 0,
-      y: titleBoxY - 10, // Extend slightly for visual effect
+      y: PAGE_HEIGHT - topOverlayHeight, // Top of page (PDF Y-axis is bottom-up)
       width: PAGE_WIDTH,
-      height: titleBoxHeight,
-      color: rgb(1, 1, 1),
-      opacity: 0.95,
+      height: topOverlayHeight,
+      color: rgb(0, 0, 0),
+      opacity: 0.6, // Semi-transparent dark overlay
     });
     
-    // Draw title text
+    // Bottom gradient overlay for author
+    const bottomOverlayHeight = 80;
+    coverPage.drawRectangle({
+      x: 0,
+      y: 0, // Bottom of page
+      width: PAGE_WIDTH,
+      height: bottomOverlayHeight,
+      color: rgb(0, 0, 0),
+      opacity: 0.6, // Semi-transparent dark overlay
+    });
+    
+    // Draw title text at top with white color
     const titleFontSize = 24;
     const titleText = storybook.title;
     const titleWidth = boldFont.widthOfTextAtSize(titleText, titleFontSize);
@@ -153,20 +162,20 @@ export async function generatePrintReadyPDF(storybook: Storybook): Promise<Buffe
     
     coverPage.drawText(titleText, {
       x: PAGE_WIDTH / 2 - boldFont.widthOfTextAtSize(titleText, finalTitleSize) / 2,
-      y: titleBoxY + 50, // Position within title box
+      y: PAGE_HEIGHT - (topOverlayHeight / 2) - 10, // Center in top overlay
       size: finalTitleSize,
       font: boldFont,
-      color: rgb(0.12, 0.16, 0.23), // Dark color
+      color: rgb(1, 1, 1), // White color for contrast
     });
     
-    // Draw author text
+    // Draw author text at bottom with white color
     const authorText = `By ${storybook.author || 'AI Storyteller'}`;
     coverPage.drawText(authorText, {
       x: PAGE_WIDTH / 2 - font.widthOfTextAtSize(authorText, 12) / 2,
-      y: titleBoxY + 20, // Position within safe area
+      y: bottomOverlayHeight / 2 - 6, // Center in bottom overlay
       size: 12,
       font: font,
-      color: rgb(0.28, 0.33, 0.41),
+      color: rgb(1, 1, 1), // White color for contrast
     });
   } else {
     // Text-only cover page
