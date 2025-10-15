@@ -148,20 +148,10 @@ export default function View() {
           )
         );
         
-        // Load sound effects (ion-sound library from cdnjs)
-        const soundEffects: Record<string, string> = {
-          'page-turn': 'https://cdnjs.cloudflare.com/ajax/libs/ion-sound/3.0.7/sounds/bell_ring.mp3',
-          'whoosh': 'https://cdnjs.cloudflare.com/ajax/libs/ion-sound/3.0.7/sounds/water_droplet.mp3',
-          'sparkle': 'https://cdnjs.cloudflare.com/ajax/libs/ion-sound/3.0.7/sounds/bell_ring.mp3',
-        };
-
-        await Promise.all(
-          Object.entries(soundEffects).map(([effect, url]) => 
-            audioManager.loadSoundEffect(effect, url).catch(err => {
-              console.warn(`Could not load ${effect} sound:`, err);
-            })
-          )
-        );
+        // Load sound effects (synthetic page-turn sound)
+        // Generate realistic page-turn sound using Web Audio API
+        // This must succeed for audio to be marked as initialized
+        await audioManager.loadSoundEffect('page-turn');
         
         if (isSubscribed) {
           setAudioInitialized(true);
@@ -169,6 +159,8 @@ export default function View() {
         }
       } catch (error) {
         console.error('Failed to initialize audio:', error);
+        // Don't set audioInitialized if there was an error
+        // The audio controls will remain disabled
       }
     };
 
