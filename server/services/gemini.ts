@@ -282,14 +282,31 @@ Return JSON following the schema with exactly ${pagesPerBook} pages.`;
                   ? "The narrative text for this page (100-150 words). Ensure it flows naturally from the previous page and advances the story arc. Match the tone specified in the user's prompt."
                   : "The narrative text for this page (100-150 words). Ensure it flows naturally from the previous page and advances the story arc. Use clear, engaging language for children aged 5-7.",
               },
+              main_action: {
+                type: Type.STRING,
+                description: "The PRIMARY action happening in this page's text. Be very specific about what the character(s) are doing. Examples: 'discovering a glowing time machine', 'running through a forest chasing butterflies', 'meeting Abraham Lincoln in his office'. This should be a specific action verb and what they're doing.",
+              },
+              setting: {
+                type: Type.STRING,
+                description: "The SPECIFIC location where this scene takes place. Include descriptive details about the environment. Examples: 'a dusty basement with cobwebs and old furniture', 'busy Victorian street with horse carriages and gas lamps', 'Lincoln's presidential office with tall windows and a large wooden desk'. Be as detailed as possible.",
+              },
+              key_objects: {
+                type: Type.ARRAY,
+                items: { type: Type.STRING },
+                description: "List of IMPORTANT objects, items, or secondary characters that appear in this scene and should be visible in the illustration. Examples: ['ornate brass time machine with swirling energy', 'old yellowed paper with mysterious writing', 'Abraham Lincoln in his black suit', 'glowing blue crystal', 'wooden telescope']. Include descriptive details for each object.",
+              },
+              emotional_tone: {
+                type: Type.STRING,
+                description: "The emotional context or atmosphere of this scene. Examples: 'excited discovery', 'worried confusion', 'joyful celebration', 'tense anticipation', 'peaceful contentment'. This helps set the mood of the illustration.",
+              },
               imagePrompt: {
                 type: Type.STRING,
                 description: hasCustomStyle
-                  ? "A detailed image generation prompt. Describe the specific scene, action, setting, and any other characters/objects. Maintain the style requested by the user. IMPORTANT: The character's appearance and default clothing will be added automatically. Only specify different clothing if the scene REQUIRES it (e.g., 'wearing pajamas' for bedtime, 'wearing a swimsuit' at the pool, 'wearing a raincoat' in the rain). Do NOT mention the character's physical features or default clothing - they will be prepended automatically."
-                  : "A detailed image generation prompt. Describe the specific scene, action, setting, background, and any other characters/objects. Use vibrant, whimsical children's book illustration style. IMPORTANT: The character's appearance and default clothing will be added automatically. Only specify different clothing if the scene REQUIRES it (e.g., 'wearing pajamas' for bedtime, 'wearing a swimsuit' at the pool, 'wearing a raincoat' in the rain). Do NOT mention the character's physical features or default clothing - they will be prepended automatically.",
+                  ? "AUTOMATICALLY CONSTRUCTED from the structured metadata. Format: '[main_action] in [setting], featuring [key_objects]. [emotional_tone] atmosphere.' DO NOT mention character appearance or default clothing - they will be prepended. Only specify different clothing if the scene REQUIRES it (e.g., 'wearing pajamas' for bedtime)."
+                  : "AUTOMATICALLY CONSTRUCTED from the structured metadata. Format: '[main_action] in [setting], featuring [key_objects]. [emotional_tone] atmosphere.' The children's book illustration style will be added. DO NOT mention character appearance or default clothing - they will be prepended. Only specify different clothing if the scene REQUIRES it.",
               },
             },
-            required: ["pageNumber", "text", "imagePrompt"],
+            required: ["pageNumber", "text", "main_action", "setting", "key_objects", "emotional_tone", "imagePrompt"],
           },
         },
       },
@@ -319,13 +336,26 @@ Return JSON following the schema with exactly ${pagesPerBook} pages.`;
     // Extract and store the art style from the original user prompt for consistency across all images
     parsedJson.artStyle = extractArtStyle(prompt);
 
-    // Analyze mood for each page
+    // Analyze mood for each page and log structured scene details
     if (parsedJson.pages && Array.isArray(parsedJson.pages)) {
+      console.log(`\n[Story Generation] Processing ${parsedJson.pages.length} pages with structured scene extraction:`);
+      
       for (const page of parsedJson.pages) {
         if (page.text) {
           page.mood = await detectPageMood(page.text);
+          
+          // Log the extracted scene metadata for debugging
+          console.log(`\n[Page ${page.pageNumber}] Scene Details:`);
+          console.log(`  - Main Action: ${page.main_action}`);
+          console.log(`  - Setting: ${page.setting}`);
+          console.log(`  - Key Objects: ${page.key_objects ? page.key_objects.join(', ') : 'none'}`);
+          console.log(`  - Emotional Tone: ${page.emotional_tone}`);
+          console.log(`  - Audio Mood: ${page.mood}`);
+          console.log(`  - Final Image Prompt: ${page.imagePrompt.substring(0, 200)}...`);
         }
       }
+      
+      console.log(`\n[Story Generation] All pages processed with structured scene metadata.\n`);
     }
 
     return parsedJson as GeneratedStory;
@@ -439,7 +469,7 @@ export async function regenerateSinglePage(
     storyArc: string;
   },
   pageNumber: number
-): Promise<{ text: string; imagePrompt: string }> {
+): Promise<{ text: string; imagePrompt: string; main_action?: string; setting?: string; key_objects?: string[]; emotional_tone?: string }> {
   try {
     const totalPages = storybook.pages.length;
     
@@ -462,6 +492,7 @@ CRITICAL REQUIREMENTS:
 1. MAINTAIN STORY CONTINUITY - The regenerated page MUST fit naturally between the surrounding pages
 2. CHARACTER CONSISTENCY - Use the existing character description and default clothing (they will be prepended to image prompts automatically)
 3. PRESERVE STORY ARC - Follow the established story arc: ${storybook.storyArc}
+4. STRUCTURED SCENE EXTRACTION - Extract specific scene metadata to ensure illustrations accurately depict the text
 
 CONTEXT:
 - Total pages: ${totalPages}
@@ -470,11 +501,16 @@ CONTEXT:
 INSTRUCTIONS:
 - Generate NEW content that flows naturally from the previous page (if exists) to the next page (if exists)
 - The text should be 100-150 words, appropriate for the story's tone
-- For the imagePrompt: Describe ONLY the scene, action, and setting
+- Extract structured metadata about the scene:
+  * main_action: The PRIMARY action happening (e.g., "discovering a time machine", "meeting Abraham Lincoln")
+  * setting: The SPECIFIC location with details (e.g., "dusty basement with cobwebs")
+  * key_objects: Important objects/characters that should be visible (e.g., ["time machine", "Abraham Lincoln"])
+  * emotional_tone: The mood/atmosphere (e.g., "excited discovery", "tense anticipation")
+- Build imagePrompt by combining: "[main_action] in [setting], featuring [key_objects]. [emotional_tone] atmosphere."
 - Do NOT describe the character's physical features or default clothing in imagePrompt - they will be added automatically
-- Only specify different clothing if the scene REQUIRES it (e.g., "wearing pajamas" for bedtime, "wearing a swimsuit" at the pool)
+- Only specify different clothing if the scene REQUIRES it (e.g., "wearing pajamas" for bedtime)
 
-Return JSON with "text" and "imagePrompt" fields.`;
+Return JSON with structured scene metadata and constructed imagePrompt.`;
 
     const pageSchema = {
       type: Type.OBJECT,
@@ -483,12 +519,29 @@ Return JSON with "text" and "imagePrompt" fields.`;
           type: Type.STRING,
           description: `The narrative text for page ${pageNumber} (100-150 words). Must flow naturally from the previous page and lead smoothly to the next page if they exist.`,
         },
+        main_action: {
+          type: Type.STRING,
+          description: "The PRIMARY action happening in this page's text. Be specific about what the character(s) are doing. Examples: 'discovering a glowing time machine', 'meeting Abraham Lincoln in his office'.",
+        },
+        setting: {
+          type: Type.STRING,
+          description: "The SPECIFIC location where this scene takes place with descriptive details. Examples: 'dusty basement with cobwebs and old furniture', 'Lincoln's presidential office with tall windows'.",
+        },
+        key_objects: {
+          type: Type.ARRAY,
+          items: { type: Type.STRING },
+          description: "List of IMPORTANT objects, items, or secondary characters that should be visible in the illustration. Include descriptive details for each.",
+        },
+        emotional_tone: {
+          type: Type.STRING,
+          description: "The emotional context or atmosphere of this scene. Examples: 'excited discovery', 'worried confusion', 'peaceful contentment'.",
+        },
         imagePrompt: {
           type: Type.STRING,
-          description: "A detailed image generation prompt. Describe the specific scene, action, setting, and any other characters/objects. The character's appearance and default clothing will be added automatically. Only specify different clothing if the scene REQUIRES it.",
+          description: "CONSTRUCTED from the metadata: '[main_action] in [setting], featuring [key_objects]. [emotional_tone] atmosphere.' Character appearance will be added automatically.",
         },
       },
-      required: ["text", "imagePrompt"],
+      required: ["text", "main_action", "setting", "key_objects", "emotional_tone", "imagePrompt"],
     };
 
     const response = await ai.models.generateContent({
@@ -509,6 +562,16 @@ Return JSON with "text" and "imagePrompt" fields.`;
     }
 
     const parsedJson = JSON.parse(rawJson);
+    
+    // Log the structured scene metadata for debugging
+    console.log(`\n[Page Regeneration] Page ${pageNumber} Scene Details:`);
+    console.log(`  - Main Action: ${parsedJson.main_action}`);
+    console.log(`  - Setting: ${parsedJson.setting}`);
+    console.log(`  - Key Objects: ${parsedJson.key_objects ? parsedJson.key_objects.join(', ') : 'none'}`);
+    console.log(`  - Emotional Tone: ${parsedJson.emotional_tone}`);
+    console.log(`  - Final Image Prompt: ${parsedJson.imagePrompt.substring(0, 200)}...`);
+    console.log(`[Page Regeneration] Structured scene metadata extracted successfully.\n`);
+    
     return parsedJson;
   } catch (error) {
     throw new Error(`Failed to regenerate page: ${error}`);
