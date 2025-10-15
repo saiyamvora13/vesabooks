@@ -2208,10 +2208,12 @@ async function generateStorybookAsync(
     const coverImageFileName = `${sessionId}_cover.jpg`;
     const coverImagePath = path.join(generatedDir, coverImageFileName);
     
-    // IMPORTANT: Programmatically prepend character description to ensure consistency
+    // IMPORTANT: Programmatically prepend character description AND default clothing to ensure consistency
     const characterDesc = generatedStory.mainCharacterDescription?.trim() || '';
-    const coverPromptWithCharacter = characterDesc 
-      ? `${characterDesc}. ${generatedStory.coverImagePrompt}`
+    const defaultClothing = generatedStory.defaultClothing?.trim() || '';
+    const fullCharacterDesc = [characterDesc, defaultClothing].filter(Boolean).join(', ');
+    const coverPromptWithCharacter = fullCharacterDesc 
+      ? `${fullCharacterDesc}. ${generatedStory.coverImagePrompt}`
       : generatedStory.coverImagePrompt;
     
     // Extract art style for consistency across all images
@@ -2232,9 +2234,10 @@ async function generateStorybookAsync(
       const imagePath = path.join(generatedDir, imageFileName);
 
       // Generate illustration for this page using the COVER IMAGE as reference for character consistency
-      // IMPORTANT: Programmatically prepend character description to ensure consistency
-      const pagePromptWithCharacter = characterDesc 
-        ? `${characterDesc}. ${page.imagePrompt}`
+      // IMPORTANT: Programmatically prepend character description with default clothing to ensure consistency
+      // Only override clothing if the imagePrompt specifically mentions different clothing
+      const pagePromptWithCharacter = fullCharacterDesc 
+        ? `${fullCharacterDesc}. ${page.imagePrompt}`
         : page.imagePrompt;
       await generateIllustration(pagePromptWithCharacter, imagePath, coverImagePath, artStyle);
 
@@ -2276,9 +2279,9 @@ async function generateStorybookAsync(
     // Create back cover prompt that complements the front cover
     const backCoverBasePrompt = `Create a back cover illustration for a children's storybook that complements the front cover. Show the character in a different scene that hints at the adventure without spoiling it. Maintain the same artistic style and color palette as the front cover.`;
     
-    // IMPORTANT: Programmatically prepend character description to ensure consistency
-    const backCoverPromptWithCharacter = characterDesc 
-      ? `${characterDesc}. ${backCoverBasePrompt}`
+    // IMPORTANT: Programmatically prepend character description with default clothing to ensure consistency
+    const backCoverPromptWithCharacter = fullCharacterDesc 
+      ? `${fullCharacterDesc}. ${backCoverBasePrompt}`
       : backCoverBasePrompt;
     await generateIllustration(backCoverPromptWithCharacter, backCoverImagePath, coverImagePath, artStyle);
     
