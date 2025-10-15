@@ -57,11 +57,11 @@ export async function generateEpub(storybook: Storybook): Promise<Buffer> {
     });
   }
 
-  // Check if we need a blank page before back cover to ensure it appears on correct side
-  // Back cover should ideally be on a left page (even page number in 0-indexed)
+  // Only add alignment blank page if needed for back cover
+  // Back cover should be on a left page (even index in our 0-based array)
   const currentPageCount = content.length;
   if (storybook.backCoverImageUrl && currentPageCount % 2 === 1) {
-    // Add blank page to push back cover to left side
+    // Current count is odd, so next page would be on right - add blank to push back cover to left
     content.push({
       content: `<div class="blank-page"></div>`,
       excludeFromToc: true,
