@@ -2038,22 +2038,53 @@ Sitemap: ${baseUrl}/sitemap.xml`;
         : '';
       const fullImagePrompt = characterPrefix + newPageContent.imagePrompt;
 
+      // Log the full prompt for debugging
+      console.log(`[Page Regeneration] Page ${pageNumber} full prompt:`, fullImagePrompt);
+      console.log(`[Page Regeneration] Art style:`, storybook.artStyle || 'default');
+
       // Generate image to temp location (generateIllustration already optimizes to JPG)
       const filename = `${randomUUID()}_page_${pageNumber}.jpg`;
       const tempImagePath = path.join("uploads", filename);
       
+      // Download cover image to use as reference for character consistency
+      let coverImagePath: string | undefined;
+      if (storybook.coverImageUrl) {
+        try {
+          // Create a temp path for the cover image
+          const coverFilename = `${randomUUID()}_cover_ref.jpg`;
+          coverImagePath = path.join("uploads", coverFilename);
+          
+          // Download the cover image from object storage
+          const coverImageResponse = await fetch(`http://localhost:5000${storybook.coverImageUrl}`);
+          if (coverImageResponse.ok) {
+            const coverImageBuffer = await coverImageResponse.arrayBuffer();
+            fs.writeFileSync(coverImagePath, Buffer.from(coverImageBuffer));
+            console.log(`[Page Regeneration] Using cover image as reference for consistency`);
+          } else {
+            console.warn(`[Page Regeneration] Could not download cover image: ${coverImageResponse.status}`);
+            coverImagePath = undefined;
+          }
+        } catch (error) {
+          console.warn(`[Page Regeneration] Error downloading cover image:`, error);
+          coverImagePath = undefined;
+        }
+      }
+      
       // Use art style from storybook if available
       const artStyle = storybook.artStyle || undefined;
-      await generateIllustration(fullImagePrompt, tempImagePath, undefined, artStyle);
+      await generateIllustration(fullImagePrompt, tempImagePath, coverImagePath, artStyle);
 
       // Upload to object storage (uploadFile adds date-based path automatically)
       const imageUrl = await objectStorage.uploadFile(tempImagePath, filename, true, storybook.createdAt || new Date());
 
-      // Clean up temp file
+      // Clean up temp files
       try {
         fs.unlinkSync(tempImagePath);
+        if (coverImagePath && fs.existsSync(coverImagePath)) {
+          fs.unlinkSync(coverImagePath);
+        }
       } catch (err) {
-        console.warn("Failed to delete temp file:", err);
+        console.warn("Failed to delete temp files:", err);
       }
 
       // Update the page in storage
@@ -3032,6 +3063,7 @@ async function generateStorybookAsync(
       mainCharacterDescription: generatedStory.mainCharacterDescription,
       defaultClothing: generatedStory.defaultClothing,
       storyArc: generatedStory.storyArc,
+      artStyle: generatedStory.artStyle,
     });
 
     // Track story completion (non-blocking)
