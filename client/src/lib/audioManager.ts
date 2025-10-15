@@ -54,7 +54,64 @@ class AudioManager {
     }
   }
 
-  async loadTrack(mood: MoodType, url: string): Promise<void> {
+  // Generate synthetic ambient music using Web Audio API oscillators
+  private generateSyntheticTrack(mood: MoodType): AudioBuffer | null {
+    if (!this.audioContext) return null;
+
+    // Define mood-based musical parameters
+    const moodParams: Record<MoodType, { frequencies: number[], duration: number, waveType: OscillatorType }> = {
+      calm: { frequencies: [220, 330, 440], duration: 8, waveType: 'sine' },
+      adventure: { frequencies: [262, 392, 523], duration: 6, waveType: 'triangle' },
+      mystery: { frequencies: [185, 277, 370], duration: 10, waveType: 'sine' },
+      happy: { frequencies: [294, 440, 587], duration: 5, waveType: 'square' },
+      suspense: { frequencies: [165, 247, 330], duration: 12, waveType: 'sawtooth' },
+      dramatic: { frequencies: [196, 294, 392], duration: 7, waveType: 'triangle' },
+    };
+
+    const params = moodParams[mood];
+    const sampleRate = this.audioContext.sampleRate;
+    const duration = params.duration;
+    const buffer = this.audioContext.createBuffer(1, sampleRate * duration, sampleRate);
+    const data = buffer.getChannelData(0);
+
+    // Generate a simple ambient tone by combining oscillators
+    for (let i = 0; i < data.length; i++) {
+      const time = i / sampleRate;
+      let sample = 0;
+
+      // Mix multiple frequencies for richer sound
+      params.frequencies.forEach((freq, idx) => {
+        const amplitude = 0.15 / params.frequencies.length; // Quiet ambient volume
+        const phase = Math.PI * 2 * freq * time;
+        
+        // Add some variation based on wave type
+        if (params.waveType === 'sine') {
+          sample += amplitude * Math.sin(phase);
+        } else if (params.waveType === 'triangle') {
+          sample += amplitude * (2 / Math.PI) * Math.asin(Math.sin(phase));
+        } else if (params.waveType === 'square') {
+          sample += amplitude * Math.sign(Math.sin(phase));
+        } else if (params.waveType === 'sawtooth') {
+          sample += amplitude * (2 * ((freq * time) % 1) - 1);
+        }
+      });
+
+      // Apply envelope for smooth looping
+      const fadeTime = 0.5; // 500ms fade
+      const fadeSamples = fadeTime * sampleRate;
+      if (i < fadeSamples) {
+        sample *= i / fadeSamples; // Fade in
+      } else if (i > data.length - fadeSamples) {
+        sample *= (data.length - i) / fadeSamples; // Fade out
+      }
+
+      data[i] = sample;
+    }
+
+    return buffer;
+  }
+
+  async loadTrack(mood: MoodType, url?: string): Promise<void> {
     if (!this.audioContext) {
       throw new Error('AudioContext not initialized');
     }
@@ -65,15 +122,22 @@ class AudioManager {
     }
 
     try {
-      const response = await fetch(url);
-      const arrayBuffer = await response.arrayBuffer();
-      const audioBuffer = await this.audioContext.decodeAudioData(arrayBuffer);
-      
-      track.buffer = audioBuffer;
-      console.log(`Loaded track for mood: ${mood}`);
+      if (url) {
+        // Try to load from URL first
+        const response = await fetch(url);
+        const arrayBuffer = await response.arrayBuffer();
+        const audioBuffer = await this.audioContext.decodeAudioData(arrayBuffer);
+        track.buffer = audioBuffer;
+        console.log(`Loaded track for mood: ${mood} from URL`);
+      } else {
+        // Fallback to synthetic generation
+        track.buffer = this.generateSyntheticTrack(mood);
+        console.log(`Generated synthetic track for mood: ${mood}`);
+      }
     } catch (error) {
-      console.error(`Failed to load track for ${mood}:`, error);
-      // Continue without this track - graceful degradation
+      console.error(`Failed to load track for ${mood}, using synthetic:`, error);
+      // Fallback to synthetic generation
+      track.buffer = this.generateSyntheticTrack(mood);
     }
   }
 

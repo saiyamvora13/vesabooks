@@ -133,21 +133,14 @@ export default function View() {
       try {
         await audioManager.init();
         
-        // Temporary CDN-hosted placeholder tracks (SoundHelix - royalty-free with attribution)
-        // TODO: Replace with custom mood-appropriate music in public/audio/music/
-        const moodTracks: Record<string, string> = {
-          'calm': 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3',
-          'adventure': 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3',
-          'mystery': 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3',
-          'happy': 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-4.mp3',
-          'suspense': 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-5.mp3',
-          'dramatic': 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-6.mp3',
-        };
+        // Generate synthetic ambient music using Web Audio API oscillators
+        // This avoids CORS issues and provides immediate mood-appropriate background music
+        const moods = ['calm', 'adventure', 'mystery', 'happy', 'suspense', 'dramatic'];
 
         await Promise.all(
-          Object.entries(moodTracks).map(([mood, url]) => 
-            audioManager.loadTrack(mood as any, url).catch(err => {
-              console.warn(`Could not load ${mood} music:`, err);
+          moods.map(mood => 
+            audioManager.loadTrack(mood as any).catch(err => {
+              console.warn(`Could not generate ${mood} music:`, err);
             })
           )
         );
