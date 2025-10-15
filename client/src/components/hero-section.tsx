@@ -152,9 +152,17 @@ export default function HeroSection() {
                     alt={exampleBooks[0].title}
                     className="rounded-2xl sm:rounded-3xl shadow-2xl w-full object-cover aspect-[4/5]" 
                   />
-                  <div className="absolute bottom-4 left-4 right-4 bg-card/95 backdrop-blur-sm p-3 rounded-xl shadow-lg">
-                    <div className="text-sm font-semibold truncate">{exampleBooks[0].title}</div>
-                    <div className="text-xs text-muted-foreground">AI Generated Storybook</div>
+                  {/* Top gradient overlay for title */}
+                  <div className="absolute top-0 left-0 right-0 h-[25%] bg-gradient-to-b from-black/70 to-transparent rounded-t-2xl sm:rounded-t-3xl"></div>
+                  {/* Bottom gradient overlay for author */}
+                  <div className="absolute bottom-0 left-0 right-0 h-[20%] bg-gradient-to-t from-black/70 to-transparent rounded-b-2xl sm:rounded-b-3xl"></div>
+                  {/* Title at top */}
+                  <div className="absolute top-4 left-4 right-4">
+                    <div className="text-sm sm:text-base font-bold text-white drop-shadow-[0_2px_3px_rgba(0,0,0,0.8)] truncate">{exampleBooks[0].title}</div>
+                  </div>
+                  {/* Author/label at bottom */}
+                  <div className="absolute bottom-4 left-4 right-4">
+                    <div className="text-xs sm:text-sm text-white drop-shadow-[0_2px_3px_rgba(0,0,0,0.8)]">AI Generated Storybook</div>
                   </div>
                 </div>
 
