@@ -87,14 +87,14 @@ export async function generateEpub(storybook: Storybook): Promise<Buffer> {
     prependChapterTitles: false, // Don't prepend titles before content
     numberChaptersInTOC: false, // Don't number chapters in TOC
     css: `
-      /* Basic EPUB 2.0 compatible styles only */
+      /* EPUB 2.0 compatible styles with enhanced visuals */
       body {
-        font-family: Georgia, serif;
+        font-family: Georgia, 'Times New Roman', serif;
         margin: 0;
         padding: 0;
         line-height: 1.6;
-        color: #000000;
-        background-color: #ffffff;
+        color: #2c3e50;
+        background-color: #faf8f4;
       }
       
       /* Fixed page size */
@@ -118,6 +118,7 @@ export async function generateEpub(storybook: Storybook): Promise<Buffer> {
         margin: 0;
         padding: 0;
         text-align: center;
+        background-color: #000000;
       }
       
       .page-image img {
@@ -127,24 +128,46 @@ export async function generateEpub(storybook: Storybook): Promise<Buffer> {
         padding: 0;
       }
       
-      /* Text page - simple and readable */
+      /* Text page - centered and elegant */
       .page-text {
         page-break-after: always;
         height: 100%;
         width: 100%;
         margin: 0;
-        padding: 40px;
-        background-color: #ffffff;
+        padding: 0;
+        background-color: #faf8f4;
+        position: relative;
+      }
+      
+      /* Center text vertically and horizontally using table display */
+      .page-text {
+        display: table;
+        table-layout: fixed;
       }
       
       .page-text p {
-        font-family: Georgia, serif;
-        font-size: 18px;
-        line-height: 1.8;
-        color: #000000;
-        text-align: left;
-        margin: 20px;
-        padding: 0;
+        display: table-cell;
+        vertical-align: middle;
+        text-align: center;
+        font-family: Georgia, 'Times New Roman', serif;
+        font-size: 17px;
+        line-height: 1.9;
+        letter-spacing: 0.3px;
+        color: #2c3e50;
+        padding: 50px 45px;
+        margin: 0;
+        background-color: #ffffff;
+        border-top: 3px solid #d4c4a8;
+        border-bottom: 3px solid #d4c4a8;
+      }
+      
+      /* Add some elegance with text styling */
+      .page-text p::first-letter {
+        font-size: 28px;
+        font-weight: bold;
+        color: #8b7355;
+        line-height: 1;
+        margin-right: 2px;
       }
       
       /* Ensure proper page breaks */
@@ -152,6 +175,13 @@ export async function generateEpub(storybook: Storybook): Promise<Buffer> {
       .page-text,
       .blank-page {
         page-break-inside: avoid;
+      }
+      
+      /* Additional typography enhancements */
+      .page-text p {
+        text-align: justify;
+        text-indent: 20px;
+        word-spacing: 0.05em;
       }
     `,
   };
