@@ -2774,6 +2774,103 @@ Sitemap: ${baseUrl}/sitemap.xml`;
     }
   });
 
+  // Audio Settings Routes
+
+  // Get audio settings for a specific storybook (requires authentication and ownership)
+  app.get("/api/storybooks/:id/audio-settings", isAuthenticated, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const userId = req.user.id || req.user.claims?.sub;
+
+      // Verify storybook ownership
+      const storybook = await storage.getStorybook(id);
+      if (!storybook) {
+        return res.status(404).json({ message: 'Storybook not found' });
+      }
+
+      if (storybook.userId !== userId) {
+        return res.status(403).json({ message: 'Unauthorized' });
+      }
+
+      const settings = await storage.getAudioSettings(id);
+      res.json(settings);
+    } catch (error) {
+      console.error("Get audio settings error:", error);
+      res.status(500).json({ message: "Failed to get audio settings" });
+    }
+  });
+
+  // Update audio settings for a specific storybook (requires authentication and ownership)
+  app.put("/api/storybooks/:id/audio-settings", isAuthenticated, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const userId = req.user.id || req.user.claims?.sub;
+      const { musicEnabled, soundEffectsEnabled, musicVolume, effectsVolume } = req.body;
+
+      // Verify storybook ownership
+      const storybook = await storage.getStorybook(id);
+      if (!storybook) {
+        return res.status(404).json({ message: 'Storybook not found' });
+      }
+
+      if (storybook.userId !== userId) {
+        return res.status(403).json({ message: 'Unauthorized' });
+      }
+
+      const updatedSettings = await storage.updateAudioSettings(id, {
+        musicEnabled,
+        soundEffectsEnabled,
+        musicVolume,
+        effectsVolume,
+      });
+
+      res.json(updatedSettings);
+    } catch (error) {
+      console.error("Update audio settings error:", error);
+      res.status(500).json({ message: "Failed to update audio settings" });
+    }
+  });
+
+  // Analyze mood for existing storybook pages (requires authentication and ownership)
+  app.post("/api/storybooks/:id/analyze-mood", isAuthenticated, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const userId = req.user.id || req.user.claims?.sub;
+
+      // Get storybook and verify ownership
+      const storybook = await storage.getStorybook(id);
+      if (!storybook) {
+        return res.status(404).json({ message: 'Storybook not found' });
+      }
+
+      if (storybook.userId !== userId) {
+        return res.status(403).json({ message: 'Unauthorized' });
+      }
+
+      // Import mood detection function
+      const { detectPageMood } = await import("./services/gemini");
+
+      // Analyze mood for each page
+      const updatedPages = await Promise.all(
+        storybook.pages.map(async (page) => ({
+          ...page,
+          mood: await detectPageMood(page.text),
+        }))
+      );
+
+      // Update the storybook with moods
+      await db
+        .update(storybooks)
+        .set({ pages: updatedPages as any })
+        .where(eq(storybooks.id, id));
+
+      res.json({ message: 'Mood analysis completed', pages: updatedPages });
+    } catch (error) {
+      console.error("Analyze mood error:", error);
+      res.status(500).json({ message: "Failed to analyze mood" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

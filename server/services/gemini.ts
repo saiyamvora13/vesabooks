@@ -8,6 +8,7 @@ export interface StoryPage {
   pageNumber: number;
   text: string;
   imagePrompt: string;
+  mood?: string;
 }
 
 export interface GeneratedStory {
@@ -63,6 +64,46 @@ function extractArtStyle(prompt: string): string | undefined {
 // Import and re-export from shared utility
 import { optimizeImageForWeb } from '../utils/imageOptimization';
 export { optimizeImageForWeb };
+
+// Detect the mood/emotion of a page's text for audio selection
+export async function detectPageMood(pageText: string): Promise<string> {
+  try {
+    const systemInstruction = `You are an emotion and mood analyzer. Analyze the given text and determine its overall mood/emotional tone. 
+    
+Choose ONLY ONE of these moods:
+- calm: Peaceful, serene, gentle, relaxing scenes
+- adventure: Exciting, energetic, action-filled, exploring
+- mystery: Curious, intriguing, puzzling, discovering
+- happy: Joyful, cheerful, fun, celebrating
+- suspense: Tense, uncertain, anticipating, nerve-wracking
+- dramatic: Intense, powerful, climactic, emotional
+
+Return ONLY the single mood word that best matches the text.`;
+
+    const response = await ai.models.generateContent({
+      model: "gemini-2.5-flash",
+      contents: {
+        parts: [{ text: `Analyze this text and return the mood: ${pageText}` }],
+      },
+      config: {
+        systemInstruction: systemInstruction,
+      },
+    });
+
+    const mood = response.text()?.trim().toLowerCase();
+    
+    // Validate and default to calm if invalid
+    const validMoods = ['calm', 'adventure', 'mystery', 'happy', 'suspense', 'dramatic'];
+    if (mood && validMoods.includes(mood)) {
+      return mood;
+    }
+    
+    return 'calm'; // Default fallback
+  } catch (error) {
+    console.error('Failed to detect page mood:', error);
+    return 'calm'; // Default fallback on error
+  }
+}
 
 export async function generateStoryFromPrompt(
   prompt: string,
@@ -277,6 +318,15 @@ Return JSON following the schema with exactly ${pagesPerBook} pages.`;
 
     // Extract and store the art style from the original user prompt for consistency across all images
     parsedJson.artStyle = extractArtStyle(prompt);
+
+    // Analyze mood for each page
+    if (parsedJson.pages && Array.isArray(parsedJson.pages)) {
+      for (const page of parsedJson.pages) {
+        if (page.text) {
+          page.mood = await detectPageMood(page.text);
+        }
+      }
+    }
 
     return parsedJson as GeneratedStory;
   } catch (error) {

@@ -17,6 +17,7 @@ interface FlipbookViewerProps {
   isOwner?: boolean;
   onRegeneratePage?: (pageNumber: number) => void;
   regeneratingPageNumber?: number | null;
+  onPageChange?: (pageNumber: number) => void;
 }
 
 const PageFace = ({ 
@@ -216,7 +217,7 @@ const EndPage = ({ totalPages, backCoverImageUrl }: { totalPages: number; backCo
   );
 };
 
-export function FlipbookViewer({ pages, title, author = "AI Author", coverImageUrl, backCoverImageUrl, isOwner = false, onRegeneratePage, regeneratingPageNumber }: FlipbookViewerProps) {
+export function FlipbookViewer({ pages, title, author = "AI Author", coverImageUrl, backCoverImageUrl, isOwner = false, onRegeneratePage, regeneratingPageNumber, onPageChange }: FlipbookViewerProps) {
   const numPages = pages.length;
   const numSheets = numPages + 1;
   const [currentPage, setCurrentPage] = useState(0);
@@ -230,6 +231,13 @@ export function FlipbookViewer({ pages, title, author = "AI Author", coverImageU
     window.addEventListener('resize', checkMobile);
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
+
+  // Call onPageChange callback when page changes
+  useEffect(() => {
+    if (onPageChange && currentPage >= 0) {
+      onPageChange(currentPage);
+    }
+  }, [currentPage, onPageChange]);
 
   const totalMobilePages = (pages.length * 2) + 1; // cover + (text + image) per story page
   const maxPage = isMobile ? totalMobilePages : numSheets;

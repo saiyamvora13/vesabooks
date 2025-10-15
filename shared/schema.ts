@@ -46,6 +46,7 @@ export const storybooks = pgTable("storybooks", {
     text: string;
     imageUrl: string;
     imagePrompt: string;
+    mood?: string;
   }>>().notNull(),
   inspirationImages: json("inspiration_images").$type<string[]>().notNull().default([]),
   coverImageUrl: text("cover_image_url"),
@@ -282,3 +283,27 @@ export const insertStoryRatingSchema = createInsertSchema(storyRatings).omit({
 
 export type StoryRating = typeof storyRatings.$inferSelect;
 export type InsertStoryRating = z.infer<typeof insertStoryRatingSchema>;
+
+// Audio Settings - storybook-specific audio preferences
+export const audioSettings = pgTable("audio_settings", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  storybookId: varchar("storybook_id").notNull().references(() => storybooks.id, { onDelete: 'cascade' }),
+  musicEnabled: boolean("music_enabled").notNull().default(true),
+  soundEffectsEnabled: boolean("sound_effects_enabled").notNull().default(true),
+  musicVolume: numeric("music_volume").notNull().default('70'),
+  effectsVolume: numeric("effects_volume").notNull().default('80'),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("idx_audio_settings_storybook").on(table.storybookId),
+  unique().on(table.storybookId),
+]);
+
+export const insertAudioSettingsSchema = createInsertSchema(audioSettings).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type AudioSettings = typeof audioSettings.$inferSelect;
+export type InsertAudioSettings = z.infer<typeof insertAudioSettingsSchema>;

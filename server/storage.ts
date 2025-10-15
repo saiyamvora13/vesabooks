@@ -1,4 +1,4 @@
-import { type Storybook, type InsertStorybook, type StoryGenerationProgress, storybooks, users, type User, type UpsertUser, type Purchase, type InsertPurchase, purchases, passwordResetTokens, type PasswordResetToken, type AdminUser, type InsertAdminUser, adminUsers, type SiteSetting, siteSettings, type HeroStorybookSlot, type InsertHeroStorybookSlot, heroStorybookSlots, type FeaturedStorybook, type InsertFeaturedStorybook, featuredStorybooks, type AdminAuditLog, type InsertAdminAuditLog, adminAuditLogs, type SamplePrompt, type InsertSamplePrompt, samplePrompts, type AnalyticsEvent, type InsertAnalyticsEvent, analyticsEvents, type StoryRating, type InsertStoryRating, storyRatings } from "@shared/schema";
+import { type Storybook, type InsertStorybook, type StoryGenerationProgress, storybooks, users, type User, type UpsertUser, type Purchase, type InsertPurchase, purchases, passwordResetTokens, type PasswordResetToken, type AdminUser, type InsertAdminUser, adminUsers, type SiteSetting, siteSettings, type HeroStorybookSlot, type InsertHeroStorybookSlot, heroStorybookSlots, type FeaturedStorybook, type InsertFeaturedStorybook, featuredStorybooks, type AdminAuditLog, type InsertAdminAuditLog, adminAuditLogs, type SamplePrompt, type InsertSamplePrompt, samplePrompts, type AnalyticsEvent, type InsertAnalyticsEvent, analyticsEvents, type StoryRating, type InsertStoryRating, storyRatings, type AudioSettings, audioSettings } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, count, countDistinct, isNull, and, lt, sql } from "drizzle-orm";
 import { normalizeEmail } from "./auth";
@@ -98,6 +98,10 @@ export interface IStorage {
   incrementViewCount(storybookId: string): Promise<void>;
   getPublicStorybooks(limit: number, offset: number): Promise<Storybook[]>;
   getPublicStorybookCount(): Promise<number>;
+  
+  // Audio settings
+  getAudioSettings(storybookId: string): Promise<AudioSettings | null>;
+  updateAudioSettings(storybookId: string, settings: Partial<AudioSettings>): Promise<AudioSettings>;
 }
 
 // Database storage for persistent data
@@ -783,6 +787,46 @@ export class DatabaseStorage implements IStorage {
       .from(storybooks)
       .where(and(eq(storybooks.isPublic, true), isNull(storybooks.deletedAt)));
     return result?.count || 0;
+  }
+
+  // Audio settings
+  async getAudioSettings(storybookId: string): Promise<AudioSettings | null> {
+    const [settings] = await db
+      .select()
+      .from(audioSettings)
+      .where(eq(audioSettings.storybookId, storybookId));
+    return settings || null;
+  }
+
+  async updateAudioSettings(storybookId: string, settings: Partial<AudioSettings>): Promise<AudioSettings> {
+    // Try to find existing settings
+    const existing = await this.getAudioSettings(storybookId);
+    
+    if (existing) {
+      // Update existing settings
+      const [updated] = await db
+        .update(audioSettings)
+        .set({
+          ...settings,
+          updatedAt: new Date(),
+        })
+        .where(eq(audioSettings.id, existing.id))
+        .returning();
+      return updated;
+    } else {
+      // Create new settings with storybook ID
+      const [newSettings] = await db
+        .insert(audioSettings)
+        .values({
+          storybookId,
+          musicEnabled: settings.musicEnabled ?? true,
+          soundEffectsEnabled: settings.soundEffectsEnabled ?? true,
+          musicVolume: settings.musicVolume ?? '70',
+          effectsVolume: settings.effectsVolume ?? '80',
+        })
+        .returning();
+      return newSettings;
+    }
   }
 }
 

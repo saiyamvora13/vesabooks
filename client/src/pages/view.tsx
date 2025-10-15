@@ -25,6 +25,8 @@ import { addToCart } from "@/lib/cartUtils";
 import { useAuth } from "@/hooks/useAuth";
 import { RatingDialog } from "@/components/rating-dialog";
 import { ShareDialog } from "@/components/share-dialog";
+import { AudioControls } from "@/components/audio-controls";
+import { audioManager } from "@/lib/audioManager";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 
 export default function View() {
@@ -37,8 +39,10 @@ export default function View() {
   const [shareDialogOpen, setShareDialogOpen] = useState(false);
   const [regenerateDialogOpen, setRegenerateDialogOpen] = useState(false);
   const [pageToRegenerate, setPageToRegenerate] = useState<number | null>(null);
+  const [currentPageNumber, setCurrentPageNumber] = useState(0);
+  const [audioInitialized, setAudioInitialized] = useState(false);
   const { toast } = useToast();
-  const { isAuthenticated, user } = useAuth();
+  const { isAuthenticated, user} = useAuth();
 
   // Determine if viewing by ID or share URL
   const storybookId = params.id;
@@ -122,6 +126,70 @@ export default function View() {
       }).catch(console.error);
     }
   }, [storybook, storybookId]);
+
+  // Initialize audio system
+  useEffect(() => {
+    const initAudio = async () => {
+      if (audioInitialized) return;
+      
+      try {
+        await audioManager.init();
+        
+        // Note: Music files should be placed in public/audio/music/
+        // For now, we'll attempt to load them but gracefully handle missing files
+        const moods = ['calm', 'adventure', 'mystery', 'happy', 'suspense', 'dramatic'];
+        await Promise.all(
+          moods.map(mood => 
+            audioManager.loadTrack(mood as any, `/audio/music/${mood}.mp3`).catch(err => {
+              console.warn(`Could not load ${mood} music:`, err);
+            })
+          )
+        );
+        
+        // Load sound effects
+        const effects = ['page-turn', 'whoosh', 'sparkle'];
+        await Promise.all(
+          effects.map(effect => 
+            audioManager.loadSoundEffect(effect, `/audio/effects/${effect}.mp3`).catch(err => {
+              console.warn(`Could not load ${effect} sound:`, err);
+            })
+          )
+        );
+        
+        setAudioInitialized(true);
+      } catch (error) {
+        console.error('Failed to initialize audio:', error);
+      }
+    };
+
+    // Initialize audio on user interaction (browser autoplay policy)
+    const handleFirstInteraction = () => {
+      initAudio();
+      document.removeEventListener('click', handleFirstInteraction);
+      document.removeEventListener('keydown', handleFirstInteraction);
+    };
+
+    document.addEventListener('click', handleFirstInteraction);
+    document.addEventListener('keydown', handleFirstInteraction);
+
+    return () => {
+      document.removeEventListener('click', handleFirstInteraction);
+      document.removeEventListener('keydown', handleFirstInteraction);
+      audioManager.cleanup();
+    };
+  }, [audioInitialized]);
+
+  // Handle page changes and crossfade music
+  useEffect(() => {
+    if (!audioInitialized || !storybook || currentPageNumber < 0) return;
+    
+    const currentPage = storybook.pages[currentPageNumber];
+    const mood = currentPage?.mood;
+    
+    if (mood) {
+      audioManager.crossfadeTo(mood as any, 2);
+    }
+  }, [currentPageNumber, storybook, audioInitialized]);
 
   const generateShareUrl = async () => {
     if (!storybook) return;
@@ -310,6 +378,8 @@ export default function View() {
               </div>
             </div>
             <div className="flex flex-wrap gap-3">
+              <AudioControls storybookId={id} />
+              
               <Button 
                 variant="outline" 
                 className="rounded-xl" 
@@ -389,6 +459,7 @@ export default function View() {
               isOwner={isAuthenticated && user?.id === storybook.userId}
               onRegeneratePage={handleRegeneratePage}
               regeneratingPageNumber={regeneratePageMutation.isPending ? pageToRegenerate : null}
+              onPageChange={setCurrentPageNumber}
             />
           </div>
 
