@@ -220,13 +220,13 @@ class AudioManager {
 
   cleanup(): void {
     // Stop all playing tracks
-    for (const [, track] of this.musicTracks) {
+    Array.from(this.musicTracks.values()).forEach(track => {
       if (track.source) {
         track.source.stop();
         track.source = null;
         track.isPlaying = false;
       }
-    }
+    });
 
     // Close audio context
     if (this.audioContext) {

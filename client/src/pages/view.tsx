@@ -78,7 +78,7 @@ export default function View() {
   const regeneratePageMutation = useMutation({
     mutationFn: async (pageNumber: number) => {
       if (!storybookId) throw new Error('No storybook ID');
-      return apiRequest<Storybook>(`/api/storybooks/${storybookId}/regenerate-page`, {
+      return apiRequest(`/api/storybooks/${storybookId}/regenerate-page`, {
         method: 'POST',
         body: JSON.stringify({ pageNumber }),
       });
@@ -135,22 +135,35 @@ export default function View() {
       try {
         await audioManager.init();
         
-        // Note: Music files should be placed in public/audio/music/
-        // For now, we'll attempt to load them but gracefully handle missing files
-        const moods = ['calm', 'adventure', 'mystery', 'happy', 'suspense', 'dramatic'];
+        // Temporary CDN-hosted placeholder tracks (SoundHelix - royalty-free with attribution)
+        // TODO: Replace with custom mood-appropriate music in public/audio/music/
+        const moodTracks: Record<string, string> = {
+          'calm': 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3',
+          'adventure': 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3',
+          'mystery': 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3',
+          'happy': 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-4.mp3',
+          'suspense': 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-5.mp3',
+          'dramatic': 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-6.mp3',
+        };
+
         await Promise.all(
-          moods.map(mood => 
-            audioManager.loadTrack(mood as any, `/audio/music/${mood}.mp3`).catch(err => {
+          Object.entries(moodTracks).map(([mood, url]) => 
+            audioManager.loadTrack(mood as any, url).catch(err => {
               console.warn(`Could not load ${mood} music:`, err);
             })
           )
         );
         
-        // Load sound effects
-        const effects = ['page-turn', 'whoosh', 'sparkle'];
+        // Load sound effects (ion-sound library from cdnjs)
+        const soundEffects: Record<string, string> = {
+          'page-turn': 'https://cdnjs.cloudflare.com/ajax/libs/ion-sound/3.0.7/sounds/bell_ring.mp3',
+          'whoosh': 'https://cdnjs.cloudflare.com/ajax/libs/ion-sound/3.0.7/sounds/water_droplet.mp3',
+          'sparkle': 'https://cdnjs.cloudflare.com/ajax/libs/ion-sound/3.0.7/sounds/bell_ring.mp3',
+        };
+
         await Promise.all(
-          effects.map(effect => 
-            audioManager.loadSoundEffect(effect, `/audio/effects/${effect}.mp3`).catch(err => {
+          Object.entries(soundEffects).map(([effect, url]) => 
+            audioManager.loadSoundEffect(effect, url).catch(err => {
               console.warn(`Could not load ${effect} sound:`, err);
             })
           )
@@ -378,7 +391,7 @@ export default function View() {
               </div>
             </div>
             <div className="flex flex-wrap gap-3">
-              <AudioControls storybookId={storybookId} />
+              {storybookId && <AudioControls storybookId={storybookId} />}
               
               <Button 
                 variant="outline" 
