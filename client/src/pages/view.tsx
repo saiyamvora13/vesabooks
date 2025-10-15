@@ -130,6 +130,7 @@ export default function View() {
   // Initialize audio system
   useEffect(() => {
     let isSubscribed = true;
+    let hasPlayedBookOpen = false;
     
     const initAudio = async () => {
       if (!isSubscribed || audioInitialized) return;
@@ -159,7 +160,10 @@ export default function View() {
           console.log('AudioManager initialized successfully');
           
           // Play book-open sound when first opening the storybook
-          audioManager.playSoundEffect('book-open');
+          if (!hasPlayedBookOpen) {
+            audioManager.playSoundEffect('book-open');
+            hasPlayedBookOpen = true;
+          }
         }
       } catch (error) {
         console.error('Failed to initialize audio:', error);
@@ -168,20 +172,26 @@ export default function View() {
       }
     };
 
-    // Initialize audio on user interaction (browser autoplay policy)
-    const handleFirstInteraction = () => {
-      initAudio();
-      document.removeEventListener('click', handleFirstInteraction);
-      document.removeEventListener('keydown', handleFirstInteraction);
+    // Initialize audio on user interaction within this component (browser autoplay policy)
+    // Use a ref to the container to scope events to this component only
+    const handleFirstInteraction = (e: Event) => {
+      // Only initialize if the click is within the storybook viewer
+      if (isSubscribed && !audioInitialized) {
+        initAudio();
+      }
     };
 
-    document.addEventListener('click', handleFirstInteraction);
-    document.addEventListener('keydown', handleFirstInteraction);
+    // Add event listeners to the window but check if we should init
+    const clickListener = (e: MouseEvent) => handleFirstInteraction(e);
+    const keyListener = (e: KeyboardEvent) => handleFirstInteraction(e);
+    
+    window.addEventListener('click', clickListener, { once: true });
+    window.addEventListener('keydown', keyListener, { once: true });
 
     return () => {
       isSubscribed = false;
-      document.removeEventListener('click', handleFirstInteraction);
-      document.removeEventListener('keydown', handleFirstInteraction);
+      window.removeEventListener('click', clickListener);
+      window.removeEventListener('keydown', keyListener);
       // Only cleanup audio when component unmounts, not when audioInitialized changes
       audioManager.cleanup();
     };

@@ -235,11 +235,19 @@ class AudioManager {
     }
 
     console.log(`🎵 Crossfading to mood: ${newMood} (current: ${this.currentMood || 'none'})`);
+    console.log(`🎵 AudioContext state: ${this.audioContext.state}, isPaused: ${this.isPaused}`);
+    console.log(`🎵 Master gain: ${this.masterGainNode?.gain.value}, Effects gain: ${this.effectsGainNode?.gain.value}`);
 
     // Resume AudioContext if suspended (browser autoplay policy)
     if (this.audioContext.state === 'suspended') {
-      console.log('AudioContext was suspended, resuming...');
+      console.log('🎵 AudioContext was suspended, resuming...');
       await this.audioContext.resume();
+    }
+
+    // Unpause if paused
+    if (this.isPaused) {
+      console.log('🎵 AudioManager was paused, resuming...');
+      this.isPaused = false;
     }
 
     const newTrack = this.musicTracks.get(newMood);
@@ -260,7 +268,7 @@ class AudioManager {
     if (this.currentMood) {
       const currentTrack = this.musicTracks.get(this.currentMood);
       if (currentTrack && currentTrack.isPlaying) {
-        console.log(`Fading out ${this.currentMood}`);
+        console.log(`🎵 Fading out ${this.currentMood}`);
         // Equal-power crossfade out
         currentTrack.gainNode.gain.setValueAtTime(currentTrack.gainNode.gain.value, currentTime);
         currentTrack.gainNode.gain.exponentialRampToValueAtTime(0.01, currentTime + duration);
@@ -280,16 +288,17 @@ class AudioManager {
     if (!newTrack.source || !newTrack.isPlaying) {
       newTrack.source = this.createSource(newTrack);
       if (newTrack.source) {
-        console.log(`Starting ${newMood} track`);
+        console.log(`🎵 Starting ${newMood} track`);
         newTrack.source.start(0);
         newTrack.isPlaying = true;
+        console.log(`🎵 Track started, isPlaying: ${newTrack.isPlaying}`);
       }
     }
 
     // Fade in new track (equal-power crossfade)
     newTrack.gainNode.gain.setValueAtTime(0.01, currentTime);
     newTrack.gainNode.gain.exponentialRampToValueAtTime(1, currentTime + duration);
-    console.log(`Fading in ${newMood}`);
+    console.log(`🎵 Fading in ${newMood} from 0.01 to 1.0 over ${duration}s`);
 
     this.currentMood = newMood;
   }
