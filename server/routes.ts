@@ -2311,6 +2311,7 @@ async function generateStorybookAsync(
       coverImageUrl,
       backCoverImageUrl,
       mainCharacterDescription: generatedStory.mainCharacterDescription,
+      defaultClothing: generatedStory.defaultClothing,
       storyArc: generatedStory.storyArc,
     });
 

@@ -51,6 +51,7 @@ export const storybooks = pgTable("storybooks", {
   coverImageUrl: text("cover_image_url"),
   backCoverImageUrl: text("back_cover_image_url"),
   mainCharacterDescription: text("main_character_description"),
+  defaultClothing: text("default_clothing"),
   storyArc: text("story_arc"),
   createdAt: timestamp("created_at").defaultNow(),
   shareUrl: text("share_url"),
