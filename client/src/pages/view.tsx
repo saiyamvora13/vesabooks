@@ -29,6 +29,11 @@ import { AudioControls } from "@/components/audio-controls";
 import { audioManager } from "@/lib/audioManager";
 import bookOpenUrl from "@assets/ES_Book_Open - Epidemic Sound_1760551479317.mp3";
 import pageTurnUrl from "@assets/ES_Page Turn 01 - Epidemic Sound_1760551479319.mp3";
+// Background music tracks
+import calmMusicUrl from "@assets/ES_Softest of Feathers - Calm Shores_1760561293990.mp3";
+import adventureMusicUrl from "@assets/ES_The Road to Odessa - Lama House_1760561293991.mp3";
+import mysteryMusicUrl from "@assets/ES_Magical Dream Dust - John B. Lund_1760561293989.mp3";
+import happyMusicUrl from "@assets/ES_My Kitty Cat (Instrumental Version) - Luna The Cat_1760561293990.mp3";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 
 export default function View() {
@@ -139,14 +144,20 @@ export default function View() {
         console.log('🎵 Initializing AudioManager...');
         await audioManager.init();
         
-        // Generate synthetic ambient music using Web Audio API oscillators
-        // This avoids CORS issues and provides immediate mood-appropriate background music
-        const moods = ['calm', 'adventure', 'mystery', 'happy', 'suspense', 'dramatic'];
+        // Load background music tracks (real MP3s where available, synthetic fallback)
+        const moodMusicMap: Record<string, string | undefined> = {
+          calm: calmMusicUrl,
+          adventure: adventureMusicUrl,
+          mystery: mysteryMusicUrl,
+          happy: happyMusicUrl,
+          suspense: undefined, // Will use synthetic
+          dramatic: undefined, // Will use synthetic
+        };
 
         await Promise.all(
-          moods.map(mood => 
-            audioManager.loadTrack(mood as any).catch(err => {
-              console.warn(`Could not generate ${mood} music:`, err);
+          Object.entries(moodMusicMap).map(([mood, url]) => 
+            audioManager.loadTrack(mood as any, url).catch(err => {
+              console.warn(`Could not load ${mood} music:`, err);
             })
           )
         );
