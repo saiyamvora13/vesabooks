@@ -315,9 +315,8 @@ export async function generateCompositeCoverImage(
     // Calculate font size based on longest line to ensure it fits width
     const fontSizeByWidth = Math.floor((safeWidth / longestLineLength) * 1.8);
     
-    // Calculate font size based on height to ensure all lines fit vertically
-    // Reserve space for author text (approximately 2 line heights)
-    const availableHeightForTitle = overlayHeight * 0.7; // Use 70% for title, 30% for author and padding
+    // Calculate font size based on height - title at top 20% area
+    const availableHeightForTitle = height * 0.18; // Use top 18% for title
     const fontSizeByHeight = Math.floor(availableHeightForTitle / (titleLines.length * 1.2));
     
     // Use the smallest of all three constraints to ensure text fits in all dimensions
@@ -327,38 +326,45 @@ export async function generateCompositeCoverImage(
     const minFontSize = 25;
     const finalBaseFontSize = Math.max(baseFontSize, minFontSize);
     
-    // If font would be too small, adjust overlay height to accommodate text
-    let finalOverlayHeight = overlayHeight;
-    let finalOverlayY = overlayY;
+    const authorFontSize = Math.floor(finalBaseFontSize * 0.4); // Smaller author font
     
-    if (baseFontSize < minFontSize) {
-      // Calculate required height for minimum font size
-      const requiredHeight = (titleLines.length * minFontSize * 1.2) + (minFontSize * 2); // Title + author space
-      finalOverlayHeight = Math.min(requiredHeight * 1.3, height * 0.4); // Max 40% of image height
-      finalOverlayY = height - finalOverlayHeight;
-    }
-    
-    const authorFontSize = Math.floor(finalBaseFontSize * 0.5);
-    
-    // Calculate line height and starting position for multi-line title
+    // Calculate line height and starting position for multi-line title at TOP
     const lineHeight = finalBaseFontSize * 1.2;
     const totalTitleHeight = titleLines.length * lineHeight;
-    const startTitleY = finalOverlayY + (finalOverlayHeight - totalTitleHeight) / 2 - (lineHeight * 0.3); // Center with slight upward adjustment
+    const topPadding = height * 0.05; // Start 5% from top
+    const startTitleY = topPadding; // Title starts near top
     
-    // Build SVG text elements for each line of the title
+    // Build SVG text elements for each line of the title with white text and shadow
     const titleSvgElements = titleLines.map((line, index) => {
       const y = startTitleY + (index + 1) * lineHeight;
-      return `<text x="50%" y="${y}" text-anchor="middle" font-family="Georgia, serif" font-size="${baseFontSize}" font-weight="bold" fill="#1e293b">${escapeXml(line)}</text>`;
+      return `<text x="50%" y="${y}" text-anchor="middle" font-family="Georgia, serif" font-size="${finalBaseFontSize}" font-weight="bold" fill="white" filter="url(#textShadow)">${escapeXml(line)}</text>`;
     }).join('\n      ');
     
-    // Position author text below title
-    const authorY = startTitleY + totalTitleHeight + lineHeight * 0.8;
+    // Position author text at bottom
+    const authorY = height * 0.92; // Position author at 92% from top (near bottom)
 
-    // Create SVG overlay with semi-transparent background and wrapped text
+    // Create SVG overlay with transparent gradients at top and bottom
+    // Title at top, author at bottom with high-contrast white text and shadows
     const svg = `<svg width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg">
-      <rect x="0" y="${finalOverlayY}" width="${width}" height="${finalOverlayHeight}" fill="rgba(255,255,255,0.95)"/>
+      <defs>
+        <linearGradient id="topGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+          <stop offset="0%" style="stop-color:rgb(0,0,0);stop-opacity:0.7" />
+          <stop offset="100%" style="stop-color:rgb(0,0,0);stop-opacity:0" />
+        </linearGradient>
+        <linearGradient id="bottomGradient" x1="0%" y1="100%" x2="0%" y2="0%">
+          <stop offset="0%" style="stop-color:rgb(0,0,0);stop-opacity:0.7" />
+          <stop offset="100%" style="stop-color:rgb(0,0,0);stop-opacity:0" />
+        </linearGradient>
+        <filter id="textShadow">
+          <feDropShadow dx="0" dy="2" stdDeviation="3" flood-opacity="0.8"/>
+        </filter>
+      </defs>
+      <!-- Top gradient for title -->
+      <rect x="0" y="0" width="${width}" height="${height * 0.25}" fill="url(#topGradient)"/>
+      <!-- Bottom gradient for author -->
+      <rect x="0" y="${height * 0.75}" width="${width}" height="${height * 0.25}" fill="url(#bottomGradient)"/>
       ${titleSvgElements}
-      <text x="50%" y="${authorY}" text-anchor="middle" font-family="Georgia, serif" font-size="${authorFontSize}" fill="#475569">By AI Storyteller</text>
+      <text x="50%" y="${authorY}" text-anchor="middle" font-family="Georgia, serif" font-size="${authorFontSize}" fill="white" filter="url(#textShadow)">By AI Storyteller</text>
     </svg>`;
 
     // Create composite image
