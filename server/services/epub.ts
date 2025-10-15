@@ -31,37 +31,56 @@ export async function generateEpub(storybook: Storybook): Promise<Buffer> {
       compositeCoverPath = path.join(tempDir, `epub-cover-${storybook.id}-${uniqueId}.png`);
       fs.writeFileSync(compositeCoverPath, compositeBuffer);
     }
-    
-    // Add internal cover page with title and author overlay
+  }
+
+  // Add blank first page - this ensures proper page alignment for two-page spreads
+  content.push({
+    content: `<div class="blank-page"></div>`,
+    excludeFromToc: true,
+  });
+
+  // Add cover as a full-page image (will be on the right page after blank)
+  if (coverImageUrl) {
     const coverUrl = `${baseUrl}${coverImageUrl}`;
     content.push({
-      content: `<div class="cover-page">
-  <img src="${coverUrl}" alt="Cover" class="cover-image" />
-  <div class="cover-overlay"></div>
-  <div class="cover-text">
-    <h1>${escapeHtml(storybook.title)}</h1>
-    <p>By AI Storyteller</p>
-  </div>
+      content: `<div class="full-page-image">
+  <img src="${coverUrl}" alt="Cover" />
 </div>`,
-      beforeToc: true,
       excludeFromToc: true,
     });
   }
 
-  // Add each story page - mobile-first responsive layout: image first on mobile, side-by-side on larger screens
+  // Add each story page as separate left (image) and right (text) pages
   for (const page of storybook.pages) {
     const pageImageUrl = `${baseUrl}${page.imageUrl}`;
     
+    // Left page - Image
     content.push({
-      content: `<div class="story-page">
-  <div class="page-image">
-    <img src="${pageImageUrl}" alt="Illustration for page ${page.pageNumber}" />
-  </div>
-  <div class="page-text">
+      content: `<div class="left-page full-page-image">
+  <img src="${pageImageUrl}" alt="Illustration for page ${page.pageNumber}" />
+</div>`,
+      excludeFromToc: true,
+    });
+    
+    // Right page - Text
+    content.push({
+      content: `<div class="right-page text-page">
+  <div class="text-content">
     <p>${escapeHtml(page.text)}</p>
   </div>
 </div>`,
-      excludeFromToc: true, // Exclude from Table of Contents
+      excludeFromToc: true,
+    });
+  }
+
+  // Check if we need a blank page before back cover to ensure it appears on correct side
+  // Back cover should ideally be on a left page (even page number in 0-indexed)
+  const currentPageCount = content.length;
+  if (storybook.backCoverImageUrl && currentPageCount % 2 === 1) {
+    // Add blank page to push back cover to left side
+    content.push({
+      content: `<div class="blank-page"></div>`,
+      excludeFromToc: true,
     });
   }
 
@@ -69,8 +88,8 @@ export async function generateEpub(storybook: Storybook): Promise<Buffer> {
   if (storybook.backCoverImageUrl) {
     const backCoverUrl = `${baseUrl}${storybook.backCoverImageUrl}`;
     content.push({
-      content: `<div class="back-cover-page">
-  <img src="${backCoverUrl}" alt="Back Cover" class="back-cover-image" />
+      content: `<div class="full-page-image back-cover">
+  <img src="${backCoverUrl}" alt="Back Cover" />
 </div>`,
       excludeFromToc: true,
     });
@@ -86,6 +105,13 @@ export async function generateEpub(storybook: Storybook): Promise<Buffer> {
     prependChapterTitles: false, // Don't prepend titles before content
     numberChaptersInTOC: false, // Don't number chapters in TOC
     css: `
+      /* Reset and base styles */
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      
       body {
         font-family: Georgia, serif;
         margin: 0;
@@ -93,129 +119,105 @@ export async function generateEpub(storybook: Storybook): Promise<Buffer> {
         line-height: 1.6;
       }
       
-      /* Cover page with title and author overlay */
-      .cover-page {
-        position: relative;
-        margin: 0;
-        padding: 0;
-        page-break-after: always;
-        height: 100vh;
-      }
-      
-      .cover-image {
-        width: 100%;
-        height: 100%;
-        object-fit: cover;
-        display: block;
-      }
-      
-      .cover-overlay {
-        position: absolute;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background: rgba(0, 0, 0, 0.1);
-      }
-      
-      .cover-text {
-        position: absolute;
-        bottom: 0;
-        left: 0;
-        right: 0;
-        padding: 2rem;
-        background: rgba(255, 255, 255, 0.95);
-        backdrop-filter: blur(8px);
-        text-align: center;
-      }
-      
-      .cover-text h1 {
-        font-size: 2.5rem;
-        font-weight: bold;
-        font-family: Georgia, serif;
-        color: #1e293b;
-        margin: 0 0 0.5rem 0;
-      }
-      
-      .cover-text p {
-        font-size: 1.2rem;
-        color: #475569;
+      /* Fixed page dimensions for traditional book layout */
+      @page {
+        size: 6in 9in;
         margin: 0;
       }
       
-      /* Story page styles - mobile-first: image first, text below */
-      .story-page {
-        display: flex;
-        flex-direction: column;
+      /* Blank page - completely empty */
+      .blank-page {
         page-break-after: always;
         min-height: 100vh;
-      }
-      
-      /* On larger screens (tablets/desktops): image left, text right */
-      @media (min-width: 768px) {
-        .story-page {
-          flex-direction: row;
-          align-items: flex-start;
-        }
-      }
-      
-      .page-image {
         width: 100%;
       }
       
-      @media (min-width: 768px) {
-        .page-image {
-          flex: 1;
-          max-width: 50%;
-        }
-      }
-      
-      .page-image img {
+      /* Full page image for left pages */
+      .full-page-image {
+        page-break-after: always;
+        min-height: 100vh;
         width: 100%;
-        height: auto;
-        display: block;
-      }
-      
-      .page-text {
-        width: 100%;
-        padding: 1.5rem;
         display: flex;
         align-items: center;
         justify-content: center;
-      }
-      
-      @media (min-width: 768px) {
-        .page-text {
-          flex: 1;
-          padding: 2rem;
-        }
-      }
-      
-      .page-text p {
-        font-size: 1.1rem;
-        line-height: 1.8;
-        margin: 0;
-        padding: 2rem;
-        background: #f5f1e8;
-        border-radius: 12px;
-        color: #334155;
-        text-align: left;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-      }
-      
-      /* Back cover page */
-      .back-cover-page {
         margin: 0;
         padding: 0;
-        page-break-after: always;
-        height: 100vh;
+        overflow: hidden;
       }
       
-      .back-cover-image {
+      .full-page-image img {
         width: 100%;
-        height: 100%;
+        height: 100vh;
         object-fit: cover;
         display: block;
+      }
+      
+      /* Left page (image page) */
+      .left-page {
+        page-break-before: auto;
+        page-break-after: always;
+      }
+      
+      /* Right page (text page) */
+      .right-page {
+        page-break-before: auto;
+        page-break-after: always;
+        min-height: 100vh;
+        width: 100%;
+      }
+      
+      /* Text page styling */
+      .text-page {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 10%;
+        background: linear-gradient(to bottom, #fffef9, #faf8f3);
+      }
+      
+      .text-content {
+        width: 100%;
+        max-width: 450px;
+      }
+      
+      .text-content p {
+        font-size: 16px;
+        line-height: 1.8;
+        color: #2c3e50;
+        text-align: justify;
+        margin: 0;
+        padding: 30px;
+        background: white;
+        border: 1px solid #e8e4d9;
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+      }
+      
+      /* Back cover specific styling */
+      .back-cover {
+        page-break-before: auto;
+        page-break-after: avoid;
+      }
+      
+      /* Ensure proper page breaks */
+      .left-page,
+      .right-page,
+      .full-page-image,
+      .blank-page {
+        page-break-inside: avoid;
+      }
+      
+      /* Page numbering suppression */
+      @page {
+        @bottom-center {
+          content: none;
+        }
+        @bottom-right {
+          content: none;
+        }
+        @bottom-left {
+          content: none;
+        }
       }
     `,
   };
