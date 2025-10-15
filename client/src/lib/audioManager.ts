@@ -180,56 +180,21 @@ class AudioManager {
     return buffer;
   }
 
-  async loadSoundEffect(name: string, url?: string): Promise<void> {
+  async loadSoundEffect(name: string, url: string): Promise<void> {
     if (!this.audioContext) {
       throw new Error('AudioContext not initialized');
     }
 
     try {
-      if (name === 'page-turn' && !url) {
-        // Generate synthetic page-turn sound
-        const buffer = this.generatePageTurnSound();
-        if (!buffer) {
-          throw new Error('Failed to generate synthetic page-turn sound');
-        }
-        this.soundEffects.set(name, buffer);
-        console.log(`Generated synthetic page-turn sound effect`);
-        return;
-      }
-
-      if (url) {
-        const response = await fetch(url);
-        const arrayBuffer = await response.arrayBuffer();
-        const audioBuffer = await this.audioContext.decodeAudioData(arrayBuffer);
-        
-        this.soundEffects.set(name, audioBuffer);
-        console.log(`Loaded sound effect: ${name}`);
-        return;
-      }
-
-      throw new Error(`No URL provided for sound effect: ${name}`);
+      const response = await fetch(url);
+      const arrayBuffer = await response.arrayBuffer();
+      const audioBuffer = await this.audioContext.decodeAudioData(arrayBuffer);
+      
+      this.soundEffects.set(name, audioBuffer);
+      console.log(`Loaded sound effect: ${name} from ${url}`);
     } catch (error) {
       console.error(`Failed to load sound effect ${name}:`, error);
-      
-      // For page-turn, try generating again or create a simple beep
-      if (name === 'page-turn') {
-        const buffer = this.generatePageTurnSound();
-        if (buffer) {
-          this.soundEffects.set(name, buffer);
-          console.log(`Using synthetic page-turn sound as fallback`);
-        } else {
-          // Last resort: create a simple beep
-          const beepBuffer = this.generateSimpleBeep();
-          if (beepBuffer) {
-            this.soundEffects.set(name, beepBuffer);
-            console.log(`Using simple beep as page-turn fallback`);
-          } else {
-            throw new Error('Cannot create any page-turn sound effect');
-          }
-        }
-      } else {
-        throw error;
-      }
+      throw error;
     }
   }
 

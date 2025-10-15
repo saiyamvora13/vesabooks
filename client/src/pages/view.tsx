@@ -27,6 +27,8 @@ import { RatingDialog } from "@/components/rating-dialog";
 import { ShareDialog } from "@/components/share-dialog";
 import { AudioControls } from "@/components/audio-controls";
 import { audioManager } from "@/lib/audioManager";
+import bookOpenUrl from "@assets/ES_Book_Open - Epidemic Sound_1760551479317.mp3";
+import pageTurnUrl from "@assets/ES_Page Turn 01 - Epidemic Sound_1760551479319.mp3";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 
 export default function View() {
@@ -148,14 +150,16 @@ export default function View() {
           )
         );
         
-        // Load sound effects (synthetic page-turn sound)
-        // Generate realistic page-turn sound using Web Audio API
-        // This must succeed for audio to be marked as initialized
-        await audioManager.loadSoundEffect('page-turn');
+        // Load sound effects from real audio files
+        await audioManager.loadSoundEffect('book-open', bookOpenUrl);
+        await audioManager.loadSoundEffect('page-turn', pageTurnUrl);
         
         if (isSubscribed) {
           setAudioInitialized(true);
           console.log('AudioManager initialized successfully');
+          
+          // Play book-open sound when first opening the storybook
+          audioManager.playSoundEffect('book-open');
         }
       } catch (error) {
         console.error('Failed to initialize audio:', error);
