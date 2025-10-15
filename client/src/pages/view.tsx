@@ -378,7 +378,7 @@ export default function View() {
               </div>
             </div>
             <div className="flex flex-wrap gap-3">
-              <AudioControls storybookId={id} />
+              <AudioControls storybookId={storybookId} />
               
               <Button 
                 variant="outline" 

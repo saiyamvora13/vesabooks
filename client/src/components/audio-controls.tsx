@@ -214,19 +214,6 @@ export function AudioControls({ storybookId }: AudioControlsProps) {
             />
           </div>
 
-          {/* Autoplay Toggle */}
-          <div className="flex items-center justify-between">
-            <Label htmlFor="autoplay" className="text-sm font-medium">
-              Autoplay on Load
-            </Label>
-            <Switch
-              id="autoplay"
-              checked={autoplay}
-              onCheckedChange={handleAutoplayChange}
-              data-testid="switch-autoplay"
-            />
-          </div>
-
           <p className="text-xs text-muted-foreground">
             Music adapts to the story's mood as you turn pages
           </p>
