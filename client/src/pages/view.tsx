@@ -195,6 +195,17 @@ export default function View() {
     }
   }, [currentPageNumber, storybook, audioInitialized]);
 
+  // Handle page change with sound effect
+  const handlePageChange = (pageNumber: number) => {
+    setCurrentPageNumber(pageNumber);
+    
+    // Play page-turn sound effect if audio is initialized
+    // Volume and enable/disable are controlled by AudioControls component
+    if (audioInitialized) {
+      audioManager.playSoundEffect('page-turn');
+    }
+  };
+
   const generateShareUrl = async () => {
     if (!storybook) return;
     
@@ -463,7 +474,7 @@ export default function View() {
               isOwner={isAuthenticated && user?.id === storybook.userId}
               onRegeneratePage={handleRegeneratePage}
               regeneratingPageNumber={regeneratePageMutation.isPending ? pageToRegenerate : null}
-              onPageChange={setCurrentPageNumber}
+              onPageChange={handlePageChange}
             />
           </div>
 

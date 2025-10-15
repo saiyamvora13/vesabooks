@@ -58,10 +58,7 @@ export function AudioControls({ storybookId }: AudioControlsProps) {
     effectsVolume: string;
   }>) => {
     try {
-      await apiRequest(`/api/storybooks/${storybookId}/audio-settings`, {
-        method: 'PUT',
-        body: JSON.stringify(updates),
-      });
+      await apiRequest('PUT', `/api/storybooks/${storybookId}/audio-settings`, updates);
     } catch (error) {
       console.error('Failed to save audio settings:', error);
     }
