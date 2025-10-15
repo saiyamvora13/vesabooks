@@ -143,7 +143,14 @@ CRITICAL STORY STRUCTURE REQUIREMENTS:
    - The default clothing will be maintained throughout the story UNLESS the scene context requires different clothing
    - For imagePrompts: Describe ONLY the scene, action, and setting. Do NOT describe clothing unless it DIFFERS from the default
    - NEVER repeat character features or default clothing in imagePrompts - they will be prepended automatically
-   - Only specify clothing in imagePrompts when it MUST change (e.g., "at the swimming pool" implies swimsuit, "getting ready for bed" implies pajamas)
+   - Context-appropriate clothing changes (ONLY mention these in imagePrompts when needed):
+     * Swimming/beach/pool scenes → "wearing a swimsuit"
+     * Bedtime/sleeping scenes → "wearing pajamas"
+     * Rain/storm scenes → "wearing a raincoat and boots"
+     * Winter/snow scenes → "wearing a winter coat, hat, and gloves"
+     * Formal events → "wearing formal attire" or "wearing a fancy dress/suit"
+     * Sports/exercise → "wearing athletic clothes"
+   - If the scene doesn't require special clothing, say NOTHING about clothing
 
 4. STORY ELEMENTS - Include: clear protagonist, conflict/problem, rising action, climax, and resolution.
 
@@ -163,7 +170,14 @@ CRITICAL STORY STRUCTURE REQUIREMENTS:
    - The default clothing will be maintained throughout the story UNLESS the scene context requires different clothing
    - For imagePrompts: Describe ONLY the scene, action, and setting. Do NOT describe clothing unless it DIFFERS from the default
    - NEVER repeat character features or default clothing in imagePrompts - they will be prepended automatically
-   - Only specify clothing in imagePrompts when it MUST change (e.g., "at the swimming pool" implies swimsuit, "getting ready for bed" implies pajamas)
+   - Context-appropriate clothing changes (ONLY mention these in imagePrompts when needed):
+     * Swimming/beach/pool scenes → "wearing a swimsuit"
+     * Bedtime/sleeping scenes → "wearing pajamas"
+     * Rain/storm scenes → "wearing a raincoat and boots"
+     * Winter/snow scenes → "wearing a winter coat, hat, and gloves"
+     * Formal events → "wearing formal attire" or "wearing a fancy dress/suit"
+     * Sports/exercise → "wearing athletic clothes"
+   - If the scene doesn't require special clothing, say NOTHING about clothing
 
 4. STORY ELEMENTS - Include: lovable protagonist, clear problem, attempts to solve it, moment of success, happy ending with lesson.
 
@@ -244,8 +258,8 @@ Return JSON following the schema with exactly ${pagesPerBook} pages.`;
               imagePrompt: {
                 type: Type.STRING,
                 description: hasCustomStyle
-                  ? "A detailed image generation prompt. Describe the specific scene, action, setting, and any other characters/objects. Maintain the style requested by the user. (Note: The character description will be added automatically, so focus on what's happening in the scene.)"
-                  : "A detailed image generation prompt. Describe the specific scene, action, setting, background, and any other characters/objects. Use vibrant, whimsical children's book illustration style. (Note: The character description will be added automatically, so focus on the scene details.)",
+                  ? "A detailed image generation prompt. Describe the specific scene, action, setting, and any other characters/objects. Maintain the style requested by the user. IMPORTANT: The character's appearance and default clothing will be added automatically. Only specify different clothing if the scene REQUIRES it (e.g., 'wearing pajamas' for bedtime, 'wearing a swimsuit' at the pool, 'wearing a raincoat' in the rain). Do NOT mention the character's physical features or default clothing - they will be prepended automatically."
+                  : "A detailed image generation prompt. Describe the specific scene, action, setting, background, and any other characters/objects. Use vibrant, whimsical children's book illustration style. IMPORTANT: The character's appearance and default clothing will be added automatically. Only specify different clothing if the scene REQUIRES it (e.g., 'wearing pajamas' for bedtime, 'wearing a swimsuit' at the pool, 'wearing a raincoat' in the rain). Do NOT mention the character's physical features or default clothing - they will be prepended automatically.",
               },
             },
             required: ["pageNumber", "text", "imagePrompt"],
