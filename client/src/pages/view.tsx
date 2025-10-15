@@ -78,10 +78,8 @@ export default function View() {
   const regeneratePageMutation = useMutation({
     mutationFn: async (pageNumber: number) => {
       if (!storybookId) throw new Error('No storybook ID');
-      return apiRequest(`/api/storybooks/${storybookId}/regenerate-page`, {
-        method: 'POST',
-        body: JSON.stringify({ pageNumber }),
-      });
+      const res = await apiRequest('POST', `/api/storybooks/${storybookId}/regenerate-page`, { pageNumber });
+      return res.json();
     },
     onSuccess: () => {
       // Invalidate and refetch the storybook
