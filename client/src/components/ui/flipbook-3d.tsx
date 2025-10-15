@@ -45,10 +45,17 @@ const Cover = ({ title, author, coverImageUrl }: { title: string; author: string
         className="absolute inset-0 w-full h-full object-cover" 
       />
     )}
-    <div className="absolute inset-0 w-full h-full bg-black/10"></div>
-    <div className="absolute bottom-0 left-0 right-0 p-4 bg-white/90 dark:bg-slate-900/90 backdrop-blur-sm">
-      <h1 className="text-3xl md:text-4xl font-bold font-serif text-slate-800 dark:text-white">{title}</h1>
-      <p className="text-md md:text-lg text-slate-600 dark:text-slate-300 mt-2">By {author}</p>
+    {/* Top gradient overlay for title */}
+    <div className="absolute top-0 left-0 right-0 h-[25%] bg-gradient-to-b from-black/70 to-transparent"></div>
+    {/* Bottom gradient overlay for author */}
+    <div className="absolute bottom-0 left-0 right-0 h-[25%] bg-gradient-to-t from-black/70 to-transparent"></div>
+    {/* Title at top */}
+    <div className="absolute top-0 left-0 right-0 p-4 flex flex-col items-center justify-center h-[25%]">
+      <h1 className="text-3xl md:text-4xl font-bold font-serif text-white drop-shadow-[0_2px_3px_rgba(0,0,0,0.8)]">{title}</h1>
+    </div>
+    {/* Author at bottom */}
+    <div className="absolute bottom-0 left-0 right-0 p-4 flex items-center justify-center h-[15%]">
+      <p className="text-md md:text-lg text-white drop-shadow-[0_2px_3px_rgba(0,0,0,0.8)]">By {author}</p>
     </div>
     <div className="absolute left-[-24px] top-0 bottom-0 w-6 bg-gradient-to-r from-slate-800 to-slate-600 shadow-md"></div>
   </div>
