@@ -73,48 +73,40 @@ export default function Create() {
 
   const createStoryMutation = useMutation({
     mutationFn: async (data: CreateStoryForm): Promise<GenerationResponse> => {
-      try {
-        const formData = new FormData();
-        formData.append("prompt", data.prompt);
-        if (data.author) {
-          formData.append("author", data.author);
-        }
-        data.images.forEach(image => {
-          formData.append("images", image);
-        });
-
-        // Get reCAPTCHA token for anonymous users
-        try {
-          const recaptchaToken = await executeRecaptcha('create_story');
-          if (recaptchaToken) {
-            formData.append("recaptchaToken", recaptchaToken);
-          }
-        } catch (recaptchaError) {
-          console.error('reCAPTCHA error:', recaptchaError);
-          // Continue without reCAPTCHA token - server will handle it
-        }
-
-        const response = await fetch("/api/storybooks", {
-          method: "POST",
-          body: formData,
-          credentials: "include", // Include session cookie for authentication
-        });
-
-        if (!response.ok) {
-          const errorData = await response.json();
-          // Backend returns either {error: string} or {message: string}
-          const errorMessage = errorData.error || errorData.message || "Failed to create storybook";
-          throw new Error(errorMessage);
-        }
-
-        return response.json();
-      } catch (error) {
-        // Ensure we always throw an Error object
-        if (error instanceof Error) {
-          throw error;
-        }
-        throw new Error(String(error || 'Failed to create storybook'));
+      const formData = new FormData();
+      formData.append("prompt", data.prompt);
+      if (data.author) {
+        formData.append("author", data.author);
       }
+      data.images.forEach(image => {
+        formData.append("images", image);
+      });
+
+      // Get reCAPTCHA token for anonymous users
+      try {
+        const recaptchaToken = await executeRecaptcha('create_story');
+        if (recaptchaToken) {
+          formData.append("recaptchaToken", recaptchaToken);
+        }
+      } catch (recaptchaError) {
+        console.error('reCAPTCHA error:', recaptchaError);
+        // Continue without reCAPTCHA token - server will handle it
+      }
+
+      const response = await fetch("/api/storybooks", {
+        method: "POST",
+        body: formData,
+        credentials: "include", // Include session cookie for authentication
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: response.statusText }));
+        // Backend returns either {error: string} or {message: string}
+        const errorMessage = errorData.error || errorData.message || "Failed to create storybook";
+        throw new Error(errorMessage);
+      }
+
+      return response.json();
     },
     onSuccess: async (data) => {
       try {
@@ -167,18 +159,15 @@ export default function Create() {
     },
   });
 
-  const onSubmit = async (data: CreateStoryForm) => {
-    try {
-      setLastFormData(data); // Save form data for retry
-      setRetryCount(0); // Reset retry count on new submission
-      
-      // Use mutateAsync to get a promise we can await and catch
-      await createStoryMutation.mutateAsync(data);
-    } catch (error) {
-      // All mutation errors are caught here, preventing unhandled rejections
-      console.error('Error in onSubmit:', error);
-      // The mutation's onError callback handles the toast, but this catches the rejection
-    }
+  const onSubmit = (data: CreateStoryForm) => {
+    console.log('🔵 onSubmit called');
+    setLastFormData(data); // Save form data for retry
+    setRetryCount(0); // Reset retry count on new submission
+    
+    console.log('🔵 Calling mutate (not mutateAsync)');
+    // Use mutate instead of mutateAsync to avoid promise rejections entirely
+    // All error handling is done through the onError callback
+    createStoryMutation.mutate(data);
   };
 
   const onGenerationComplete = (storybookId: string) => {
@@ -187,18 +176,14 @@ export default function Create() {
     setLocation(`/view/${storybookId}`);
   };
 
-  const handleRetry = async () => {
+  const handleRetry = () => {
     if (lastFormData) {
-      try {
-        setRetryCount(prev => prev + 1);
-        setIsGenerating(false);
-        setSessionId(null);
-        await createStoryMutation.mutateAsync(lastFormData);
-      } catch (error) {
-        // Catch any errors to prevent unhandled rejections
-        console.error('Error in handleRetry:', error);
-        // The mutation's onError callback handles the toast
-      }
+      setRetryCount(prev => prev + 1);
+      setIsGenerating(false);
+      setSessionId(null);
+      
+      // Use mutate instead of mutateAsync to avoid promise rejections
+      createStoryMutation.mutate(lastFormData);
     }
   };
 
