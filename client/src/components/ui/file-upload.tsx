@@ -88,14 +88,14 @@ export function FileUpload({
         onDrop={handleDrop}
         onClick={openFilePicker}
         className={cn(
-          "upload-zone border-2 border-dashed rounded-2xl p-8 text-center bg-muted/20 cursor-pointer transition-all",
+          "upload-zone border-2 border-dashed rounded-2xl p-6 sm:p-8 text-center bg-muted/20 cursor-pointer transition-all min-h-[120px] flex flex-col items-center justify-center",
           isDragOver ? "drag-over border-primary bg-primary/5" : "border-border"
         )}
       >
-        <i className="fas fa-cloud-upload-alt text-4xl text-primary mb-3"></i>
-        <p className="text-base font-medium mb-1">Drop your images here</p>
-        <p className="text-sm text-muted-foreground mb-2">or click to browse</p>
-        <p className="text-xs text-muted-foreground">
+        <i className="fas fa-cloud-upload-alt text-3xl sm:text-4xl text-primary mb-3"></i>
+        <p className="text-sm sm:text-base font-medium mb-1">Drop your images here</p>
+        <p className="text-sm sm:text-sm text-muted-foreground mb-2">or tap to browse</p>
+        <p className="text-xs sm:text-xs text-muted-foreground px-4">
           PNG or JPEG • Max {formatFileSize(maxSize)} per image • {maxFiles} images max
         </p>
         <input
@@ -110,13 +110,13 @@ export function FileUpload({
 
       {/* Image Previews */}
       {value.length > 0 && (
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3 sm:gap-4">
           {value.map((file, index) => (
             <div key={index} className="relative group">
               <img
                 src={URL.createObjectURL(file)}
                 alt={`Preview ${index + 1}`}
-                className="w-full h-40 object-cover rounded-xl border-2 border-border"
+                className="w-full h-32 sm:h-40 object-cover rounded-xl border-2 border-border"
                 loading="lazy"
               />
               <Button
@@ -124,10 +124,10 @@ export function FileUpload({
                   e.stopPropagation();
                   removeFile(index);
                 }}
-                className="absolute -top-2 -right-2 w-6 h-6 p-0 bg-destructive text-destructive-foreground rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                className="absolute -top-2 -right-2 w-8 h-8 sm:w-6 sm:h-6 p-0 bg-destructive text-destructive-foreground rounded-full opacity-100 sm:opacity-0 group-hover:opacity-100 transition-opacity shadow-lg"
                 data-testid={`button-remove-image-${index}`}
               >
-                <i className="fas fa-times text-xs"></i>
+                <i className="fas fa-times text-sm sm:text-xs"></i>
               </Button>
               <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent text-white text-xs px-2 py-1.5 rounded-b-xl text-center truncate">
                 {file.name}

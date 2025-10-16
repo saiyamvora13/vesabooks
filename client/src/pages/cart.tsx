@@ -31,20 +31,20 @@ function CartItemCard({ item, onRemove }: { item: PricedCartItem; onRemove: (sto
 
   return (
     <Card data-testid={`card-item-${item.storybookId}-${item.type}`}>
-      <CardHeader className="pb-3">
-        <div className="flex items-start gap-4">
+      <CardHeader className="pb-3 p-4 sm:p-6">
+        <div className="flex flex-col sm:flex-row items-start gap-4">
           {isLoading ? (
-            <Skeleton className="w-20 h-28 rounded-lg flex-shrink-0" data-testid={`skeleton-image-${item.storybookId}`} />
+            <Skeleton className="w-full sm:w-20 h-40 sm:h-28 rounded-lg flex-shrink-0" data-testid={`skeleton-image-${item.storybookId}`} />
           ) : coverImageUrl ? (
             <img
               src={coverImageUrl}
               alt={`${item.title} cover`}
-              className="w-20 h-28 object-cover rounded-lg flex-shrink-0"
+              className="w-full sm:w-20 h-40 sm:h-28 object-cover rounded-lg flex-shrink-0"
               data-testid={`img-cover-${item.storybookId}-${item.type}`}
               loading="lazy"
             />
           ) : (
-            <div className="w-20 h-28 bg-muted rounded-lg flex-shrink-0 flex items-center justify-center">
+            <div className="w-full sm:w-20 h-40 sm:h-28 bg-muted rounded-lg flex-shrink-0 flex items-center justify-center">
               <ShoppingCart className="h-8 w-8 text-muted-foreground" />
             </div>
           )}
@@ -75,8 +75,8 @@ function CartItemCard({ item, onRemove }: { item: PricedCartItem; onRemove: (sto
             </div>
           </div>
           
-          <div className="flex flex-col items-end gap-1 flex-shrink-0">
-            <div className="flex items-center gap-3">
+          <div className="flex flex-row sm:flex-col items-start sm:items-end justify-between sm:justify-start w-full sm:w-auto gap-2 sm:gap-1 mt-3 sm:mt-0 flex-shrink-0">
+            <div className="flex items-center gap-2 sm:gap-3">
               {hasDiscount && (
                 <span className="text-sm text-muted-foreground line-through" data-testid={`text-original-price-${item.storybookId}-${item.type}`}>
                   ${((item.originalPrice || item.price) / 100).toFixed(2)}
@@ -85,15 +85,16 @@ function CartItemCard({ item, onRemove }: { item: PricedCartItem; onRemove: (sto
               <span className={`text-lg font-semibold ${hasDiscount ? 'text-green-600' : ''}`} data-testid={`text-price-${item.storybookId}-${item.type}`}>
                 ${(item.price / 100).toFixed(2)}
               </span>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => onRemove(item.storybookId, item.type)}
-                data-testid={`button-remove-${item.storybookId}-${item.type}`}
-              >
-                <X className="h-4 w-4" />
-              </Button>
             </div>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-10 w-10"
+              onClick={() => onRemove(item.storybookId, item.type)}
+              data-testid={`button-remove-${item.storybookId}-${item.type}`}
+            >
+              <X className="h-5 w-5" />
+            </Button>
           </div>
         </div>
       </CardHeader>
