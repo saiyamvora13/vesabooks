@@ -37,7 +37,7 @@ export type User = typeof users.$inferSelect;
 
 export const storybooks = pgTable("storybooks", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
+  userId: varchar("user_id").references(() => users.id, { onDelete: 'cascade' }),
   title: text("title").notNull(),
   author: text("author"),
   prompt: text("prompt").notNull(),

@@ -42,7 +42,7 @@ Key features include:
   - **Email-Gated Downloads**: Anonymous storybooks require email verification (6-digit code, 15-minute expiry) before EPUB/PDF download
   - **Database Tables**: `ipRateLimits` (tracks IP usage) and `downloadVerifications` (manages email verification codes)
   - Authenticated users bypass all anonymous restrictions
-  - **Development Bypass**: For testing environments, set `VITE_DEV_RECAPTCHA_BYPASS=true` (frontend) and `DEV_RECAPTCHA_BYPASS=true` (backend) to skip reCAPTCHA validation. Production should never enable these flags.
+  - **Development Bypass**: For local testing only, set `VITE_DEV_RECAPTCHA_BYPASS=true` (frontend) and `DEV_RECAPTCHA_BYPASS=true` (backend) as environment variables to skip reCAPTCHA validation. The bypass only works when `NODE_ENV=development` to prevent accidental production usage. Never commit these values to `.env` files.
 - **Production Monitoring**: Utilizes Replit Analytics Dashboard and application logs to track HTTP 429 errors, request patterns, and identify problematic IPs. Best practices for monitoring and adjusting thresholds are defined.
 - **SEO & Accessibility**: Complete meta tags, sitemap at `/sitemap.xml`, robots.txt, and ARIA labels for accessibility.
 

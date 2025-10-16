@@ -12,7 +12,8 @@ declare global {
 export function useRecaptcha() {
   const [isReady, setIsReady] = useState(false);
   const siteKey = import.meta.env.VITE_RECAPTCHA_SITE_KEY;
-  const devBypass = import.meta.env.VITE_DEV_RECAPTCHA_BYPASS === 'true';
+  // Only allow bypass in development mode to prevent accidental production usage
+  const devBypass = import.meta.env.MODE === 'development' && import.meta.env.VITE_DEV_RECAPTCHA_BYPASS === 'true';
 
   useEffect(() => {
     // Skip reCAPTCHA loading in development bypass mode

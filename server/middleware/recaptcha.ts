@@ -13,8 +13,8 @@ export async function verifyRecaptcha(req: Request, res: Response, next: NextFun
   try {
     const { recaptchaToken } = req.body;
 
-    // Development bypass mode - skip verification
-    if (process.env.DEV_RECAPTCHA_BYPASS === 'true') {
+    // Development bypass mode - skip verification (only in development)
+    if (process.env.NODE_ENV === 'development' && process.env.DEV_RECAPTCHA_BYPASS === 'true') {
       console.log('[DEV] reCAPTCHA bypass enabled - skipping verification');
       return next();
     }
