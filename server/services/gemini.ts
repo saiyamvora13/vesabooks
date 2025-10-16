@@ -52,11 +52,8 @@ function hasStyleInstructions(prompt: string): boolean {
 // Helper function to extract the art style directive from user prompt for consistency
 function extractArtStyle(prompt: string, hasPhotos: boolean = false): string | undefined {
   if (!hasStyleInstructions(prompt)) {
-    // If photos are uploaded but no style specified, default to photo-realistic
-    if (hasPhotos) {
-      return "photo-realistic, lifelike, natural lighting, high quality photographic style";
-    }
-    // No custom style and no photos, return undefined so we use the default children's book style
+    // No custom style specified, return undefined so we use the default children's book style
+    // This applies regardless of whether photos are uploaded or not
     return undefined;
   }
   
