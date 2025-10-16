@@ -27,6 +27,7 @@ import { RatingDialog } from "@/components/rating-dialog";
 import { ShareDialog } from "@/components/share-dialog";
 import { AudioControls } from "@/components/audio-controls";
 import { audioManager } from "@/lib/audioManager";
+import { EmailVerificationDialog } from "@/components/email-verification-dialog";
 import bookOpenUrl from "@assets/ES_Book_Open - Epidemic Sound_1760551479317.mp3";
 import pageTurnUrl from "@assets/ES_Page Turn 01 - Epidemic Sound_1760551479319.mp3";
 // Background music tracks
@@ -48,6 +49,8 @@ export default function View() {
   const [pageToRegenerate, setPageToRegenerate] = useState<number | null>(null);
   const [currentPageNumber, setCurrentPageNumber] = useState(0);
   const [audioInitialized, setAudioInitialized] = useState(false);
+  const [emailVerificationOpen, setEmailVerificationOpen] = useState(false);
+  const [verifiedEmail, setVerifiedEmail] = useState<string | null>(null);
   const { toast } = useToast();
   const { isAuthenticated, user} = useAuth();
 
@@ -272,7 +275,17 @@ export default function View() {
   const downloadEpub = async () => {
     if (!storybook || isDownloading) return;
 
-    if (!digitalPurchase?.owned) {
+    // Check if this is an anonymous storybook
+    const isAnonymousStorybook = !storybook.userId;
+
+    // For anonymous storybooks, require email verification
+    if (isAnonymousStorybook && !verifiedEmail) {
+      setEmailVerificationOpen(true);
+      return;
+    }
+
+    // For authenticated storybooks, check purchase
+    if (!isAnonymousStorybook && !digitalPurchase?.owned) {
       toast({
         title: t('storybook.viewer.download.toast.purchaseRequired.title'),
         description: t('storybook.viewer.download.toast.purchaseRequired.description'),
@@ -289,20 +302,25 @@ export default function View() {
     });
     
     try {
-      const response = await fetch(`/api/storybooks/${storybook.id}/epub`);
+      // Add email to query params for anonymous storybooks
+      const url = isAnonymousStorybook && verifiedEmail
+        ? `/api/storybooks/${storybook.id}/epub?email=${encodeURIComponent(verifiedEmail)}`
+        : `/api/storybooks/${storybook.id}/epub`;
+        
+      const response = await fetch(url);
       
       if (!response.ok) {
         throw new Error('Failed to download EPUB');
       }
       
       const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
+      const downloadUrl = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
-      a.href = url;
+      a.href = downloadUrl;
       a.download = `${storybook.title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}.epub`;
       document.body.appendChild(a);
       a.click();
-      window.URL.revokeObjectURL(url);
+      window.URL.revokeObjectURL(downloadUrl);
       document.body.removeChild(a);
       
       toast({
@@ -318,6 +336,13 @@ export default function View() {
     } finally {
       setIsDownloading(false);
     }
+  };
+
+  const handleEmailVerified = (email: string) => {
+    setVerifiedEmail(email);
+    setEmailVerificationOpen(false);
+    // Trigger download after verification
+    setTimeout(() => downloadEpub(), 100);
   };
 
   const handleBuyDigital = () => {
@@ -580,6 +605,16 @@ export default function View() {
         onClose={() => setShareDialogOpen(false)}
         isOwner={isOwner}
       />
+
+      {/* Email Verification Dialog for Anonymous Downloads */}
+      {storybook?.id && (
+        <EmailVerificationDialog
+          open={emailVerificationOpen}
+          onOpenChange={setEmailVerificationOpen}
+          storybookId={storybook.id}
+          onVerified={handleEmailVerified}
+        />
+      )}
     </div>
   );
 }

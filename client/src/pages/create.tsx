@@ -18,6 +18,7 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { isUnauthorizedError } from "@/lib/authUtils";
 import { SEO } from "@/components/SEO";
+import { useRecaptcha } from "@/hooks/use-recaptcha";
 import {
   Dialog,
   DialogContent,
@@ -30,6 +31,8 @@ import { Info } from "lucide-react";
 
 interface GenerationResponse {
   sessionId: string;
+  isAnonymous?: boolean;
+  rateLimitRemaining?: number | null;
 }
 
 export default function Create() {
@@ -39,6 +42,7 @@ export default function Create() {
   const [sessionId, setSessionId] = useState<string | null>(null);
   const [retryCount, setRetryCount] = useState(0);
   const { toast } = useToast();
+  const { executeRecaptcha } = useRecaptcha();
 
   const createStorySchema = useMemo(() => z.object({
     prompt: z.string().min(10, t('common.validation.promptMinLength')),
@@ -78,6 +82,12 @@ export default function Create() {
         formData.append("images", image);
       });
 
+      // Get reCAPTCHA token for anonymous users
+      const recaptchaToken = await executeRecaptcha('create_story');
+      if (recaptchaToken) {
+        formData.append("recaptchaToken", recaptchaToken);
+      }
+
       const response = await fetch("/api/storybooks", {
         method: "POST",
         body: formData,
@@ -94,10 +104,19 @@ export default function Create() {
     onSuccess: (data) => {
       setSessionId(data.sessionId);
       setIsGenerating(true);
-      toast({
-        title: t('storybook.create.toast.started.title'),
-        description: t('storybook.create.toast.started.description'),
-      });
+      
+      // Show different message based on user type
+      if (data.isAnonymous && data.rateLimitRemaining !== null) {
+        toast({
+          title: t('storybook.create.toast.started.title'),
+          description: `${t('storybook.create.toast.started.description')} You have ${data.rateLimitRemaining} stories remaining today.`,
+        });
+      } else {
+        toast({
+          title: t('storybook.create.toast.started.title'),
+          description: t('storybook.create.toast.started.description'),
+        });
+      }
     },
     onError: (error) => {
       // Replit Auth: Handle unauthorized error - redirect to login

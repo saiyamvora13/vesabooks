@@ -15,6 +15,8 @@ import Stripe from "stripe";
 import { z } from "zod";
 import rateLimit from "express-rate-limit";
 import * as analytics from "./services/analytics";
+import { verifyRecaptcha } from "./middleware/recaptcha";
+import { createIpRateLimitMiddleware } from "./middleware/ipRateLimit";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', {
   apiVersion: "2025-09-30.clover",
@@ -1518,7 +1520,7 @@ Sitemap: ${baseUrl}/sitemap.xml`;
       `);
 
       // Get returning users (users with multiple storybooks)
-      const [returningUsersResult] = await db.execute(sql`
+      const returningUsersResult = await db.execute(sql`
         SELECT COUNT(DISTINCT user_id) as returning_users
         FROM (
           SELECT user_id, COUNT(*) as story_count
@@ -1534,12 +1536,15 @@ Sitemap: ${baseUrl}/sitemap.xml`;
         .select({ count: count() })
         .from(users);
 
+      const returningUsersCount = Number(returningUsersResult.rows[0]?.returning_users || 0);
+      const totalUsersCount = Number(totalUsersResult.count);
+      
       res.json({
         newUsersTrend: newUsersTrend.rows,
-        returningUsers: returningUsersResult.returning_users || 0,
-        totalUsers: totalUsersResult.count,
-        retentionRate: totalUsersResult.count > 0 
-          ? ((returningUsersResult.returning_users || 0) / totalUsersResult.count) * 100 
+        returningUsers: returningUsersCount,
+        totalUsers: totalUsersCount,
+        retentionRate: totalUsersCount > 0 
+          ? (returningUsersCount / totalUsersCount) * 100 
           : 0
       });
     } catch (error) {
@@ -1559,66 +1564,100 @@ Sitemap: ${baseUrl}/sitemap.xml`;
     }
   });
 
-  // Create storybook (requires authentication)
-  app.post("/api/storybooks", isAuthenticated, upload.array("images", 5), async (req: any, res) => {
-    try {
-      const { prompt, author } = req.body;
-      const files = req.files as Express.Multer.File[] | undefined;
-      // Use req.user.id if available (from auth changes), fallback to claims.sub for compatibility
-      const userId = req.user.id || req.user.claims?.sub;
+  // Initialize IP rate limiter
+  const ipRateLimiter = createIpRateLimitMiddleware(storage);
 
-      // Get user info for author fallback
-      const user = await storage.getUser(userId);
-      const authorName = author || `${user?.firstName || ''} ${user?.lastName || ''}`.trim() || 'Anonymous';
-
-      // Images are now optional - handle empty or undefined files
-      const imagePaths = files ? files.map(f => f.path) : [];
-      const imageFilenames = files ? files.map(f => f.filename) : [];
-
-      // Validate request
-      const validationResult = createStorybookSchema.safeParse({
-        prompt,
-        author: authorName,
-        inspirationImages: imageFilenames,
-      });
-
-      if (!validationResult.success) {
-        return res.status(400).json({ message: validationResult.error.message });
+  // Create storybook (supports both authenticated and anonymous users)
+  app.post("/api/storybooks", 
+    upload.array("images", 5),
+    async (req: any, res, next) => {
+      // If user is authenticated, skip IP rate limiting and reCAPTCHA
+      if (req.user) {
+        return next();
       }
-
-      // Fetch pages_per_book setting from admin settings
-      const pagesSetting = await storage.getSetting('pages_per_book');
-      const pagesPerBook = pagesSetting ? parseInt(pagesSetting.value) : 3;
-      
-      // Validate page count (minimum 1, maximum 10 for performance)
-      const validatedPagesPerBook = Math.max(1, Math.min(10, pagesPerBook));
-
-      const sessionId = randomUUID();
-
-      // Track story generation start (non-blocking)
-      analytics.trackStoryStarted(userId, prompt, imageFilenames).catch(err => {
-        console.error('Failed to track story_started event:', err);
+      // For anonymous users, check IP rate limit and verify reCAPTCHA
+      ipRateLimiter(req, res, (err) => {
+        if (err) return;
+        verifyRecaptcha(req, res, next);
       });
+    },
+    async (req: any, res) => {
+      try {
+        const { prompt, author } = req.body;
+        const files = req.files as Express.Multer.File[] | undefined;
+        
+        // Determine user ID (authenticated or null for anonymous)
+        const userId = req.user ? (req.user.id || req.user.claims?.sub) : null;
+        const isAnonymous = !userId;
 
-      // Start generation in background with userId, author, and pagesPerBook
-      generateStorybookAsync(sessionId, userId, prompt, authorName, imagePaths, validatedPagesPerBook)
-        .catch((error: unknown) => {
-          console.error("Story generation failed:", error);
-          const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-          storage.setGenerationProgress(sessionId, {
-            step: 'processing_images',
-            progress: 0,
-            message: `Generation failed: ${errorMessage}`,
-            error: errorMessage,
-          });
+        // Get user info for author fallback (authenticated users only)
+        let authorName = author || 'Anonymous';
+        if (userId) {
+          const user = await storage.getUser(userId);
+          authorName = author || `${user?.firstName || ''} ${user?.lastName || ''}`.trim() || 'Anonymous';
+        }
+
+        // Images are now optional - handle empty or undefined files
+        const imagePaths = files ? files.map(f => f.path) : [];
+        const imageFilenames = files ? files.map(f => f.filename) : [];
+
+        // Validate request
+        const validationResult = createStorybookSchema.safeParse({
+          prompt,
+          author: authorName,
+          inspirationImages: imageFilenames,
         });
 
-      res.json({ sessionId });
-    } catch (error) {
-      console.error("Create storybook error:", error);
-      res.status(500).json({ message: "Internal server error" });
+        if (!validationResult.success) {
+          return res.status(400).json({ message: validationResult.error.message });
+        }
+
+        // Fetch pages_per_book setting from admin settings
+        const pagesSetting = await storage.getSetting('pages_per_book');
+        const pagesPerBook = pagesSetting ? parseInt(pagesSetting.value) : 3;
+        
+        // Validate page count (minimum 1, maximum 10 for performance)
+        const validatedPagesPerBook = Math.max(1, Math.min(10, pagesPerBook));
+
+        const sessionId = randomUUID();
+
+        // Track story generation start (non-blocking, only for authenticated users)
+        if (userId) {
+          analytics.trackStoryStarted(userId, prompt, imageFilenames).catch(err => {
+            console.error('Failed to track story_started event:', err);
+          });
+        }
+
+        // Increment IP story count for anonymous users
+        if (isAnonymous) {
+          const ipAddress = (req as any).ipAddress;
+          await storage.incrementIpStoryCount(ipAddress);
+        }
+
+        // Start generation in background with userId (null for anonymous), author, and pagesPerBook
+        generateStorybookAsync(sessionId, userId, prompt, authorName, imagePaths, validatedPagesPerBook)
+          .catch((error: unknown) => {
+            console.error("Story generation failed:", error);
+            const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+            storage.setGenerationProgress(sessionId, {
+              step: 'processing_images',
+              progress: 0,
+              message: `Generation failed: ${errorMessage}`,
+              error: errorMessage,
+            });
+          });
+
+        res.json({ 
+          sessionId,
+          isAnonymous,
+          rateLimitRemaining: isAnonymous ? (req as any).rateLimitRemaining - 1 : null
+        });
+      } catch (error) {
+        console.error("Create storybook error:", error);
+        res.status(500).json({ message: "Internal server error" });
+      }
     }
-  });
+  );
 
   // Get generation progress
   app.get("/api/generation/:sessionId/progress", async (req, res) => {
@@ -1815,14 +1854,97 @@ Sitemap: ${baseUrl}/sitemap.xml`;
     }
   });
 
-  // Download storybook as EPUB
+  // Email verification for downloads (anonymous users)
+  app.post("/api/storybooks/:id/request-download-code", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { email } = req.body;
+
+      if (!email || !validateEmail(email)) {
+        return res.status(400).json({ message: "Valid email is required" });
+      }
+
+      const storybook = await storage.getStorybook(id);
+      if (!storybook) {
+        return res.status(404).json({ message: "Storybook not found" });
+      }
+
+      // Only allow email verification for anonymous storybooks
+      if (storybook.userId) {
+        return res.status(400).json({ 
+          message: "This storybook requires authentication to download" 
+        });
+      }
+
+      // Create verification code
+      const { code, expiresAt } = await storage.createDownloadVerification(id, email);
+
+      // TODO: Send email with verification code using Resend
+      // For now, return code in response (remove in production)
+      console.log(`Verification code for ${email}: ${code}`);
+      
+      res.json({ 
+        message: "Verification code sent to your email",
+        expiresIn: "15 minutes",
+        // REMOVE IN PRODUCTION - for testing only
+        code
+      });
+    } catch (error) {
+      console.error("Request download code error:", error);
+      res.status(500).json({ message: "Failed to send verification code" });
+    }
+  });
+
+  app.post("/api/storybooks/:id/verify-download-code", async (req, res) => {
+    try {
+      const { id } = req.params;
+      const { email, code } = req.body;
+
+      if (!email || !code) {
+        return res.status(400).json({ message: "Email and code are required" });
+      }
+
+      const isValid = await storage.verifyDownloadCode(id, email, code);
+      
+      if (!isValid) {
+        return res.status(400).json({ 
+          message: "Invalid or expired verification code" 
+        });
+      }
+
+      res.json({ 
+        message: "Email verified successfully",
+        verified: true
+      });
+    } catch (error) {
+      console.error("Verify download code error:", error);
+      res.status(500).json({ message: "Failed to verify code" });
+    }
+  });
+
+  // Download storybook as EPUB (requires email verification for anonymous stories)
   app.get("/api/storybooks/:id/epub", async (req, res) => {
     try {
       const { id } = req.params;
+      const { email } = req.query;
       const storybook = await storage.getStorybook(id);
       
       if (!storybook) {
         return res.status(404).json({ message: "Storybook not found" });
+      }
+
+      // Check email verification for anonymous stories
+      if (!storybook.userId && email) {
+        const isVerified = await storage.isDownloadVerified(id, email as string);
+        if (!isVerified) {
+          return res.status(403).json({ 
+            message: "Email verification required. Please verify your email first." 
+          });
+        }
+      } else if (!storybook.userId && !email) {
+        return res.status(400).json({ 
+          message: "Email verification required for anonymous storybooks" 
+        });
       }
 
       const { generateEpub } = await import("./services/epub");
@@ -2886,6 +3008,10 @@ Sitemap: ${baseUrl}/sitemap.xml`;
       );
 
       // Update the storybook with moods
+      const { db } = await import('./db');
+      const { storybooks } = await import('@shared/schema');
+      const { eq } = await import('drizzle-orm');
+      
       await db
         .update(storybooks)
         .set({ pages: updatedPages as any })
