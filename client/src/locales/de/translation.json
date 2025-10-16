@@ -193,6 +193,10 @@
         "label": "Inspirationsbilder (Optional)",
         "count": "0-5 Bilder"
       },
+      "samplePrompts": {
+        "label": "Beispiel Story-Ideen",
+        "helpText": "Klicken Sie auf ein Beispiel, um es als Inspiration für Ihre Geschichte zu verwenden"
+      },
       "styleGuide": {
         "button": "Stilanleitung",
         "title": "Bildstil-Anleitung",

@@ -193,6 +193,10 @@
         "label": "Images d'Inspiration (Optionnel)",
         "count": "0-5 images"
       },
+      "samplePrompts": {
+        "label": "Idées d'Histoire Exemples",
+        "helpText": "Cliquez sur un exemple pour l'utiliser comme inspiration pour votre histoire"
+      },
       "styleGuide": {
         "button": "Guide de Style",
         "title": "Guide de Style d'Image",

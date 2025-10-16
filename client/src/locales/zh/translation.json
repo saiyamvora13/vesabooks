@@ -193,6 +193,10 @@
         "label": "灵感图片（可选）",
         "count": "0-5张图片"
       },
+      "samplePrompts": {
+        "label": "示例故事创意",
+        "helpText": "点击示例提示以将其用作故事灵感"
+      },
       "styleGuide": {
         "button": "风格指南",
         "title": "图片风格指南",
