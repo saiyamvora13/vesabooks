@@ -40,7 +40,7 @@ export default function StorybookSelector({ open, onOpenChange, onSelect }: Stor
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent 
-        className="max-w-4xl bg-slate-900 border-slate-800 text-slate-100"
+        className="sm:max-w-2xl lg:max-w-4xl bg-slate-900 border-slate-800 text-slate-100"
         data-testid="modal-storybook-selector"
       >
         <DialogHeader>
@@ -64,7 +64,7 @@ export default function StorybookSelector({ open, onOpenChange, onSelect }: Stor
 
           <ScrollArea className="h-96 rounded-lg border border-slate-800 bg-slate-950 p-4">
             {isLoading ? (
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 {[...Array(6)].map((_, i) => (
                   <div key={i} className="space-y-2">
                     <Skeleton className="h-40 bg-slate-800" />
@@ -80,7 +80,7 @@ export default function StorybookSelector({ open, onOpenChange, onSelect }: Stor
                 </p>
               </div>
             ) : (
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                 {filteredStorybooks.map((storybook) => (
                   <button
                     key={storybook.id}
