@@ -2168,33 +2168,34 @@ Sitemap: ${baseUrl}/sitemap.xml`;
       const filename = `${randomUUID()}_page_${pageNumber}.jpg`;
       const tempImagePath = path.join("uploads", filename);
       
-      // Download cover image to use as reference for character consistency
-      let coverImagePath: string | undefined;
-      if (storybook.coverImageUrl) {
+      // Download first inspiration image (user's photo) to use as reference for character consistency
+      let inspirationImagePath: string | undefined;
+      if (storybook.inspirationImages && storybook.inspirationImages.length > 0) {
         try {
-          // Create a temp path for the cover image
-          const coverFilename = `${randomUUID()}_cover_ref.jpg`;
-          coverImagePath = path.join("uploads", coverFilename);
+          // Create a temp path for the inspiration image
+          const inspirationFilename = `${randomUUID()}_inspiration_ref.jpg`;
+          inspirationImagePath = path.join("uploads", inspirationFilename);
           
-          // Download the cover image from object storage
-          const coverImageResponse = await fetch(`http://localhost:5000${storybook.coverImageUrl}`);
-          if (coverImageResponse.ok) {
-            const coverImageBuffer = await coverImageResponse.arrayBuffer();
-            fs.writeFileSync(coverImagePath, Buffer.from(coverImageBuffer));
-            console.log(`[Page Regeneration] Using cover image as reference for consistency`);
+          // Download the first inspiration image from object storage
+          const inspirationUrl = storybook.inspirationImages[0];
+          const inspirationImageResponse = await fetch(`http://localhost:5000${inspirationUrl}`);
+          if (inspirationImageResponse.ok) {
+            const inspirationImageBuffer = await inspirationImageResponse.arrayBuffer();
+            fs.writeFileSync(inspirationImagePath, Buffer.from(inspirationImageBuffer));
+            console.log(`[Page Regeneration] Using uploaded photo as reference for consistency`);
           } else {
-            console.warn(`[Page Regeneration] Could not download cover image: ${coverImageResponse.status}`);
-            coverImagePath = undefined;
+            console.warn(`[Page Regeneration] Could not download inspiration image: ${inspirationImageResponse.status}`);
+            inspirationImagePath = undefined;
           }
         } catch (error) {
-          console.warn(`[Page Regeneration] Error downloading cover image:`, error);
-          coverImagePath = undefined;
+          console.warn(`[Page Regeneration] Error downloading inspiration image:`, error);
+          inspirationImagePath = undefined;
         }
       }
       
       // Use art style from storybook if available
       const artStyle = storybook.artStyle || undefined;
-      await generateIllustration(fullImagePrompt, tempImagePath, coverImagePath, artStyle);
+      await generateIllustration(fullImagePrompt, tempImagePath, inspirationImagePath, artStyle);
 
       // Upload to object storage (uploadFile adds date-based path automatically)
       const imageUrl = await objectStorage.uploadFile(tempImagePath, filename, true, storybook.createdAt || new Date());
@@ -2202,8 +2203,8 @@ Sitemap: ${baseUrl}/sitemap.xml`;
       // Clean up temp files
       try {
         fs.unlinkSync(tempImagePath);
-        if (coverImagePath && fs.existsSync(coverImagePath)) {
-          fs.unlinkSync(coverImagePath);
+        if (inspirationImagePath && fs.existsSync(inspirationImagePath)) {
+          fs.unlinkSync(inspirationImagePath);
         }
       } catch (err) {
         console.warn("Failed to delete temp files:", err);
