@@ -79,55 +79,59 @@ export default function AdminSettings() {
   return (
     <ProtectedAdminRoute>
       <AdminLayout>
-        <div className="space-y-8">
+        <div className="space-y-6 sm:space-y-8">
           <div>
-            <h1 className="text-3xl font-bold text-slate-100 mb-2">General Settings</h1>
-            <p className="text-slate-400">Manage site configuration and pricing</p>
+            <h1 className="text-2xl sm:text-3xl font-bold text-slate-100 mb-2">General Settings</h1>
+            <p className="text-sm sm:text-base text-slate-400">Manage site configuration and pricing</p>
           </div>
 
           <Card className="bg-slate-900 border-slate-800">
             <CardHeader>
-              <CardTitle className="text-slate-100">Site Configuration</CardTitle>
-              <CardDescription className="text-slate-400">
+              <CardTitle className="text-lg sm:text-xl text-slate-100">Site Configuration</CardTitle>
+              <CardDescription className="text-sm sm:text-base text-slate-400">
                 Update global settings for the storybook builder
               </CardDescription>
             </CardHeader>
             <CardContent>
               {isLoading ? (
-                <div className="space-y-6">
+                <div className="space-y-4 sm:space-y-6">
                   <Skeleton className="h-20 bg-slate-800" />
                   <Skeleton className="h-20 bg-slate-800" />
                   <Skeleton className="h-20 bg-slate-800" />
                 </div>
               ) : error ? (
-                <div className="text-center py-8">
-                  <p className="text-red-400 mb-4">Failed to load settings: {error instanceof Error ? error.message : 'Unknown error'}</p>
-                  <Button onClick={() => queryClient.invalidateQueries({ queryKey: ["/api/admin/settings"] })} variant="outline" className="border-slate-700 text-slate-300">
+                <div className="text-center py-6 sm:py-8">
+                  <p className="text-red-400 mb-4 text-sm sm:text-base px-2">Failed to load settings: {error instanceof Error ? error.message : 'Unknown error'}</p>
+                  <Button 
+                    onClick={() => queryClient.invalidateQueries({ queryKey: ["/api/admin/settings"] })} 
+                    variant="outline" 
+                    className="border-slate-700 text-slate-300 hover:bg-slate-800 w-full sm:w-auto"
+                  >
                     Retry
                   </Button>
                 </div>
               ) : (
                 <Form {...form}>
-                  <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+                  <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5 sm:space-y-6">
                     <FormField
                       control={form.control}
                       name="pages_per_book"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel className="text-slate-300">Pages Per Book</FormLabel>
+                          <FormLabel className="text-sm sm:text-base text-slate-300">Pages Per Book</FormLabel>
                           <FormControl>
                             <Input
                               {...field}
                               type="number"
                               placeholder="10"
-                              className="bg-slate-950 border-slate-700 text-slate-100 placeholder:text-slate-500"
+                              className="bg-slate-950 border-slate-700 text-slate-100 placeholder:text-slate-500 h-11 sm:h-10"
                               data-testid="input-pages-per-book"
                             />
                           </FormControl>
-                          <FormDescription className="text-slate-500">
+                          <FormDescription className="text-xs sm:text-sm text-slate-500">
                             Number of pages in each generated storybook
                           </FormDescription>
-                          <FormMessage className="text-red-400" />
+                          <FormMessage className="text-xs sm:text-sm text-red-400" />
                         </FormItem>
                       )}
                     />
@@ -137,21 +141,21 @@ export default function AdminSettings() {
                       name="digital_price"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel className="text-slate-300">Digital Price ($)</FormLabel>
+                          <FormLabel className="text-sm sm:text-base text-slate-300">Digital Price ($)</FormLabel>
                           <FormControl>
                             <Input
                               {...field}
                               type="number"
                               step="0.01"
                               placeholder="9.99"
-                              className="bg-slate-950 border-slate-700 text-slate-100 placeholder:text-slate-500"
+                              className="bg-slate-950 border-slate-700 text-slate-100 placeholder:text-slate-500 h-11 sm:h-10"
                               data-testid="input-digital-price"
                             />
                           </FormControl>
-                          <FormDescription className="text-slate-500">
+                          <FormDescription className="text-xs sm:text-sm text-slate-500">
                             Price for digital (PDF/EPUB) version
                           </FormDescription>
-                          <FormMessage className="text-red-400" />
+                          <FormMessage className="text-xs sm:text-sm text-red-400" />
                         </FormItem>
                       )}
                     />
@@ -161,34 +165,38 @@ export default function AdminSettings() {
                       name="print_price"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel className="text-slate-300">Print Price ($)</FormLabel>
+                          <FormLabel className="text-sm sm:text-base text-slate-300">Print Price ($)</FormLabel>
                           <FormControl>
                             <Input
                               {...field}
                               type="number"
                               step="0.01"
                               placeholder="24.99"
-                              className="bg-slate-950 border-slate-700 text-slate-100 placeholder:text-slate-500"
+                              className="bg-slate-950 border-slate-700 text-slate-100 placeholder:text-slate-500 h-11 sm:h-10"
                               data-testid="input-print-price"
                             />
                           </FormControl>
-                          <FormDescription className="text-slate-500">
+                          <FormDescription className="text-xs sm:text-sm text-slate-500">
                             Price for print version of the book
                           </FormDescription>
-                          <FormMessage className="text-red-400" />
+                          <FormMessage className="text-xs sm:text-sm text-red-400" />
                         </FormItem>
                       )}
                     />
 
-                    <Button
-                      type="submit"
-                      className="bg-purple-600 hover:bg-purple-700 text-white"
-                      disabled={updateSettingMutation.isPending}
-                      data-testid="button-save-settings"
-                    >
-                      <Save className="w-4 h-4 mr-2" />
-                      {updateSettingMutation.isPending ? "Saving..." : "Save Settings"}
-                    </Button>
+                    <div className="pt-2">
+                      <Button
+                        type="submit"
+                        className="bg-purple-600 hover:bg-purple-700 text-white w-full sm:w-auto h-11 sm:h-10"
+                        disabled={updateSettingMutation.isPending}
+                        data-testid="button-save-settings"
+                      >
+                        <Save className="w-4 h-4 mr-2" />
+                        <span className="text-sm sm:text-base">
+                          {updateSettingMutation.isPending ? "Saving..." : "Save Settings"}
+                        </span>
+                      </Button>
+                    </div>
                   </form>
                 </Form>
               )}

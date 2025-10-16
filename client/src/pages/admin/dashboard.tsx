@@ -31,24 +31,24 @@ export default function AdminDashboard() {
   return (
     <ProtectedAdminRoute>
       <AdminLayout>
-        <div className="space-y-8">
+        <div className="space-y-6 sm:space-y-8">
           <div>
-            <h1 className="text-3xl font-bold text-slate-100 mb-2">Dashboard</h1>
-            <p className="text-slate-400">Overview of your admin panel</p>
+            <h1 className="text-2xl sm:text-3xl font-bold text-slate-100 mb-2">Dashboard</h1>
+            <p className="text-sm sm:text-base text-slate-400">Overview of your admin panel</p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
             {/* Total Stories Card */}
             <Card className="bg-slate-900 border-slate-800">
               <CardHeader className="flex flex-row items-center justify-between pb-2">
                 <CardTitle className="text-sm font-medium text-slate-400">Total Stories</CardTitle>
-                <BookOpen className="w-5 h-5 text-purple-500" />
+                <BookOpen className="w-5 h-5 text-purple-500 flex-shrink-0" />
               </CardHeader>
               <CardContent>
                 {storybooksLoading ? (
                   <Skeleton className="h-10 w-24 bg-slate-800" />
                 ) : (
-                  <div className="text-3xl font-bold text-slate-100" data-testid="stat-total-stories">
+                  <div className="text-2xl sm:text-3xl font-bold text-slate-100" data-testid="stat-total-stories">
                     {totalStories}
                   </div>
                 )}
@@ -60,13 +60,13 @@ export default function AdminDashboard() {
             <Card className="bg-slate-900 border-slate-800">
               <CardHeader className="flex flex-row items-center justify-between pb-2">
                 <CardTitle className="text-sm font-medium text-slate-400">Active Users</CardTitle>
-                <Users className="w-5 h-5 text-purple-500" />
+                <Users className="w-5 h-5 text-purple-500 flex-shrink-0" />
               </CardHeader>
               <CardContent>
                 {metricsLoading ? (
                   <Skeleton className="h-10 w-24 bg-slate-800" />
                 ) : (
-                  <div className="text-3xl font-bold text-slate-100" data-testid="stat-total-users">
+                  <div className="text-2xl sm:text-3xl font-bold text-slate-100" data-testid="stat-total-users">
                     {totalUsers}
                   </div>
                 )}
@@ -78,13 +78,13 @@ export default function AdminDashboard() {
             <Card className="bg-slate-900 border-slate-800">
               <CardHeader className="flex flex-row items-center justify-between pb-2">
                 <CardTitle className="text-sm font-medium text-slate-400">Site Settings</CardTitle>
-                <Settings className="w-5 h-5 text-purple-500" />
+                <Settings className="w-5 h-5 text-purple-500 flex-shrink-0" />
               </CardHeader>
               <CardContent>
                 {settingsLoading ? (
                   <Skeleton className="h-10 w-24 bg-slate-800" />
                 ) : (
-                  <div className="text-3xl font-bold text-slate-100">
+                  <div className="text-2xl sm:text-3xl font-bold text-slate-100">
                     {settingsCount}
                   </div>
                 )}
@@ -93,48 +93,52 @@ export default function AdminDashboard() {
             </Card>
           </div>
 
-          {/* Recent Activity Section */}
+          {/* Quick Actions Section - Mobile optimized */}
           <Card className="bg-slate-900 border-slate-800">
             <CardHeader>
-              <CardTitle className="text-slate-100">Quick Actions</CardTitle>
+              <CardTitle className="text-lg sm:text-xl text-slate-100">Quick Actions</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                 <a
                   href="/admin/analytics"
-                  className="p-4 rounded-lg border border-slate-800 bg-slate-950 hover:bg-slate-800 transition-colors"
+                  className="block p-4 rounded-lg border border-slate-800 bg-slate-950 hover:bg-slate-800 transition-colors min-h-[60px] sm:min-h-[auto]"
                   data-testid="link-analytics"
                 >
-                  <h3 className="font-semibold text-slate-100 mb-1">Analytics Dashboard</h3>
-                  <p className="text-sm text-slate-400">View detailed insights and metrics</p>
+                  <h3 className="font-semibold text-base sm:text-lg text-slate-100 mb-1">Analytics Dashboard</h3>
+                  <p className="text-xs sm:text-sm text-slate-400">View detailed insights and metrics</p>
                 </a>
                 <a
                   href="/admin/settings"
-                  className="p-4 rounded-lg border border-slate-800 bg-slate-950 hover:bg-slate-800 transition-colors"
+                  className="block p-4 rounded-lg border border-slate-800 bg-slate-950 hover:bg-slate-800 transition-colors min-h-[60px] sm:min-h-[auto]"
+                  data-testid="link-settings"
                 >
-                  <h3 className="font-semibold text-slate-100 mb-1">Manage Settings</h3>
-                  <p className="text-sm text-slate-400">Update site configuration</p>
+                  <h3 className="font-semibold text-base sm:text-lg text-slate-100 mb-1">Manage Settings</h3>
+                  <p className="text-xs sm:text-sm text-slate-400">Update site configuration</p>
                 </a>
                 <a
                   href="/admin/hero"
-                  className="p-4 rounded-lg border border-slate-800 bg-slate-950 hover:bg-slate-800 transition-colors"
+                  className="block p-4 rounded-lg border border-slate-800 bg-slate-950 hover:bg-slate-800 transition-colors min-h-[60px] sm:min-h-[auto]"
+                  data-testid="link-hero"
                 >
-                  <h3 className="font-semibold text-slate-100 mb-1">Hero Management</h3>
-                  <p className="text-sm text-slate-400">Manage featured hero slots</p>
+                  <h3 className="font-semibold text-base sm:text-lg text-slate-100 mb-1">Hero Management</h3>
+                  <p className="text-xs sm:text-sm text-slate-400">Manage featured hero slots</p>
                 </a>
                 <a
                   href="/admin/featured"
-                  className="p-4 rounded-lg border border-slate-800 bg-slate-950 hover:bg-slate-800 transition-colors"
+                  className="block p-4 rounded-lg border border-slate-800 bg-slate-950 hover:bg-slate-800 transition-colors min-h-[60px] sm:min-h-[auto]"
+                  data-testid="link-featured"
                 >
-                  <h3 className="font-semibold text-slate-100 mb-1">Featured Content</h3>
-                  <p className="text-sm text-slate-400">Curate featured storybooks</p>
+                  <h3 className="font-semibold text-base sm:text-lg text-slate-100 mb-1">Featured Content</h3>
+                  <p className="text-xs sm:text-sm text-slate-400">Curate featured storybooks</p>
                 </a>
                 <a
                   href="/admin/audit-logs"
-                  className="p-4 rounded-lg border border-slate-800 bg-slate-950 hover:bg-slate-800 transition-colors"
+                  className="block p-4 rounded-lg border border-slate-800 bg-slate-950 hover:bg-slate-800 transition-colors min-h-[60px] sm:min-h-[auto]"
+                  data-testid="link-audit"
                 >
-                  <h3 className="font-semibold text-slate-100 mb-1">Audit Logs</h3>
-                  <p className="text-sm text-slate-400">View admin activity logs</p>
+                  <h3 className="font-semibold text-base sm:text-lg text-slate-100 mb-1">Audit Logs</h3>
+                  <p className="text-xs sm:text-sm text-slate-400">View admin activity logs</p>
                 </a>
               </div>
             </CardContent>

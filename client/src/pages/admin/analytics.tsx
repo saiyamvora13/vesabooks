@@ -114,40 +114,42 @@ export default function AdminAnalytics() {
   return (
     <ProtectedAdminRoute>
       <AdminLayout>
-        <div className="space-y-8">
-          <div className="flex items-center justify-between">
+        <div className="space-y-6 sm:space-y-8">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
-              <h1 className="text-3xl font-bold text-slate-100 mb-2">Analytics Dashboard</h1>
-              <p className="text-slate-400">Comprehensive insights and metrics</p>
+              <h1 className="text-2xl sm:text-3xl font-bold text-slate-100 mb-2">Analytics Dashboard</h1>
+              <p className="text-sm sm:text-base text-slate-400">Comprehensive insights and metrics</p>
             </div>
             <Button
               onClick={handleRefresh}
               variant="outline"
-              className="border-slate-700 text-slate-300 hover:bg-slate-800"
+              className="border-slate-700 text-slate-300 hover:bg-slate-800 w-full sm:w-auto"
               data-testid="button-refresh"
             >
               <RefreshCw className="w-4 h-4 mr-2" />
-              Refresh Data
+              <span className="text-sm sm:text-base">Refresh Data</span>
             </Button>
           </div>
 
-          {/* Stats Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
+          {/* Stats Cards - Mobile optimized grid */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-5 gap-4 sm:gap-6">
             <Card className="bg-slate-900 border-slate-800">
               <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-sm font-medium text-slate-400">Total Revenue</CardTitle>
-                <DollarSign className="w-5 h-5 text-green-500" />
+                <CardTitle className="text-xs sm:text-sm font-medium text-slate-400">Total Revenue</CardTitle>
+                <DollarSign className="w-4 sm:w-5 h-4 sm:h-5 text-green-500 flex-shrink-0" />
               </CardHeader>
               <CardContent>
                 {overviewLoading ? (
                   <Skeleton className="h-10 w-24 bg-slate-800" />
                 ) : (
                   <div>
-                    <div className="text-3xl font-bold text-slate-100" data-testid="stat-total-revenue">
+                    <div className="text-xl sm:text-2xl lg:text-3xl font-bold text-slate-100" data-testid="stat-total-revenue">
                       ${overview?.totalRevenue.toFixed(2) || '0.00'}
                     </div>
-                    <p className="text-xs text-slate-500 mt-1">
-                      Digital: ${overview?.revenueByType.digital.toFixed(2)} | Print: ${overview?.revenueByType.print.toFixed(2)}
+                    <p className="text-xs text-slate-500 mt-1 break-words">
+                      <span className="block sm:inline">Digital: ${overview?.revenueByType.digital.toFixed(2)}</span>
+                      <span className="hidden sm:inline"> | </span>
+                      <span className="block sm:inline">Print: ${overview?.revenueByType.print.toFixed(2)}</span>
                     </p>
                   </div>
                 )}
@@ -156,14 +158,14 @@ export default function AdminAnalytics() {
 
             <Card className="bg-slate-900 border-slate-800">
               <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-sm font-medium text-slate-400">Total Stories</CardTitle>
-                <BookOpen className="w-5 h-5 text-purple-500" />
+                <CardTitle className="text-xs sm:text-sm font-medium text-slate-400">Total Stories</CardTitle>
+                <BookOpen className="w-4 sm:w-5 h-4 sm:h-5 text-purple-500 flex-shrink-0" />
               </CardHeader>
               <CardContent>
                 {overviewLoading ? (
                   <Skeleton className="h-10 w-24 bg-slate-800" />
                 ) : (
-                  <div className="text-3xl font-bold text-slate-100" data-testid="stat-total-stories">
+                  <div className="text-xl sm:text-2xl lg:text-3xl font-bold text-slate-100" data-testid="stat-total-stories">
                     {overview?.totalStories || 0}
                   </div>
                 )}
@@ -173,14 +175,14 @@ export default function AdminAnalytics() {
 
             <Card className="bg-slate-900 border-slate-800">
               <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-sm font-medium text-slate-400">Active Users</CardTitle>
-                <Users className="w-5 h-5 text-blue-500" />
+                <CardTitle className="text-xs sm:text-sm font-medium text-slate-400">Active Users</CardTitle>
+                <Users className="w-4 sm:w-5 h-4 sm:h-5 text-blue-500 flex-shrink-0" />
               </CardHeader>
               <CardContent>
                 {overviewLoading ? (
                   <Skeleton className="h-10 w-24 bg-slate-800" />
                 ) : (
-                  <div className="text-3xl font-bold text-slate-100" data-testid="stat-active-users">
+                  <div className="text-xl sm:text-2xl lg:text-3xl font-bold text-slate-100" data-testid="stat-active-users">
                     {overview?.activeUsers || 0}
                   </div>
                 )}
@@ -190,14 +192,14 @@ export default function AdminAnalytics() {
 
             <Card className="bg-slate-900 border-slate-800">
               <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-sm font-medium text-slate-400">Avg Rating</CardTitle>
-                <Star className="w-5 h-5 text-yellow-500" />
+                <CardTitle className="text-xs sm:text-sm font-medium text-slate-400">Avg Rating</CardTitle>
+                <Star className="w-4 sm:w-5 h-4 sm:h-5 text-yellow-500 flex-shrink-0" />
               </CardHeader>
               <CardContent>
                 {overviewLoading ? (
                   <Skeleton className="h-10 w-24 bg-slate-800" />
                 ) : (
-                  <div className="text-3xl font-bold text-slate-100" data-testid="stat-avg-rating">
+                  <div className="text-xl sm:text-2xl lg:text-3xl font-bold text-slate-100" data-testid="stat-avg-rating">
                     {overview?.averageRating?.toFixed(1) || 'N/A'}
                   </div>
                 )}
@@ -207,14 +209,14 @@ export default function AdminAnalytics() {
 
             <Card className="bg-slate-900 border-slate-800">
               <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-sm font-medium text-slate-400">Completion Rate</CardTitle>
-                <TrendingUp className="w-5 h-5 text-orange-500" />
+                <CardTitle className="text-xs sm:text-sm font-medium text-slate-400">Completion Rate</CardTitle>
+                <TrendingUp className="w-4 sm:w-5 h-4 sm:h-5 text-orange-500 flex-shrink-0" />
               </CardHeader>
               <CardContent>
                 {overviewLoading ? (
                   <Skeleton className="h-10 w-24 bg-slate-800" />
                 ) : (
-                  <div className="text-3xl font-bold text-slate-100" data-testid="stat-completion-rate">
+                  <div className="text-xl sm:text-2xl lg:text-3xl font-bold text-slate-100" data-testid="stat-completion-rate">
                     {overview?.completionRate.toFixed(1) || 0}%
                   </div>
                 )}
@@ -223,25 +225,32 @@ export default function AdminAnalytics() {
             </Card>
           </div>
 
-          {/* Revenue Chart */}
+          {/* Revenue Chart - Mobile optimized */}
           <Card className="bg-slate-900 border-slate-800">
             <CardHeader>
-              <CardTitle className="text-slate-100">Revenue Trends (Last 30 Days)</CardTitle>
+              <CardTitle className="text-base sm:text-lg lg:text-xl text-slate-100">Revenue Trends (Last 30 Days)</CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="overflow-x-auto">
               {trendsLoading ? (
-                <Skeleton className="h-[300px] w-full bg-slate-800" />
+                <Skeleton className="h-[250px] sm:h-[300px] w-full bg-slate-800" />
               ) : (
-                <ResponsiveContainer width="100%" height={300}>
-                  <LineChart data={revenueChartData}>
+                <ResponsiveContainer width="100%" height={isMobile ? 250 : 300} minWidth={300}>
+                  <LineChart data={revenueChartData} margin={{ top: 5, right: 10, left: 0, bottom: 5 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
-                    <XAxis dataKey="date" stroke="#94a3b8" />
-                    <YAxis stroke="#94a3b8" />
+                    <XAxis 
+                      dataKey="date" 
+                      stroke="#94a3b8" 
+                      tick={{ fontSize: isMobile ? 10 : 12 }}
+                      angle={isMobile ? -45 : 0}
+                      textAnchor={isMobile ? "end" : "middle"}
+                      height={isMobile ? 60 : 30}
+                    />
+                    <YAxis stroke="#94a3b8" tick={{ fontSize: isMobile ? 10 : 12 }} />
                     <Tooltip 
-                      contentStyle={{ backgroundColor: '#1e293b', border: '1px solid #334155' }}
+                      contentStyle={{ backgroundColor: '#1e293b', border: '1px solid #334155', fontSize: '12px' }}
                       labelStyle={{ color: '#e2e8f0' }}
                     />
-                    <Legend />
+                    <Legend wrapperStyle={{ fontSize: '12px' }} />
                     <Line type="monotone" dataKey="digital" stroke="#8b5cf6" name="Digital" strokeWidth={2} />
                     <Line type="monotone" dataKey="print" stroke="#10b981" name="Print" strokeWidth={2} />
                   </LineChart>
@@ -250,23 +259,30 @@ export default function AdminAnalytics() {
             </CardContent>
           </Card>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Popular Themes */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+            {/* Popular Themes - Mobile optimized */}
             <Card className="bg-slate-900 border-slate-800">
               <CardHeader>
-                <CardTitle className="text-slate-100">Popular Themes</CardTitle>
+                <CardTitle className="text-base sm:text-lg lg:text-xl text-slate-100">Popular Themes</CardTitle>
               </CardHeader>
-              <CardContent>
+              <CardContent className="overflow-x-auto">
                 {themesLoading ? (
-                  <Skeleton className="h-[300px] w-full bg-slate-800" />
+                  <Skeleton className="h-[250px] sm:h-[300px] w-full bg-slate-800" />
                 ) : (
-                  <ResponsiveContainer width="100%" height={300}>
-                    <BarChart data={themes}>
+                  <ResponsiveContainer width="100%" height={isMobile ? 250 : 300} minWidth={300}>
+                    <BarChart data={themes} margin={{ top: 5, right: 10, left: 0, bottom: 60 }}>
                       <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
-                      <XAxis dataKey="theme" stroke="#94a3b8" angle={-45} textAnchor="end" height={80} />
-                      <YAxis stroke="#94a3b8" />
+                      <XAxis 
+                        dataKey="theme" 
+                        stroke="#94a3b8" 
+                        angle={-45} 
+                        textAnchor="end" 
+                        height={80}
+                        tick={{ fontSize: isMobile ? 10 : 12 }}
+                      />
+                      <YAxis stroke="#94a3b8" tick={{ fontSize: isMobile ? 10 : 12 }} />
                       <Tooltip 
-                        contentStyle={{ backgroundColor: '#1e293b', border: '1px solid #334155' }}
+                        contentStyle={{ backgroundColor: '#1e293b', border: '1px solid #334155', fontSize: '12px' }}
                         labelStyle={{ color: '#e2e8f0' }}
                       />
                       <Bar dataKey="count" fill="#8b5cf6" />
@@ -276,22 +292,29 @@ export default function AdminAnalytics() {
               </CardContent>
             </Card>
 
-            {/* User Growth */}
+            {/* User Growth - Mobile optimized */}
             <Card className="bg-slate-900 border-slate-800">
               <CardHeader>
-                <CardTitle className="text-slate-100">User Growth (Last 30 Days)</CardTitle>
+                <CardTitle className="text-base sm:text-lg lg:text-xl text-slate-100">User Growth (Last 30 Days)</CardTitle>
               </CardHeader>
-              <CardContent>
+              <CardContent className="overflow-x-auto">
                 {retentionLoading ? (
-                  <Skeleton className="h-[300px] w-full bg-slate-800" />
+                  <Skeleton className="h-[250px] sm:h-[300px] w-full bg-slate-800" />
                 ) : (
-                  <ResponsiveContainer width="100%" height={300}>
-                    <LineChart data={userGrowthData}>
+                  <ResponsiveContainer width="100%" height={isMobile ? 250 : 300} minWidth={300}>
+                    <LineChart data={userGrowthData} margin={{ top: 5, right: 10, left: 0, bottom: 60 }}>
                       <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
-                      <XAxis dataKey="date" stroke="#94a3b8" angle={-45} textAnchor="end" height={80} />
-                      <YAxis stroke="#94a3b8" />
+                      <XAxis 
+                        dataKey="date" 
+                        stroke="#94a3b8" 
+                        angle={-45} 
+                        textAnchor="end" 
+                        height={80}
+                        tick={{ fontSize: isMobile ? 10 : 12 }}
+                      />
+                      <YAxis stroke="#94a3b8" tick={{ fontSize: isMobile ? 10 : 12 }} />
                       <Tooltip 
-                        contentStyle={{ backgroundColor: '#1e293b', border: '1px solid #334155' }}
+                        contentStyle={{ backgroundColor: '#1e293b', border: '1px solid #334155', fontSize: '12px' }}
                         labelStyle={{ color: '#e2e8f0' }}
                       />
                       <Line type="monotone" dataKey="users" stroke="#3b82f6" name="New Users" strokeWidth={2} />
@@ -302,41 +325,41 @@ export default function AdminAnalytics() {
             </Card>
           </div>
 
-          {/* User Retention Stats */}
+          {/* User Retention Stats - Mobile optimized */}
           <Card className="bg-slate-900 border-slate-800">
             <CardHeader>
-              <CardTitle className="text-slate-100">User Retention</CardTitle>
+              <CardTitle className="text-base sm:text-lg lg:text-xl text-slate-100">User Retention</CardTitle>
             </CardHeader>
             <CardContent>
               {retentionLoading ? (
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
                   <Skeleton className="h-20 bg-slate-800" />
                   <Skeleton className="h-20 bg-slate-800" />
                   <Skeleton className="h-20 bg-slate-800" />
                 </div>
               ) : (
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div className="p-4 bg-slate-950 rounded-lg">
-                    <div className="text-2xl font-bold text-slate-100">{retention?.totalUsers || 0}</div>
-                    <div className="text-sm text-slate-400">Total Users</div>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
+                  <div className="p-3 sm:p-4 bg-slate-950 rounded-lg">
+                    <div className="text-xl sm:text-2xl font-bold text-slate-100">{retention?.totalUsers || 0}</div>
+                    <div className="text-xs sm:text-sm text-slate-400">Total Users</div>
                   </div>
-                  <div className="p-4 bg-slate-950 rounded-lg">
-                    <div className="text-2xl font-bold text-slate-100">{retention?.returningUsers || 0}</div>
-                    <div className="text-sm text-slate-400">Returning Users</div>
+                  <div className="p-3 sm:p-4 bg-slate-950 rounded-lg">
+                    <div className="text-xl sm:text-2xl font-bold text-slate-100">{retention?.returningUsers || 0}</div>
+                    <div className="text-xs sm:text-sm text-slate-400">Returning Users</div>
                   </div>
-                  <div className="p-4 bg-slate-950 rounded-lg">
-                    <div className="text-2xl font-bold text-slate-100">{retention?.retentionRate.toFixed(1)}%</div>
-                    <div className="text-sm text-slate-400">Retention Rate</div>
+                  <div className="p-3 sm:p-4 bg-slate-950 rounded-lg">
+                    <div className="text-xl sm:text-2xl font-bold text-slate-100">{retention?.retentionRate.toFixed(1)}%</div>
+                    <div className="text-xs sm:text-sm text-slate-400">Retention Rate</div>
                   </div>
                 </div>
               )}
             </CardContent>
           </Card>
 
-          {/* Top Rated Stories */}
+          {/* Top Popular Stories - Already responsive from previous task */}
           <Card className="bg-slate-900 border-slate-800">
             <CardHeader>
-              <CardTitle className="text-slate-100">Top Popular Stories</CardTitle>
+              <CardTitle className="text-base sm:text-lg lg:text-xl text-slate-100">Top Popular Stories</CardTitle>
             </CardHeader>
             <CardContent>
               {topRatedStories.length === 0 ? (
