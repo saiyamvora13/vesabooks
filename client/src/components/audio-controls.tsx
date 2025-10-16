@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Volume2, VolumeX, Music, Play, Pause } from "lucide-react";
+import { VolumeX, Music } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
@@ -26,7 +26,6 @@ interface AudioControlsProps {
 }
 
 export function AudioControls({ storybookId }: AudioControlsProps) {
-  const [isPlaying, setIsPlaying] = useState(false);
   const [musicEnabled, setMusicEnabled] = useState(true);
   const [soundEffectsEnabled, setSoundEffectsEnabled] = useState(true);
   const [musicVolume, setMusicVolume] = useState(70);
@@ -81,16 +80,6 @@ export function AudioControls({ storybookId }: AudioControlsProps) {
     }
   };
 
-  const togglePlayPause = () => {
-    if (isPlaying) {
-      audioManager.pause();
-      setIsPlaying(false);
-    } else {
-      audioManager.resume();
-      setIsPlaying(true);
-    }
-  };
-
   const handleMusicVolumeChange = (value: number[]) => {
     const vol = value[0];
     setMusicVolume(vol);
@@ -107,10 +96,6 @@ export function AudioControls({ storybookId }: AudioControlsProps) {
 
   const handleMusicEnabledChange = (checked: boolean) => {
     setMusicEnabled(checked);
-    if (!checked) {
-      audioManager.pause();
-      setIsPlaying(false);
-    }
     saveSettings({ musicEnabled: checked });
   };
 
@@ -126,28 +111,6 @@ export function AudioControls({ storybookId }: AudioControlsProps) {
         <p className="text-sm text-muted-foreground">
           Control music and sound effects for your storybook
         </p>
-      </div>
-
-      {/* Play/Pause Button */}
-      <div className="flex items-center justify-between">
-        <Label htmlFor="play-pause" className={`font-medium ${isMobile ? 'text-base' : 'text-sm'}`}>
-          {isPlaying ? 'Pause Music' : 'Play Music'}
-        </Label>
-        <Button
-          id="play-pause"
-          variant="outline"
-          size={isMobile ? "default" : "sm"}
-          onClick={togglePlayPause}
-          disabled={!musicEnabled}
-          data-testid="button-play-pause"
-          className={isMobile ? "min-h-[48px] px-4" : ""}
-        >
-          {isPlaying ? (
-            <Pause className={`${isMobile ? 'h-5 w-5' : 'h-4 w-4'}`} />
-          ) : (
-            <Play className={`${isMobile ? 'h-5 w-5' : 'h-4 w-4'}`} />
-          )}
-        </Button>
       </div>
 
       {/* Music Enable Toggle */}
@@ -238,9 +201,6 @@ export function AudioControls({ storybookId }: AudioControlsProps) {
           >
             {musicEnabled ? <Music className="h-5 w-5 mr-2" /> : <VolumeX className="h-5 w-5 mr-2" />}
             <span className="sr-only md:not-sr-only">Audio</span>
-            {isPlaying && (
-              <span className="absolute -top-1 -right-1 h-2 w-2 rounded-full bg-green-500 animate-pulse" />
-            )}
           </Button>
         </DrawerTrigger>
         <DrawerContent className="max-h-[90vh]">
@@ -268,9 +228,6 @@ export function AudioControls({ storybookId }: AudioControlsProps) {
           data-testid="button-audio-controls"
         >
           {musicEnabled ? <Music className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />}
-          {isPlaying && (
-            <span className="absolute -top-1 -right-1 h-2 w-2 rounded-full bg-green-500 animate-pulse" />
-          )}
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-80" align="end">
