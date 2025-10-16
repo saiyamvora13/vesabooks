@@ -308,3 +308,47 @@ export const insertAudioSettingsSchema = createInsertSchema(audioSettings).omit(
 
 export type AudioSettings = typeof audioSettings.$inferSelect;
 export type InsertAudioSettings = z.infer<typeof insertAudioSettingsSchema>;
+
+// IP Rate Limiting - track story creation by IP address
+export const ipRateLimits = pgTable("ip_rate_limits", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  ipAddress: varchar("ip_address").notNull(),
+  storyCount: numeric("story_count").notNull().default('0'),
+  resetAt: timestamp("reset_at").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("idx_ip_rate_limits_ip").on(table.ipAddress),
+  unique().on(table.ipAddress),
+]);
+
+export const insertIpRateLimitSchema = createInsertSchema(ipRateLimits).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type IpRateLimit = typeof ipRateLimits.$inferSelect;
+export type InsertIpRateLimit = z.infer<typeof insertIpRateLimitSchema>;
+
+// Download Verifications - email verification for PDF/EPUB downloads
+export const downloadVerifications = pgTable("download_verifications", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  storybookId: varchar("storybook_id").notNull().references(() => storybooks.id, { onDelete: 'cascade' }),
+  email: varchar("email").notNull(),
+  verificationCode: varchar("verification_code").notNull(),
+  expiresAt: timestamp("expires_at").notNull(),
+  verifiedAt: timestamp("verified_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("idx_download_verifications_storybook").on(table.storybookId),
+  index("idx_download_verifications_email").on(table.email),
+]);
+
+export const insertDownloadVerificationSchema = createInsertSchema(downloadVerifications).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type DownloadVerification = typeof downloadVerifications.$inferSelect;
+export type InsertDownloadVerification = z.infer<typeof insertDownloadVerificationSchema>;
