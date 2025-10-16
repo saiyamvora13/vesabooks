@@ -4,8 +4,7 @@ import App from "./App";
 import i18n from "./i18n";
 import "./index.css";
 
-// Immediately register global handler for unhandled rejections
-// This MUST be done before any other code to ensure it catches everything
+// Global handler for unhandled rejections - for debugging
 const handleUnhandledRejection = (event: PromiseRejectionEvent) => {
   console.error('🔴 UNHANDLED REJECTION CAUGHT:', {
     reason: event.reason,
@@ -15,17 +14,12 @@ const handleUnhandledRejection = (event: PromiseRejectionEvent) => {
     stack: event.reason?.stack
   });
   
-  // Always prevent the default behavior to stop Vite overlay
+  // Prevent the default behavior to stop Vite overlay
   event.preventDefault();
-  event.stopPropagation();
-  event.stopImmediatePropagation();
-  
-  // Return false to further prevent default
-  return false;
 };
 
-// Register as soon as possible with capture phase
-window.addEventListener('unhandledrejection', handleUnhandledRejection, true);
+// Register the handler
+window.addEventListener('unhandledrejection', handleUnhandledRejection);
 
 createRoot(document.getElementById("root")!).render(
   <I18nextProvider i18n={i18n}>

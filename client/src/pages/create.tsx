@@ -116,21 +116,30 @@ export default function Create() {
         throw new Error(String(error || 'Failed to create storybook'));
       }
     },
-    onSuccess: (data) => {
-      setSessionId(data.sessionId);
-      setIsGenerating(true);
-      
-      // Show different message based on user type
-      if (data.isAnonymous && data.rateLimitRemaining !== null) {
-        toast({
-          title: t('storybook.create.toast.started.title'),
-          description: `${t('storybook.create.toast.started.description')} You have ${data.rateLimitRemaining} stories remaining today.`,
-        });
-      } else {
-        toast({
-          title: t('storybook.create.toast.started.title'),
-          description: t('storybook.create.toast.started.description'),
-        });
+    onSuccess: async (data) => {
+      try {
+        setSessionId(data.sessionId);
+        setIsGenerating(true);
+        
+        // Wrap toast calls in try-catch to prevent unhandled rejections
+        try {
+          // Show different message based on user type
+          if (data.isAnonymous && data.rateLimitRemaining !== null) {
+            toast({
+              title: t('storybook.create.toast.started.title'),
+              description: `${t('storybook.create.toast.started.description')} You have ${data.rateLimitRemaining} stories remaining today.`,
+            });
+          } else {
+            toast({
+              title: t('storybook.create.toast.started.title'),
+              description: t('storybook.create.toast.started.description'),
+            });
+          }
+        } catch (toastError) {
+          console.error('Error showing toast:', toastError);
+        }
+      } catch (error) {
+        console.error('Error in onSuccess:', error);
       }
     },
     onError: (error) => {
@@ -158,11 +167,13 @@ export default function Create() {
     },
   });
 
-  const onSubmit = (data: CreateStoryForm) => {
+  const onSubmit = async (data: CreateStoryForm) => {
     try {
       setLastFormData(data); // Save form data for retry
       setRetryCount(0); // Reset retry count on new submission
       createStoryMutation.mutate(data);
+      // Return a resolved promise to satisfy handleSubmit
+      return Promise.resolve();
     } catch (error) {
       console.error('Error in onSubmit:', error);
       const errorMessage = error instanceof Error ? error.message : String(error);
@@ -171,6 +182,8 @@ export default function Create() {
         description: errorMessage,
         variant: "destructive",
       });
+      // Return a resolved promise even on error (mutation handles the actual error)
+      return Promise.resolve();
     }
   };
 
