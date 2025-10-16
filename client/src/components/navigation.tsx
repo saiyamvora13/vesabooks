@@ -126,7 +126,7 @@ export default function Navigation() {
 
           {/* Desktop CTA Buttons */}
           <div className="hidden md:flex items-center space-x-4">
-            <LanguageSwitcher />
+            <LanguageSwitcher testId="language-switcher-desktop" />
             {!isLoading && !isAuthenticated && (
               <>
                 <Link href="/login">
@@ -283,7 +283,7 @@ export default function Navigation() {
             
             <div className="pt-4 mt-2 border-t border-border space-y-3">
               <div className="px-2">
-                <LanguageSwitcher />
+                <LanguageSwitcher testId="language-switcher-mobile" />
               </div>
               {!isLoading && !isAuthenticated ? (
                 <>
