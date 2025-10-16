@@ -109,44 +109,11 @@ export function AudioControls({ storybookId }: AudioControlsProps) {
       <div className={`space-y-2 ${isMobile ? '' : ''}`}>
         <h4 className={`font-medium leading-none ${isMobile ? 'text-lg' : ''}`}>Audio Controls</h4>
         <p className="text-sm text-muted-foreground">
-          Control music and sound effects for your storybook
+          Control sound effects for your storybook
         </p>
       </div>
 
-      {/* Music Enable Toggle */}
-      <div className="flex items-center justify-between">
-        <Label htmlFor="music-enabled" className={`font-medium ${isMobile ? 'text-base' : 'text-sm'}`}>
-          Background Music
-        </Label>
-        <Switch
-          id="music-enabled"
-          checked={musicEnabled}
-          onCheckedChange={handleMusicEnabledChange}
-          data-testid="switch-music-enabled"
-        />
-      </div>
-
-      {/* Music Volume Slider */}
-      <div className={`space-y-${isMobile ? '3' : '2'}`}>
-        <div className="flex items-center justify-between">
-          <Label htmlFor="music-volume" className={`font-medium ${isMobile ? 'text-base' : 'text-sm'}`}>
-            Music Volume
-          </Label>
-          <span className={`text-muted-foreground ${isMobile ? 'text-base font-semibold' : 'text-sm'}`}>{musicVolume}%</span>
-        </div>
-        <div className={isMobile ? "py-2" : ""}>
-          <Slider
-            id="music-volume"
-            value={[musicVolume]}
-            onValueChange={handleMusicVolumeChange}
-            max={100}
-            step={1}
-            disabled={!musicEnabled}
-            data-testid="slider-music-volume"
-            className={isMobile ? "touch-none" : ""}
-          />
-        </div>
-      </div>
+      {/* Background music temporarily disabled */}
 
       {/* Sound Effects Enable Toggle */}
       <div className="flex items-center justify-between">
@@ -182,10 +149,6 @@ export function AudioControls({ storybookId }: AudioControlsProps) {
           />
         </div>
       </div>
-
-      <p className={`text-muted-foreground ${isMobile ? 'text-sm' : 'text-xs'}`}>
-        Music adapts to the story's mood as you turn pages
-      </p>
     </div>
   );
 
@@ -199,7 +162,7 @@ export function AudioControls({ storybookId }: AudioControlsProps) {
             className="relative min-h-[48px] px-4"
             data-testid="button-audio-controls"
           >
-            {musicEnabled ? <Music className="h-5 w-5 mr-2" /> : <VolumeX className="h-5 w-5 mr-2" />}
+            {soundEffectsEnabled ? <Music className="h-5 w-5 mr-2" /> : <VolumeX className="h-5 w-5 mr-2" />}
             <span className="sr-only md:not-sr-only">Audio</span>
           </Button>
         </DrawerTrigger>
@@ -227,7 +190,7 @@ export function AudioControls({ storybookId }: AudioControlsProps) {
           className="relative"
           data-testid="button-audio-controls"
         >
-          {musicEnabled ? <Music className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />}
+          {soundEffectsEnabled ? <Music className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />}
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-80" align="end">
