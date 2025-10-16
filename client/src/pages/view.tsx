@@ -147,24 +147,7 @@ export default function View() {
         console.log('🎵 Initializing AudioManager...');
         await audioManager.init();
         
-        // Load background music tracks (real MP3s where available, synthetic fallback)
-        const moodMusicMap: Record<string, string | undefined> = {
-          calm: calmMusicUrl,
-          adventure: adventureMusicUrl,
-          mystery: mysteryMusicUrl,
-          happy: happyMusicUrl,
-          suspense: undefined, // Will use synthetic
-          dramatic: undefined, // Will use synthetic
-        };
-
-        await Promise.all(
-          Object.entries(moodMusicMap).map(([mood, url]) => 
-            audioManager.loadTrack(mood as any, url).catch(err => {
-              console.warn(`Could not load ${mood} music:`, err);
-            })
-          )
-        );
-        
+        // Background music temporarily disabled
         // Load sound effects from real audio files
         await audioManager.loadSoundEffect('book-open', bookOpenUrl);
         await audioManager.loadSoundEffect('page-turn', pageTurnUrl);
@@ -178,13 +161,9 @@ export default function View() {
             hasPlayedBookOpen = true;
           }
           
-          // Start playing background music for the current page
-          const currentPage = storybook?.pages[currentPageNumber];
-          const mood = currentPage?.mood || 'calm';
-          console.log(`🎵 Starting background music with mood: ${mood} for page ${currentPageNumber}`);
-          await audioManager.crossfadeTo(mood as any, 2);
+          // Background music crossfading disabled
           
-          // Mark as initialized AFTER music starts
+          // Mark as initialized
           setAudioInitialized(true);
         }
       } catch (error) {
@@ -219,17 +198,14 @@ export default function View() {
     };
   }, []); // Remove audioInitialized from dependencies to prevent re-running when it changes
 
-  // Handle page changes and crossfade music
-  useEffect(() => {
-    if (!audioInitialized || !storybook || currentPageNumber < 0) return;
-    
-    const currentPage = storybook.pages[currentPageNumber];
-    // Use mood if available, otherwise default to 'calm' for older storybooks
-    const mood = currentPage?.mood || 'calm';
-    
-    console.log(`📖 Page ${currentPageNumber}: mood = ${mood}`);
-    audioManager.crossfadeTo(mood as any, 2);
-  }, [currentPageNumber, storybook, audioInitialized]);
+  // Background music crossfading disabled
+  // useEffect(() => {
+  //   if (!audioInitialized || !storybook || currentPageNumber < 0) return;
+  //   const currentPage = storybook.pages[currentPageNumber];
+  //   const mood = currentPage?.mood || 'calm';
+  //   console.log(`📖 Page ${currentPageNumber}: mood = ${mood}`);
+  //   audioManager.crossfadeTo(mood as any, 2);
+  // }, [currentPageNumber, storybook, audioInitialized]);
 
   // Handle page change with sound effect
   const handlePageChange = (pageNumber: number) => {
