@@ -1,6 +1,6 @@
-import { type Storybook, type InsertStorybook, type StoryGenerationProgress, storybooks, users, type User, type UpsertUser, type Purchase, type InsertPurchase, purchases, passwordResetTokens, type PasswordResetToken, type AdminUser, type InsertAdminUser, adminUsers, type SiteSetting, siteSettings, type HeroStorybookSlot, type InsertHeroStorybookSlot, heroStorybookSlots, type FeaturedStorybook, type InsertFeaturedStorybook, featuredStorybooks, type AdminAuditLog, type InsertAdminAuditLog, adminAuditLogs, type SamplePrompt, type InsertSamplePrompt, samplePrompts, type AnalyticsEvent, type InsertAnalyticsEvent, analyticsEvents, type StoryRating, type InsertStoryRating, storyRatings, type AudioSettings, audioSettings } from "@shared/schema";
+import { type Storybook, type InsertStorybook, type StoryGenerationProgress, storybooks, users, type User, type UpsertUser, type Purchase, type InsertPurchase, purchases, passwordResetTokens, type PasswordResetToken, type AdminUser, type InsertAdminUser, adminUsers, type SiteSetting, siteSettings, type HeroStorybookSlot, type InsertHeroStorybookSlot, heroStorybookSlots, type FeaturedStorybook, type InsertFeaturedStorybook, featuredStorybooks, type AdminAuditLog, type InsertAdminAuditLog, adminAuditLogs, type SamplePrompt, type InsertSamplePrompt, samplePrompts, type AnalyticsEvent, type InsertAnalyticsEvent, analyticsEvents, type StoryRating, type InsertStoryRating, storyRatings, type AudioSettings, audioSettings, type IpRateLimit, type InsertIpRateLimit, ipRateLimits, type DownloadVerification, type InsertDownloadVerification, downloadVerifications } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc, count, countDistinct, isNull, and, lt, sql } from "drizzle-orm";
+import { eq, desc, count, countDistinct, isNull, and, lt, gt, sql } from "drizzle-orm";
 import { normalizeEmail } from "./auth";
 
 export interface IStorage {
@@ -102,6 +102,16 @@ export interface IStorage {
   // Audio settings
   getAudioSettings(storybookId: string): Promise<AudioSettings | null>;
   updateAudioSettings(storybookId: string, settings: Partial<AudioSettings>): Promise<AudioSettings>;
+  
+  // IP Rate Limiting
+  checkIpRateLimit(ipAddress: string): Promise<{ allowed: boolean; remaining: number }>;
+  incrementIpStoryCount(ipAddress: string): Promise<void>;
+  getOrCreateIpRateLimit(ipAddress: string): Promise<IpRateLimit>;
+  
+  // Email Verification for Downloads
+  createDownloadVerification(storybookId: string, email: string): Promise<{ code: string; expiresAt: Date }>;
+  verifyDownloadCode(storybookId: string, email: string, code: string): Promise<boolean>;
+  isDownloadVerified(storybookId: string, email: string): Promise<boolean>;
 }
 
 // Database storage for persistent data
@@ -827,6 +837,141 @@ export class DatabaseStorage implements IStorage {
         .returning();
       return newSettings;
     }
+  }
+
+  // IP Rate Limiting operations
+  async getOrCreateIpRateLimit(ipAddress: string): Promise<IpRateLimit> {
+    const [existing] = await db
+      .select()
+      .from(ipRateLimits)
+      .where(eq(ipRateLimits.ipAddress, ipAddress));
+    
+    if (existing) {
+      const now = new Date();
+      if (existing.resetAt <= now) {
+        const tomorrow = new Date();
+        tomorrow.setDate(tomorrow.getDate() + 1);
+        tomorrow.setHours(0, 0, 0, 0);
+        
+        const [reset] = await db
+          .update(ipRateLimits)
+          .set({
+            storyCount: '0',
+            resetAt: tomorrow,
+            updatedAt: new Date(),
+          })
+          .where(eq(ipRateLimits.ipAddress, ipAddress))
+          .returning();
+        return reset;
+      }
+      return existing;
+    }
+    
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    tomorrow.setHours(0, 0, 0, 0);
+    
+    const [newLimit] = await db
+      .insert(ipRateLimits)
+      .values({
+        ipAddress,
+        storyCount: '0',
+        resetAt: tomorrow,
+      })
+      .returning();
+    return newLimit;
+  }
+
+  async checkIpRateLimit(ipAddress: string): Promise<{ allowed: boolean; remaining: number }> {
+    const limit = await this.getOrCreateIpRateLimit(ipAddress);
+    const currentCount = parseInt(limit.storyCount);
+    const maxCount = 3;
+    const remaining = Math.max(0, maxCount - currentCount);
+    
+    return {
+      allowed: currentCount < maxCount,
+      remaining,
+    };
+  }
+
+  async incrementIpStoryCount(ipAddress: string): Promise<void> {
+    await this.getOrCreateIpRateLimit(ipAddress);
+    
+    await db
+      .update(ipRateLimits)
+      .set({
+        storyCount: sql`CAST(${ipRateLimits.storyCount} AS INTEGER) + 1`,
+        updatedAt: new Date(),
+      })
+      .where(eq(ipRateLimits.ipAddress, ipAddress));
+  }
+
+  // Email Verification operations
+  async createDownloadVerification(storybookId: string, email: string): Promise<{ code: string; expiresAt: Date }> {
+    const code = Math.floor(100000 + Math.random() * 900000).toString();
+    
+    const expiresAt = new Date();
+    expiresAt.setMinutes(expiresAt.getMinutes() + 15);
+    
+    await db
+      .insert(downloadVerifications)
+      .values({
+        storybookId,
+        email: normalizeEmail(email),
+        verificationCode: code,
+        expiresAt,
+      });
+    
+    return { code, expiresAt };
+  }
+
+  async verifyDownloadCode(storybookId: string, email: string, code: string): Promise<boolean> {
+    const normalizedEmail = normalizeEmail(email);
+    const now = new Date();
+    
+    const [verification] = await db
+      .select()
+      .from(downloadVerifications)
+      .where(
+        and(
+          eq(downloadVerifications.storybookId, storybookId),
+          eq(downloadVerifications.email, normalizedEmail),
+          eq(downloadVerifications.verificationCode, code),
+          gt(downloadVerifications.expiresAt, now),
+          isNull(downloadVerifications.verifiedAt)
+        )
+      )
+      .orderBy(desc(downloadVerifications.createdAt))
+      .limit(1);
+    
+    if (!verification) {
+      return false;
+    }
+    
+    await db
+      .update(downloadVerifications)
+      .set({ verifiedAt: new Date() })
+      .where(eq(downloadVerifications.id, verification.id));
+    
+    return true;
+  }
+
+  async isDownloadVerified(storybookId: string, email: string): Promise<boolean> {
+    const normalizedEmail = normalizeEmail(email);
+    
+    const verifications = await db
+      .select()
+      .from(downloadVerifications)
+      .where(
+        and(
+          eq(downloadVerifications.storybookId, storybookId),
+          eq(downloadVerifications.email, normalizedEmail)
+        )
+      )
+      .orderBy(desc(downloadVerifications.createdAt));
+    
+    const verified = verifications.find(v => v.verifiedAt !== null);
+    return verified !== undefined;
   }
 }
 
