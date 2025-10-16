@@ -419,16 +419,20 @@ const delay = (ms: number) => new Promise(res => setTimeout(res, ms));
 export async function generateIllustration(
   imagePrompt: string,
   outputPath: string,
-  baseImagePath?: string,
+  referenceImagePaths?: string[], // Multiple reference images for better consistency
   explicitStyle?: string // Optional: explicit art style from user prompt for consistency
 ): Promise<void> {
   let retries = 3;
   let waitTime = 2000; // Start with a 2-second delay
 
+  // Filter out any invalid reference images
+  const validReferences = (referenceImagePaths || []).filter(path => path && fs.existsSync(path));
+  const hasReferences = validReferences.length > 0;
+
   // Log the generation for debugging character consistency
   console.log(`[generateIllustration] Starting image generation`);
   console.log(`[generateIllustration] Image prompt: ${imagePrompt.substring(0, 200)}...`);
-  console.log(`[generateIllustration] Base image: ${baseImagePath ? 'PROVIDED' : 'NONE'}`);
+  console.log(`[generateIllustration] Reference images: ${hasReferences ? validReferences.length : 'NONE'}`);
   console.log(`[generateIllustration] Art style: ${explicitStyle || 'default'}`);
 
   while (retries > 0) {
@@ -436,15 +440,16 @@ export async function generateIllustration(
       // Build the full prompt with consistent style application
       let fullPrompt: string;
       
-      // Step 1: Add photo-matching instructions if we have a reference photo
-      const photoMatchingPrefix = (baseImagePath && fs.existsSync(baseImagePath))
-        ? `🔴 CRITICAL: The reference image shows the EXACT person who should appear in this illustration.
+      // Step 1: Add photo-matching instructions if we have reference images
+      const photoMatchingPrefix = hasReferences
+        ? `🔴 CRITICAL: ${validReferences.length} reference image${validReferences.length > 1 ? 's' : ''} provided showing the EXACT character who should appear in this illustration.
 
-MATCH THE REFERENCE PHOTO EXACTLY:
-- Same age (if adult in photo, show adult - do NOT change to child)
+MATCH THE REFERENCE IMAGES EXACTLY:
+- Same age (if adult in images, show adult - do NOT change to child)
 - Same facial features, hair, eyes, skin tone
 - Same physical appearance and build
-- Recreate this EXACT person in the scene described below
+- The character MUST look identical to how they appear in the reference images
+- MAINTAIN VISUAL CONSISTENCY with the character shown in all reference images
 
 SCENE: `
         : '';
@@ -466,23 +471,23 @@ SCENE: `
       fullPrompt = photoMatchingPrefix + sceneDescription + styleDirective;
       
       // Add extra emphasis for photo matching
-      if (baseImagePath && fs.existsSync(baseImagePath)) {
-        fullPrompt += '\n\nIMPORTANT: The person in your generated image MUST look like the person in the reference photo - same age, same features, same appearance. Only the scene/setting should match the description, but the person must match the photo EXACTLY.';
+      if (hasReferences) {
+        fullPrompt += '\n\n🔴 CRITICAL: The character in your generated image MUST look EXACTLY like they appear in ALL reference images - same age, same facial features, same appearance. Only the scene/setting/pose should change. The character themselves must be VISUALLY IDENTICAL to the references.';
       }
       
       console.log(`[generateIllustration] Full prompt sent to Gemini: ${fullPrompt.substring(0, 250)}...`);
       
       const contentParts: any[] = [];
       
-      // Add base image if provided (reference photo for character matching)
-      if (baseImagePath && fs.existsSync(baseImagePath)) {
-        const baseImageBytes = fs.readFileSync(baseImagePath);
-        const baseImageMimeType = getMimeType(baseImagePath);
+      // Add all reference images to help maintain consistency
+      for (const refPath of validReferences) {
+        const refImageBytes = fs.readFileSync(refPath);
+        const refImageMimeType = getMimeType(refPath);
         
         contentParts.push({
           inlineData: {
-            mimeType: baseImageMimeType,
-            data: baseImageBytes.toString("base64"),
+            mimeType: refImageMimeType,
+            data: refImageBytes.toString("base64"),
           },
         });
       }

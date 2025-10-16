@@ -19,7 +19,12 @@ Key features include:
 - **Authentication**: Email/password authentication with Passport.js, bcryptjs, email validation, and session management. Secure token-based password recovery.
 - **Multilingual Support (i18n)**: Internationalization for 5 languages (English, Spanish, French, German, Chinese Simplified) with automatic detection and persistent preferences.
 - **Story Structure System**: Enforces a three-act narrative arc (beginning/middle/end) for all stories, with dynamic page distribution and continuity.
-- **Character Consistency System**: Maintains visual consistency of characters across all pages by separating and prepending `mainCharacterDescription` and `defaultClothing` to image prompts. Clothing changes only occur when contextually required. **Photo Reference System**: Uploaded inspiration images are sent to Gemini as visual references for ALL illustrations (cover, pages, back cover), ensuring photo-realistic characters look like the person in the uploaded photo. Inspiration images are stored in Object Storage and used for page regeneration.
+- **Character Consistency System**: Maintains visual consistency of characters across all pages using a **Progressive Visual Reference Chain**:
+  - **Cover Image as Visual Anchor**: After generating the cover using uploaded photo references, the cover image itself is included as an additional reference for ALL subsequent images (pages, back cover)
+  - **Multi-Reference Image Generation**: Each page receives BOTH the original uploaded photo(s) AND the cover image, ensuring Gemini sees the established visual appearance from the cover
+  - **Text-Based Consistency**: Separates and prepends `mainCharacterDescription` and `defaultClothing` to image prompts. Clothing changes only occur when contextually required.
+  - **Page Regeneration**: When regenerating individual pages, the system downloads both the inspiration photo(s) and cover image from Object Storage to maintain the same visual reference chain
+  - This multi-layered approach ensures characters remain visually identical across all illustrations, solving the consistency issue that occurred with single-reference generation
 - **Image Style Consistency**: Detects and consistently applies art style from the user's prompt to all illustrations, defaulting to "vibrant and colorful children's book illustration" if not specified.
 - **E-Commerce System**: Integrated online store with Stripe payments, shopping cart, dual pricing (digital/print), and server-side price validation.
 - **EPUB E-book Download**: Allows downloading storybooks as EPUBs with composite covers, embedded illustrations, and mobile-responsive layouts.

@@ -2198,7 +2198,35 @@ Sitemap: ${baseUrl}/sitemap.xml`;
       
       // Use art style from storybook if available
       const artStyle = storybook.artStyle || undefined;
-      await generateIllustration(fullImagePrompt, tempImagePath, inspirationImagePath, artStyle);
+      
+      // Progressive visual reference chain: use inspiration image and cover image
+      const regenerateReferences: string[] = [];
+      if (inspirationImagePath) {
+        regenerateReferences.push(inspirationImagePath);
+      }
+      
+      // Also download the cover image to use as reference for consistency
+      let coverImageRefPath: string | undefined;
+      if (storybook.coverImageUrl) {
+        try {
+          const coverFilename = `${randomUUID()}_cover_ref.jpg`;
+          coverImageRefPath = path.join("uploads", coverFilename);
+          const coverImageResponse = await fetch(`http://localhost:5000${storybook.coverImageUrl}`);
+          if (coverImageResponse.ok) {
+            const coverImageBuffer = await coverImageResponse.arrayBuffer();
+            fs.writeFileSync(coverImageRefPath, Buffer.from(coverImageBuffer));
+            regenerateReferences.push(coverImageRefPath);
+            console.log(`[Page Regeneration] Using cover image as reference for visual consistency`);
+          } else {
+            coverImageRefPath = undefined;
+          }
+        } catch (error) {
+          console.warn(`[Page Regeneration] Error downloading cover image:`, error);
+          coverImageRefPath = undefined;
+        }
+      }
+      
+      await generateIllustration(fullImagePrompt, tempImagePath, regenerateReferences.length > 0 ? regenerateReferences : undefined, artStyle);
 
       // Upload to object storage (uploadFile adds date-based path automatically)
       const imageUrl = await objectStorage.uploadFile(tempImagePath, filename, true, storybook.createdAt || new Date());
@@ -2208,6 +2236,9 @@ Sitemap: ${baseUrl}/sitemap.xml`;
         fs.unlinkSync(tempImagePath);
         if (inspirationImagePath && fs.existsSync(inspirationImagePath)) {
           fs.unlinkSync(inspirationImagePath);
+        }
+        if (coverImageRefPath && fs.existsSync(coverImageRefPath)) {
+          fs.unlinkSync(coverImageRefPath);
         }
       } catch (err) {
         console.warn("Failed to delete temp files:", err);
@@ -2245,7 +2276,7 @@ Sitemap: ${baseUrl}/sitemap.xml`;
       // Enrich with user info and rating data
       const enrichedStorybooks = await Promise.all(
         storybooks.map(async (storybook) => {
-          const user = await storage.getUser(storybook.userId);
+          const user = storybook.userId ? await storage.getUser(storybook.userId) : null;
           const averageRating = await storage.getAverageRating(storybook.id);
           const ratings = await storage.getStorybookRatings(storybook.id);
 
@@ -3082,9 +3113,6 @@ async function generateStorybookAsync(
       inspirationImageUrls.push(inspirationUrl);
     }
 
-    // Use the first inspiration image as the base for cover image (if available)
-    const baseImagePath = imagePaths.length > 0 ? imagePaths[0] : undefined;
-    
     // Generate cover image
     const coverImageFileName = `${sessionId}_cover.jpg`;
     const coverImagePath = path.join(generatedDir, coverImageFileName);
@@ -3100,7 +3128,9 @@ async function generateStorybookAsync(
     // Extract art style for consistency across all images
     const artStyle = generatedStory.artStyle;
     
-    await generateIllustration(coverPromptWithCharacter, coverImagePath, baseImagePath, artStyle);
+    // For cover image: use all uploaded inspiration images as references
+    const coverReferences = imagePaths.length > 0 ? imagePaths : undefined;
+    await generateIllustration(coverPromptWithCharacter, coverImagePath, coverReferences, artStyle);
     
     // Upload cover image to Object Storage
     const coverImageUrl = await objectStorage.uploadFile(coverImagePath, coverImageFileName);
@@ -3123,8 +3153,13 @@ async function generateStorybookAsync(
         artStyle: generatedStory.artStyle,
       });
       
-      // Use the first uploaded inspiration image (user's photo) as visual reference for all page illustrations
-      await generateIllustration(pagePromptWithCharacter, imagePath, baseImagePath, artStyle);
+      // Progressive visual reference chain: use BOTH uploaded inspiration images AND cover image
+      // This ensures each page sees both the original photo(s) and the established visual from the cover
+      const pageReferences = [...imagePaths];
+      if (fs.existsSync(coverImagePath)) {
+        pageReferences.push(coverImagePath);
+      }
+      await generateIllustration(pagePromptWithCharacter, imagePath, pageReferences.length > 0 ? pageReferences : undefined, artStyle);
 
       // Upload to Object Storage
       const imageUrl = await objectStorage.uploadFile(imagePath, imageFileName);
@@ -3172,8 +3207,12 @@ async function generateStorybookAsync(
       artStyle: generatedStory.artStyle,
     });
     
-    // Use the first uploaded inspiration image (user's photo) as visual reference for back cover
-    await generateIllustration(backCoverPromptWithCharacter, backCoverImagePath, baseImagePath, artStyle);
+    // Progressive visual reference chain: use BOTH uploaded inspiration images AND cover image for back cover
+    const backCoverReferences = [...imagePaths];
+    if (fs.existsSync(coverImagePath)) {
+      backCoverReferences.push(coverImagePath);
+    }
+    await generateIllustration(backCoverPromptWithCharacter, backCoverImagePath, backCoverReferences.length > 0 ? backCoverReferences : undefined, artStyle);
     
     // Upload back cover to Object Storage
     const backCoverImageUrl = await objectStorage.uploadFile(backCoverImagePath, backCoverImageFileName);
