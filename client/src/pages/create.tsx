@@ -73,33 +73,46 @@ export default function Create() {
 
   const createStoryMutation = useMutation({
     mutationFn: async (data: CreateStoryForm): Promise<GenerationResponse> => {
-      const formData = new FormData();
-      formData.append("prompt", data.prompt);
-      if (data.author) {
-        formData.append("author", data.author);
+      try {
+        const formData = new FormData();
+        formData.append("prompt", data.prompt);
+        if (data.author) {
+          formData.append("author", data.author);
+        }
+        data.images.forEach(image => {
+          formData.append("images", image);
+        });
+
+        // Get reCAPTCHA token for anonymous users
+        try {
+          const recaptchaToken = await executeRecaptcha('create_story');
+          if (recaptchaToken) {
+            formData.append("recaptchaToken", recaptchaToken);
+          }
+        } catch (recaptchaError) {
+          console.error('reCAPTCHA error:', recaptchaError);
+          // Continue without reCAPTCHA token - server will handle it
+        }
+
+        const response = await fetch("/api/storybooks", {
+          method: "POST",
+          body: formData,
+          credentials: "include", // Include session cookie for authentication
+        });
+
+        if (!response.ok) {
+          const error = await response.json();
+          throw new Error(error.message || "Failed to create storybook");
+        }
+
+        return response.json();
+      } catch (error) {
+        // Ensure we always throw an Error object
+        if (error instanceof Error) {
+          throw error;
+        }
+        throw new Error(String(error || 'Failed to create storybook'));
       }
-      data.images.forEach(image => {
-        formData.append("images", image);
-      });
-
-      // Get reCAPTCHA token for anonymous users
-      const recaptchaToken = await executeRecaptcha('create_story');
-      if (recaptchaToken) {
-        formData.append("recaptchaToken", recaptchaToken);
-      }
-
-      const response = await fetch("/api/storybooks", {
-        method: "POST",
-        body: formData,
-        credentials: "include", // Include session cookie for authentication
-      });
-
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || "Failed to create storybook");
-      }
-
-      return response.json();
     },
     onSuccess: (data) => {
       setSessionId(data.sessionId);
@@ -119,8 +132,11 @@ export default function Create() {
       }
     },
     onError: (error) => {
+      // Ensure error is properly typed
+      const errorMessage = error instanceof Error ? error.message : String(error || 'Failed to create storybook');
+      
       // Replit Auth: Handle unauthorized error - redirect to login
-      if (isUnauthorizedError(error as Error)) {
+      if (error instanceof Error && isUnauthorizedError(error)) {
         toast({
           title: t('storybook.create.toast.unauthorized.title'),
           description: t('storybook.create.toast.unauthorized.description'),
@@ -134,7 +150,7 @@ export default function Create() {
       
       toast({
         title: t('storybook.create.toast.failed.title'),
-        description: error.message,
+        description: errorMessage,
         variant: "destructive",
       });
     },
