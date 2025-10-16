@@ -30,11 +30,6 @@ import { audioManager } from "@/lib/audioManager";
 import { EmailVerificationDialog } from "@/components/email-verification-dialog";
 import bookOpenUrl from "@assets/ES_Book_Open - Epidemic Sound_1760551479317.mp3";
 import pageTurnUrl from "@assets/ES_Page Turn 01 - Epidemic Sound_1760551479319.mp3";
-// Background music tracks
-import calmMusicUrl from "@assets/ES_Softest of Feathers - Calm Shores_1760561293990.mp3";
-import adventureMusicUrl from "@assets/ES_The Road to Odessa - Lama House_1760561293991.mp3";
-import mysteryMusicUrl from "@assets/ES_Magical Dream Dust - John B. Lund_1760561293989.mp3";
-import happyMusicUrl from "@assets/ES_My Kitty Cat (Instrumental Version) - Luna The Cat_1760561293990.mp3";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 
 export default function View() {

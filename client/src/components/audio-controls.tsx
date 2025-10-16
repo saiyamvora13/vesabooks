@@ -26,12 +26,11 @@ interface AudioControlsProps {
 }
 
 export function AudioControls({ storybookId }: AudioControlsProps) {
-  const [musicEnabled, setMusicEnabled] = useState(true);
   const [soundEffectsEnabled, setSoundEffectsEnabled] = useState(true);
-  const [musicVolume, setMusicVolume] = useState(70);
   const [effectsVolume, setEffectsVolume] = useState(80);
   const [isOpen, setIsOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+  const [savedVolume, setSavedVolume] = useState<number | null>(null);
   
   useEffect(() => {
     const checkMobile = () => setIsMobile(window.innerWidth < 768);
@@ -48,14 +47,10 @@ export function AudioControls({ storybookId }: AudioControlsProps) {
         if (response.ok) {
           const settings = await response.json();
           if (settings) {
-            setMusicEnabled(settings.musicEnabled);
             setSoundEffectsEnabled(settings.soundEffectsEnabled);
-            setMusicVolume(parseInt(settings.musicVolume));
-            setEffectsVolume(parseInt(settings.effectsVolume));
-            
-            // Apply to audio manager
-            audioManager.setMusicVolume(parseInt(settings.musicVolume));
-            audioManager.setSoundEffectsVolume(parseInt(settings.effectsVolume));
+            const vol = parseInt(settings.effectsVolume);
+            setEffectsVolume(vol);
+            setSavedVolume(vol); // Cache for later application
           }
         }
       } catch (error) {
@@ -66,11 +61,35 @@ export function AudioControls({ storybookId }: AudioControlsProps) {
     loadSettings();
   }, [storybookId]);
 
+  // Apply saved volume once AudioManager initializes (poll until ready)
+  useEffect(() => {
+    if (savedVolume === null) return;
+
+    const tryApplyVolume = () => {
+      if (audioManager.isInitialized()) {
+        audioManager.setSoundEffectsVolume(savedVolume);
+        setSavedVolume(null); // Clear after applying
+        return true;
+      }
+      return false;
+    };
+
+    // Try immediately
+    if (tryApplyVolume()) return;
+
+    // Poll every 100ms until initialized
+    const interval = setInterval(() => {
+      if (tryApplyVolume()) {
+        clearInterval(interval);
+      }
+    }, 100);
+
+    return () => clearInterval(interval);
+  }, [savedVolume]);
+
   // Save settings to backend
   const saveSettings = async (updates: Partial<{
-    musicEnabled: boolean;
     soundEffectsEnabled: boolean;
-    musicVolume: string;
     effectsVolume: string;
   }>) => {
     try {
@@ -80,23 +99,16 @@ export function AudioControls({ storybookId }: AudioControlsProps) {
     }
   };
 
-  const handleMusicVolumeChange = (value: number[]) => {
-    const vol = value[0];
-    setMusicVolume(vol);
-    audioManager.setMusicVolume(vol);
-    saveSettings({ musicVolume: vol.toString() });
-  };
-
   const handleEffectsVolumeChange = (value: number[]) => {
     const vol = value[0];
     setEffectsVolume(vol);
-    audioManager.setSoundEffectsVolume(vol);
+    if (audioManager.isInitialized()) {
+      audioManager.setSoundEffectsVolume(vol);
+    } else {
+      // Cache for deferred application after initialization
+      setSavedVolume(vol);
+    }
     saveSettings({ effectsVolume: vol.toString() });
-  };
-
-  const handleMusicEnabledChange = (checked: boolean) => {
-    setMusicEnabled(checked);
-    saveSettings({ musicEnabled: checked });
   };
 
   const handleSoundEffectsEnabledChange = (checked: boolean) => {
@@ -170,7 +182,7 @@ export function AudioControls({ storybookId }: AudioControlsProps) {
           <DrawerHeader>
             <DrawerTitle>Audio Settings</DrawerTitle>
             <DrawerDescription>
-              Adjust music and sound effects for your reading experience
+              Adjust sound effects for your reading experience
             </DrawerDescription>
           </DrawerHeader>
           <div className="p-4 pb-8">
