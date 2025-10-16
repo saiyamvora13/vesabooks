@@ -1,5 +1,4 @@
 import { useTranslation } from 'react-i18next';
-import { Globe } from 'lucide-react';
 import {
   Select,
   SelectContent,
@@ -30,11 +29,11 @@ export default function LanguageSwitcher({ testId = "language-switcher" }: { tes
   return (
     <Select value={currentLanguage.code} onValueChange={handleLanguageChange}>
       <SelectTrigger 
-        className="w-[140px] h-9 border-border/50 hover:border-border transition-colors gap-2"
+        className="w-[140px] h-9 border-border/50 hover:border-border transition-colors pl-3"
         data-testid={testId}
       >
-        <Globe className="h-4 w-4 text-foreground/70 shrink-0 pointer-events-none" />
-        <SelectValue />
+        <span className="mr-2">🌐</span>
+        <SelectValue placeholder={currentLanguage.name} />
       </SelectTrigger>
       <SelectContent>
         {languages.map((lang) => (
