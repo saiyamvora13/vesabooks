@@ -3209,18 +3209,11 @@ async function generateStorybookAsync(
       console.error('Failed to track story_completed event:', err);
     });
 
-    // Complete
+    // Complete - Store the storybook ID in progress for retrieval
     await storage.setGenerationProgress(sessionId, {
       step: 'finalizing',
       progress: 100,
-      message: `Complete! Your storybook "${generatedStory.title}" is ready.`,
-    });
-
-    // Store the storybook ID in progress for retrieval
-    await storage.setGenerationProgress(sessionId, {
-      step: 'finalizing',
-      progress: 100,
-      message: storybook.id, // Store ID in message for retrieval
+      message: storybook.id, // Frontend expects the storybook ID here
     });
 
     // Clean up cover image now that all pages are generated
