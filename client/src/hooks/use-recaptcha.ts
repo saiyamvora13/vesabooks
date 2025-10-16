@@ -12,8 +12,16 @@ declare global {
 export function useRecaptcha() {
   const [isReady, setIsReady] = useState(false);
   const siteKey = import.meta.env.VITE_RECAPTCHA_SITE_KEY;
+  const devBypass = import.meta.env.VITE_DEV_RECAPTCHA_BYPASS === 'true';
 
   useEffect(() => {
+    // Skip reCAPTCHA loading in development bypass mode
+    if (devBypass) {
+      setIsReady(true);
+      console.log('[DEV] reCAPTCHA bypass enabled - skipping script load');
+      return;
+    }
+
     if (!siteKey) {
       console.error('VITE_RECAPTCHA_SITE_KEY is not configured');
       return;
@@ -40,9 +48,15 @@ export function useRecaptcha() {
         existingScript.remove();
       }
     };
-  }, [siteKey]);
+  }, [siteKey, devBypass]);
 
   const executeRecaptcha = async (action: string = 'submit'): Promise<string | null> => {
+    // Return mock token in development bypass mode
+    if (devBypass) {
+      console.log('[DEV] reCAPTCHA bypass enabled - returning mock token');
+      return 'dev-bypass-token';
+    }
+
     if (!siteKey) {
       console.error('VITE_RECAPTCHA_SITE_KEY is not configured');
       return null;
