@@ -55,14 +55,147 @@
 @layer base {
   * {
     @apply border-border;
+    -webkit-tap-highlight-color: transparent;
+    -webkit-touch-callout: none;
+  }
+
+  html {
+    /* Prevent iOS text size adjustment */
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+    /* Enable smooth scrolling */
+    scroll-behavior: smooth;
   }
 
   body {
     @apply font-sans antialiased bg-background text-foreground;
+    /* Ensure minimum font size of 16px on mobile to prevent iOS zoom */
+    font-size: 16px;
+    line-height: 1.6;
+    /* Improve text rendering */
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+    /* Enable momentum scrolling on iOS */
+    -webkit-overflow-scrolling: touch;
   }
 
-  h1, h2, h3, h4, h5, h6 {
+  /* Responsive typography with mobile-first approach */
+  h1 {
     font-family: var(--font-display);
+    @apply text-2xl sm:text-3xl md:text-4xl lg:text-5xl xl:text-6xl;
+    line-height: 1.2;
+    letter-spacing: -0.02em;
+  }
+
+  h2 {
+    font-family: var(--font-display);
+    @apply text-xl sm:text-2xl md:text-3xl lg:text-4xl;
+    line-height: 1.3;
+    letter-spacing: -0.01em;
+  }
+
+  h3 {
+    font-family: var(--font-display);
+    @apply text-lg sm:text-xl md:text-2xl lg:text-3xl;
+    line-height: 1.4;
+  }
+
+  h4 {
+    font-family: var(--font-display);
+    @apply text-base sm:text-lg md:text-xl lg:text-2xl;
+    line-height: 1.4;
+  }
+
+  h5, h6 {
+    font-family: var(--font-display);
+    @apply text-base sm:text-lg md:text-xl;
+    line-height: 1.5;
+  }
+
+  /* Ensure readable paragraph text on mobile */
+  p {
+    @apply text-base;
+    line-height: 1.7;
+  }
+
+  /* Improve touch targets globally */
+  button, a, [role="button"], [role="link"] {
+    touch-action: manipulation;
+    -webkit-user-select: none;
+    user-select: none;
+  }
+
+  /* Ensure all interactive elements have minimum touch target size */
+  button:not(.inline-button), 
+  a:not(.inline-link), 
+  [role="button"]:not(.inline-button) {
+    min-height: 44px;
+    min-width: 44px;
+    @apply sm:min-h-[40px] sm:min-w-[40px];
+  }
+
+  /* Improve focus visibility on mobile */
+  :focus-visible {
+    @apply outline-2 outline-offset-2 outline-primary;
+  }
+
+  /* Better active states for touch feedback */
+  button:active:not(:disabled),
+  a:active:not(:disabled),
+  [role="button"]:active:not(:disabled) {
+    transform: scale(0.98);
+    transition: transform 0.1s ease;
+  }
+
+  /* Prevent text selection on UI elements */
+  button, label, select, option {
+    -webkit-user-select: none;
+    user-select: none;
+  }
+
+  /* Improve form inputs on mobile */
+  input, textarea, select {
+    font-size: 16px !important; /* Prevents iOS zoom */
+    @apply sm:text-sm;
+  }
+
+  /* Add safe area padding for devices with notches */
+  .safe-area-top {
+    padding-top: env(safe-area-inset-top);
+  }
+
+  .safe-area-bottom {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  .safe-area-left {
+    padding-left: env(safe-area-inset-left);
+  }
+
+  .safe-area-right {
+    padding-right: env(safe-area-inset-right);
+  }
+
+  /* Optimize images */
+  img {
+    max-width: 100%;
+    height: auto;
+    display: block;
+    /* Add loading attribute for lazy loading */
+    -webkit-user-drag: none;
+    user-drag: none;
+  }
+  
+  /* Ensure all images have lazy loading and proper aspect ratios */
+  img[loading="lazy"] {
+    background-color: hsl(var(--muted));
+  }
+
+  /* Improve table scrolling on mobile */
+  .table-container {
+    -webkit-overflow-scrolling: touch;
+    overflow-x: auto;
   }
 }
 
@@ -417,25 +550,141 @@
   animation: wiggle 2s ease-in-out infinite;
 }
 
+/* Mobile-First Optimizations */
+@layer utilities {
+  /* Mobile padding utilities */
+  .mobile-padding {
+    @apply px-4 sm:px-6 lg:px-8;
+  }
+  
+  .mobile-padding-y {
+    @apply py-4 sm:py-6 lg:py-8;
+  }
+  
+  .mobile-section-spacing {
+    @apply py-8 sm:py-12 lg:py-16 xl:py-20;
+  }
+  
+  /* Mobile card spacing */
+  .mobile-card-padding {
+    @apply p-4 sm:p-6 lg:p-8;
+  }
+  
+  /* Mobile form spacing */
+  .mobile-form-spacing {
+    @apply space-y-4 sm:space-y-5 lg:space-y-6;
+  }
+  
+  /* Better touch feedback */
+  .touch-feedback {
+    @apply transition-all active:scale-[0.98] active:opacity-90;
+  }
+  
+  /* Mobile-optimized text sizes */
+  .mobile-text-sm {
+    @apply text-sm sm:text-xs;
+  }
+  
+  .mobile-text-base {
+    @apply text-base sm:text-sm;
+  }
+  
+  .mobile-text-lg {
+    @apply text-lg sm:text-base;
+  }
+  
+  .mobile-text-xl {
+    @apply text-xl sm:text-lg;
+  }
+  
+  /* Ensure touch targets */
+  .mobile-touch-target {
+    @apply min-h-[48px] min-w-[48px] sm:min-h-[44px] sm:min-w-[44px];
+  }
+  
+  /* Improve scrolling performance */
+  .smooth-scroll {
+    -webkit-overflow-scrolling: touch;
+    scroll-behavior: smooth;
+  }
+}
+
 /* Mobile Navigation Improvements */
 @media (max-width: 768px) {
-  /* Ensure minimum touch target size */
-  button, a, [role="button"] {
-    min-height: 44px;
-    min-width: 44px;
+  /* Spacing for mobile forms */
+  form input,
+  form textarea,
+  form select,
+  form button {
+    @apply mb-1;
   }
   
-  /* Improve text readability on mobile */
-  body {
-    font-size: 16px;
-    -webkit-text-size-adjust: 100%;
+  /* Better spacing between form labels and inputs */
+  label + input,
+  label + textarea,
+  label + select {
+    @apply mt-2;
   }
   
-  /* Prevent text selection on navigation items */
-  nav a, nav button {
-    -webkit-tap-highlight-color: transparent;
-    -webkit-user-select: none;
-    user-select: none;
+  /* Ensure cards have proper spacing on mobile */
+  .card {
+    @apply mb-4;
+  }
+  
+  /* Mobile-optimized grid gaps */
+  .grid {
+    @apply gap-4 sm:gap-6;
+  }
+  
+  /* Improve button groups on mobile */
+  .btn-group {
+    @apply flex flex-col gap-2 sm:flex-row sm:gap-4;
+  }
+  
+  /* Full-width buttons on mobile */
+  .mobile-full-width {
+    @apply w-full sm:w-auto;
+  }
+  
+  /* Better modal/dialog sizing on mobile */
+  [role="dialog"] {
+    @apply max-h-[90vh] mx-4;
+  }
+  
+  /* Ensure modals are scrollable */
+  [role="dialog"] .dialog-content {
+    @apply overflow-y-auto max-h-[80vh];
+  }
+  
+  /* Improve dropdown menus on mobile */
+  [role="menu"] {
+    @apply min-w-[200px];
+  }
+  
+  /* Better table scrolling */
+  table {
+    @apply block overflow-x-auto;
+  }
+  
+  /* Ensure images don't overflow */
+  img, video, iframe {
+    @apply max-w-full h-auto;
+  }
+  
+  /* Improve list spacing on mobile */
+  ul, ol {
+    @apply pl-4 sm:pl-6;
+  }
+  
+  /* Better blockquote styling */
+  blockquote {
+    @apply pl-4 border-l-4;
+    border-left-color: hsl(var(--primary) / 0.3);
+  }
+  
+  /* Improve code block scrolling */
+  pre {
+    @apply overflow-x-auto p-4 rounded-lg;
   }
   
   /* Add safe area padding for notched devices */
@@ -451,6 +700,16 @@
     background: rgba(0, 0, 0, 0.3);
     backdrop-filter: blur(4px);
     z-index: 40;
+  }
+  
+  /* Disable hover effects on mobile */
+  @media (hover: none) and (pointer: coarse) {
+    .story-card:hover,
+    .upload-zone:hover,
+    button:hover,
+    a:hover {
+      transform: none !important;
+    }
   }
 }
 
@@ -483,4 +742,158 @@
 
 .mobile-menu-exit {
   animation: slideUp 0.3s ease-in forwards;
+}
+
+/* Final Mobile Performance Optimizations */
+@layer utilities {
+  /* Reduce animations on mobile for better performance */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+  
+  /* Optimize touch scrolling */
+  .mobile-scroll {
+    -webkit-overflow-scrolling: touch;
+    overflow-y: auto;
+    overscroll-behavior-y: contain;
+  }
+  
+  /* Better card interactions on mobile */
+  .mobile-card {
+    @apply rounded-2xl p-4 sm:p-6 shadow-md active:shadow-sm transition-shadow;
+    touch-action: manipulation;
+  }
+  
+  /* Improved mobile form styles */
+  .mobile-form {
+    @apply space-y-6;
+  }
+  
+  .mobile-form-field {
+    @apply space-y-2;
+  }
+  
+  /* Mobile-optimized grids */
+  .mobile-grid-2 {
+    @apply grid grid-cols-1 min-[480px]:grid-cols-2 gap-4 sm:gap-6;
+  }
+  
+  .mobile-grid-3 {
+    @apply grid grid-cols-1 min-[480px]:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6;
+  }
+  
+  .mobile-grid-4 {
+    @apply grid grid-cols-1 min-[480px]:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6;
+  }
+  
+  /* Ensure proper spacing around content */
+  .mobile-container {
+    @apply w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8;
+  }
+  
+  /* Mobile-optimized hero sections */
+  .mobile-hero {
+    @apply py-12 sm:py-16 lg:py-20 xl:py-24;
+  }
+  
+  /* Better mobile navigation */
+  .mobile-nav-item {
+    @apply block px-4 py-3 text-base font-medium rounded-lg hover:bg-muted transition-colors;
+  }
+  
+  /* Accessibility improvements */
+  .mobile-focus {
+    @apply focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2;
+  }
+  
+  /* Better skip link for screen readers */
+  .skip-link {
+    @apply absolute left-[-999px] focus:left-4 focus:top-4 focus:z-[100] bg-primary text-primary-foreground px-4 py-2 rounded;
+  }
+  
+  /* Ensure proper color contrast */
+  .high-contrast {
+    @apply text-foreground bg-background;
+  }
+  
+  /* Loading states */
+  .mobile-skeleton {
+    @apply animate-pulse bg-muted rounded;
+  }
+  
+  /* Improved touch feedback for cards */
+  .mobile-interactive {
+    @apply transition-all active:scale-[0.98] hover:shadow-lg cursor-pointer;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+  }
+  
+  /* Better error message styling */
+  .mobile-error {
+    @apply text-destructive text-sm mt-1 min-h-[20px];
+  }
+  
+  /* Floating action button for mobile */
+  .mobile-fab {
+    @apply fixed bottom-6 right-6 z-40 w-14 h-14 rounded-full shadow-lg flex items-center justify-center;
+  }
+}
+
+/* Ensure proper focus visibility for accessibility */
+*:focus-visible {
+  outline: 2px solid hsl(var(--primary));
+  outline-offset: 2px;
+}
+
+/* Better keyboard navigation indicators */
+.keyboard-focus:focus {
+  box-shadow: 0 0 0 2px hsl(var(--background)), 0 0 0 4px hsl(var(--primary));
+}
+
+/* Ensure sufficient color contrast for text */
+@media (prefers-contrast: high) {
+  :root {
+    --foreground: hsl(0 0% 0%);
+    --background: hsl(0 0% 100%);
+  }
+  
+  .dark {
+    --foreground: hsl(0 0% 100%);
+    --background: hsl(0 0% 0%);
+  }
+}
+
+/* Print styles to save paper and ink */
+@media print {
+  *,
+  *::before,
+  *::after {
+    background: transparent !important;
+    color: black !important;
+    box-shadow: none !important;
+    text-shadow: none !important;
+  }
+  
+  nav, footer, .no-print {
+    display: none !important;
+  }
+  
+  a[href]::after {
+    content: " (" attr(href) ")";
+  }
+  
+  img {
+    max-width: 100% !important;
+  }
+  
+  @page {
+    margin: 2cm;
+  }
 }
