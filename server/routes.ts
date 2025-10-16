@@ -17,6 +17,7 @@ import rateLimit from "express-rate-limit";
 import * as analytics from "./services/analytics";
 import { verifyRecaptcha } from "./middleware/recaptcha";
 import { createIpRateLimitMiddleware } from "./middleware/ipRateLimit";
+import { buildFinalImagePrompt } from "./utils/imagePromptBuilder";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', {
   apiVersion: "2025-09-30.clover",
@@ -2154,11 +2155,13 @@ Sitemap: ${baseUrl}/sitemap.xml`;
       const { ObjectStorageService } = await import("./objectStorage");
       const objectStorage = new ObjectStorageService();
 
-      // Build the full image prompt with character description and clothing
-      const characterPrefix = storybook.mainCharacterDescription 
-        ? `${storybook.mainCharacterDescription}, ${storybook.defaultClothing || ''}. `
-        : '';
-      const fullImagePrompt = characterPrefix + newPageContent.imagePrompt;
+      // Build the full image prompt using the centralized utility function
+      const fullImagePrompt = buildFinalImagePrompt({
+        mainCharacterDescription: storybook.mainCharacterDescription || undefined,
+        defaultClothing: storybook.defaultClothing || undefined,
+        scenePrompt: newPageContent.imagePrompt,
+        artStyle: storybook.artStyle || undefined,
+      });
 
       // Log the full prompt for debugging
       console.log(`[Page Regeneration] Page ${pageNumber} full prompt:`, fullImagePrompt);
@@ -3086,21 +3089,13 @@ async function generateStorybookAsync(
     const coverImageFileName = `${sessionId}_cover.jpg`;
     const coverImagePath = path.join(generatedDir, coverImageFileName);
     
-    // IMPORTANT: Programmatically prepend character description AND default clothing to ensure consistency
-    const characterDesc = generatedStory.mainCharacterDescription?.trim() || '';
-    const defaultClothing = generatedStory.defaultClothing?.trim() || '';
-    
-    // Format the full character description with explicit clothing designation
-    let fullCharacterDesc = characterDesc;
-    if (defaultClothing) {
-      // Make it clear to the AI that this is the character's clothing
-      fullCharacterDesc = characterDesc 
-        ? `${characterDesc}, ${defaultClothing}`
-        : defaultClothing;
-    }
-    const coverPromptWithCharacter = fullCharacterDesc 
-      ? `${fullCharacterDesc}. ${generatedStory.coverImagePrompt}`
-      : generatedStory.coverImagePrompt;
+    // Build the cover image prompt using the centralized utility function
+    const coverPromptWithCharacter = buildFinalImagePrompt({
+      mainCharacterDescription: generatedStory.mainCharacterDescription,
+      defaultClothing: generatedStory.defaultClothing,
+      scenePrompt: generatedStory.coverImagePrompt,
+      artStyle: generatedStory.artStyle,
+    });
     
     // Extract art style for consistency across all images
     const artStyle = generatedStory.artStyle;
@@ -3119,12 +3114,15 @@ async function generateStorybookAsync(
       const imageFileName = `${sessionId}_page_${page.pageNumber}.jpg`;
       const imagePath = path.join(generatedDir, imageFileName);
 
-      // Generate illustration for this page using the UPLOADED PHOTO as reference for character consistency
-      // IMPORTANT: Programmatically prepend character description with default clothing to ensure consistency
-      // Only override clothing if the imagePrompt specifically mentions different clothing
-      const pagePromptWithCharacter = fullCharacterDesc 
-        ? `${fullCharacterDesc}. ${page.imagePrompt}`
-        : page.imagePrompt;
+      // Build the page image prompt using the centralized utility function
+      // The utility handles clothing logic automatically (skips default clothing if scene specifies different clothing)
+      const pagePromptWithCharacter = buildFinalImagePrompt({
+        mainCharacterDescription: generatedStory.mainCharacterDescription,
+        defaultClothing: generatedStory.defaultClothing,
+        scenePrompt: page.imagePrompt,
+        artStyle: generatedStory.artStyle,
+      });
+      
       // Use the first uploaded inspiration image (user's photo) as visual reference for all page illustrations
       await generateIllustration(pagePromptWithCharacter, imagePath, baseImagePath, artStyle);
 
@@ -3166,10 +3164,14 @@ async function generateStorybookAsync(
     // Create back cover prompt that complements the front cover
     const backCoverBasePrompt = `Create a back cover illustration for a children's storybook that complements the front cover. Show the character in a different scene that hints at the adventure without spoiling it. Maintain the same artistic style and color palette as the front cover.`;
     
-    // IMPORTANT: Programmatically prepend character description with default clothing to ensure consistency
-    const backCoverPromptWithCharacter = fullCharacterDesc 
-      ? `${fullCharacterDesc}. ${backCoverBasePrompt}`
-      : backCoverBasePrompt;
+    // Build the back cover image prompt using the centralized utility function
+    const backCoverPromptWithCharacter = buildFinalImagePrompt({
+      mainCharacterDescription: generatedStory.mainCharacterDescription,
+      defaultClothing: generatedStory.defaultClothing,
+      scenePrompt: backCoverBasePrompt,
+      artStyle: generatedStory.artStyle,
+    });
+    
     // Use the first uploaded inspiration image (user's photo) as visual reference for back cover
     await generateIllustration(backCoverPromptWithCharacter, backCoverImagePath, baseImagePath, artStyle);
     
