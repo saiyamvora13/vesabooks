@@ -402,64 +402,71 @@ export default function View() {
       
       <Navigation />
       
-      <section className="py-8 md:py-20">
+      <section className="py-4 md:py-20">
         <div className="max-w-7xl mx-auto px-2 sm:px-4 lg:px-8">
           {/* Header with Actions */}
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6 md:mb-8 px-2">
-            <div>
-              <h2 className="text-2xl md:text-3xl font-bold mb-2" data-testid="text-story-title">{storybook.title}</h2>
-              <div className="flex items-center gap-4">
-                <p className="text-sm md:text-base text-muted-foreground">
-                  {t('storybook.viewer.created', { date: storybook.createdAt ? new Date(storybook.createdAt).toLocaleDateString() : 'Unknown' })}
-                </p>
-                {averageRatingData && averageRatingData.count > 0 && (
-                  <div className="flex items-center gap-1" data-testid="text-average-rating">
-                    <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
-                    <span className="text-sm font-medium">
-                      {averageRatingData.averageRating?.toFixed(1)}
-                    </span>
-                    <span className="text-sm text-muted-foreground">
-                      ({averageRatingData.count} {averageRatingData.count === 1 ? 'rating' : 'ratings'})
-                    </span>
-                  </div>
-                )}
+          <div className="flex flex-col gap-3 mb-4 md:mb-8 px-2">
+            {/* Title and Rating Section */}
+            <div className="flex flex-col md:flex-row md:justify-between md:items-start gap-4">
+              <div className="flex-1">
+                <h2 className="text-xl md:text-3xl font-bold mb-2" data-testid="text-story-title">{storybook.title}</h2>
+                <div className="flex flex-wrap items-center gap-2 md:gap-4">
+                  <p className="text-xs md:text-base text-muted-foreground">
+                    {t('storybook.viewer.created', { date: storybook.createdAt ? new Date(storybook.createdAt).toLocaleDateString() : 'Unknown' })}
+                  </p>
+                  {averageRatingData && averageRatingData.count > 0 && (
+                    <div className="flex items-center gap-1" data-testid="text-average-rating">
+                      <Star className="h-3 md:h-4 w-3 md:w-4 fill-yellow-400 text-yellow-400" />
+                      <span className="text-xs md:text-sm font-medium">
+                        {averageRatingData.averageRating?.toFixed(1)}
+                      </span>
+                      <span className="text-xs md:text-sm text-muted-foreground">
+                        ({averageRatingData.count})
+                      </span>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
-            <div className="flex flex-wrap gap-3">
+            
+            {/* Action Buttons - Mobile Optimized */}
+            <div className="flex flex-wrap gap-2 md:gap-3">
               {storybookId && <AudioControls storybookId={storybookId} />}
               
               <Button 
                 variant="outline" 
-                className="rounded-xl" 
+                className="rounded-xl flex-1 md:flex-initial min-h-[48px] md:min-h-0" 
                 onClick={() => setShareDialogOpen(true)}
                 data-testid="button-share"
               >
-                <Share2 className="h-4 w-4 mr-2" />
-                Share
+                <Share2 className="h-4 md:h-4 w-4 md:w-4 mr-2" />
+                <span className="text-sm md:text-base">Share</span>
               </Button>
 
               {isAuthenticated && (
                 <Button 
                   variant="outline" 
-                  className="rounded-xl" 
+                  className="rounded-xl flex-1 md:flex-initial min-h-[48px] md:min-h-0" 
                   onClick={() => setRatingDialogOpen(true)}
                   data-testid="button-rate-story"
                 >
-                  <Star className="h-4 w-4 mr-2" />
-                  Rate this Story
+                  <Star className="h-4 md:h-4 w-4 md:w-4 mr-2" />
+                  <span className="text-sm md:text-base">Rate</span>
                 </Button>
               )}
               
               {digitalPurchase?.owned ? (
                 <Button 
                   variant="outline" 
-                  className="rounded-xl" 
+                  className="rounded-xl flex-1 md:flex-initial min-h-[48px] md:min-h-0" 
                   onClick={downloadEpub} 
                   disabled={isDownloading}
                   data-testid="button-download-epub"
                 >
                   <i className={`fas ${isDownloading ? 'fa-spinner fa-spin' : 'fa-book'} mr-2`}></i>
-                  {isDownloading ? t('storybook.viewer.download.buttonPreparing') : t('storybook.viewer.download.button')}
+                  <span className="text-sm md:text-base">
+                    {isDownloading ? 'Preparing...' : 'Download'}
+                  </span>
                 </Button>
               ) : (
                 <>
@@ -468,9 +475,9 @@ export default function View() {
                       <TooltipTrigger asChild>
                         <Button 
                           variant="outline" 
-                          className="rounded-xl opacity-50 cursor-not-allowed" 
+                          className="rounded-xl opacity-50 cursor-not-allowed hidden md:flex" 
                           disabled
-                          data-testid="button-download-epub"
+                          data-testid="button-download-epub-disabled"
                         >
                           <i className="fas fa-book mr-2"></i>
                           {t('storybook.viewer.download.button')}
@@ -484,12 +491,12 @@ export default function View() {
                   
                   <Button 
                     variant="default" 
-                    className="rounded-xl gradient-bg !text-[hsl(258,90%,20%)]" 
+                    className="rounded-xl gradient-bg !text-[hsl(258,90%,20%)] flex-1 md:flex-initial min-h-[48px] md:min-h-0" 
                     onClick={handleBuyDigital}
                     data-testid="button-buy-digital-viewer"
                   >
-                    <ShoppingCart className="h-4 w-4 mr-2" />
-                    {t('storybook.viewer.buyButton')}
+                    <ShoppingCart className="h-4 md:h-4 w-4 md:w-4 mr-2" />
+                    <span className="text-sm md:text-base font-semibold">Buy $3.99</span>
                   </Button>
                 </>
               )}
@@ -497,7 +504,7 @@ export default function View() {
           </div>
 
           {/* Flipbook Container */}
-          <div className="bg-gradient-to-br from-slate-100 to-slate-200 dark:from-slate-800 dark:to-slate-900 rounded-2xl md:rounded-3xl shadow-2xl p-2 md:p-8 min-h-[85vh] md:min-h-[80vh] flex items-center justify-center">
+          <div className="bg-gradient-to-br from-slate-100 to-slate-200 dark:from-slate-800 dark:to-slate-900 rounded-lg md:rounded-3xl shadow-2xl p-1 md:p-8 min-h-[calc(100vh-200px)] md:min-h-[80vh] flex items-center justify-center">
             <FlipbookViewer 
               pages={storybook.pages} 
               title={storybook.title}
@@ -511,19 +518,27 @@ export default function View() {
             />
           </div>
 
-          {/* Regenerate Page Confirmation Dialog */}
+          {/* Regenerate Page Confirmation Dialog - Mobile Optimized */}
           <AlertDialog open={regenerateDialogOpen} onOpenChange={setRegenerateDialogOpen}>
-            <AlertDialogContent data-testid="dialog-regenerate-confirm">
+            <AlertDialogContent className="max-w-[95vw] md:max-w-[500px] rounded-xl" data-testid="dialog-regenerate-confirm">
               <AlertDialogHeader>
-                <AlertDialogTitle>Regenerate Page {pageToRegenerate}?</AlertDialogTitle>
-                <AlertDialogDescription>
-                  This will replace the current page with new AI-generated content. The current text and image will be permanently replaced. This action cannot be undone.
+                <AlertDialogTitle className="text-lg md:text-xl">
+                  Regenerate Page {pageToRegenerate}?
+                </AlertDialogTitle>
+                <AlertDialogDescription className="text-sm md:text-base">
+                  This will replace the current page with new AI-generated content. The current text and image will be permanently replaced.
                 </AlertDialogDescription>
               </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel data-testid="button-cancel-regenerate">Cancel</AlertDialogCancel>
+              <AlertDialogFooter className="flex-col sm:flex-row gap-2">
+                <AlertDialogCancel 
+                  className="min-h-[44px] w-full sm:w-auto"
+                  data-testid="button-cancel-regenerate"
+                >
+                  Cancel
+                </AlertDialogCancel>
                 <AlertDialogAction 
                   onClick={confirmRegenerate}
+                  className="min-h-[44px] w-full sm:w-auto"
                   data-testid="button-confirm-regenerate"
                   disabled={regeneratePageMutation.isPending}
                 >
@@ -533,16 +548,16 @@ export default function View() {
             </AlertDialogContent>
           </AlertDialog>
 
-          {/* Back to Create */}
-          <div className="text-center mt-8 md:mt-12">
+          {/* Back to Create - Mobile Optimized */}
+          <div className="text-center mt-6 md:mt-12 pb-4">
             <Button 
               onClick={() => setLocation("/create")} 
               size="lg" 
-              className="rounded-full bg-primary text-primary-foreground hover:bg-primary/90"
+              className="rounded-full bg-primary text-primary-foreground hover:bg-primary/90 min-h-[48px] px-8"
               data-testid="button-create-another"
             >
               <i className="fas fa-plus mr-2"></i>
-              {t('storybook.viewer.createAnother')}
+              <span className="text-base md:text-lg">{t('storybook.viewer.createAnother')}</span>
             </Button>
           </div>
         </div>
