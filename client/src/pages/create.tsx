@@ -183,30 +183,30 @@ export default function Create() {
           </div>
 
           <Card className="rounded-2xl sm:rounded-3xl shadow-xl">
-            <CardContent className="p-4 sm:p-6 lg:p-8">
+            <CardContent className="p-5 sm:p-6 lg:p-8">
               <Form {...form}>
-                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8 sm:space-y-8">
                   {/* Sample Prompts */}
                   {samplePrompts && samplePrompts.length > 0 && (
                     <div className="space-y-3">
-                      <h3 className="text-sm font-semibold flex items-center">
+                      <h3 className="text-base sm:text-sm font-semibold flex items-center">
                         <i className="fas fa-sparkles text-primary mr-2"></i>
                         {t('storybook.create.samplePrompts.label', 'Sample Story Ideas')}
                       </h3>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      <div className="grid grid-cols-1 sm:grid-cols-1 md:grid-cols-2 gap-3 sm:gap-3">
                         {samplePrompts.map((samplePrompt) => (
                           <button
                             key={samplePrompt.id}
                             type="button"
                             onClick={() => handlePromptClick(samplePrompt.prompt)}
-                            className="text-left p-4 rounded-xl border-2 border-purple-200 dark:border-purple-900 bg-purple-50 dark:bg-purple-950/30 hover:border-purple-400 dark:hover:border-purple-700 hover:bg-purple-100 dark:hover:bg-purple-950/50 transition-all cursor-pointer"
+                            className="text-left p-5 sm:p-4 rounded-xl border-2 border-purple-200 dark:border-purple-900 bg-purple-50 dark:bg-purple-950/30 hover:border-purple-400 dark:hover:border-purple-700 hover:bg-purple-100 dark:hover:bg-purple-950/50 transition-all cursor-pointer active:scale-98 min-h-[80px] sm:min-h-0"
                             data-testid={`card-sample-prompt-${samplePrompt.id}`}
                           >
                             <div className="flex items-center justify-between mb-2">
-                              <h4 className="font-semibold text-purple-900 dark:text-purple-100" data-testid={`text-prompt-title-${samplePrompt.id}`}>
+                              <h4 className="font-semibold text-purple-900 dark:text-purple-100 text-base sm:text-base" data-testid={`text-prompt-title-${samplePrompt.id}`}>
                                 {samplePrompt.title}
                               </h4>
-                              <span className="px-2 py-1 bg-purple-200 dark:bg-purple-900 text-purple-800 dark:text-purple-200 text-xs rounded-full" data-testid={`badge-age-range-${samplePrompt.id}`}>
+                              <span className="px-3 sm:px-2 py-1 bg-purple-200 dark:bg-purple-900 text-purple-800 dark:text-purple-200 text-xs rounded-full" data-testid={`badge-age-range-${samplePrompt.id}`}>
                                 {samplePrompt.ageRange}
                               </span>
                             </div>
@@ -229,8 +229,8 @@ export default function Create() {
                     name="prompt"
                     render={({ field }) => (
                       <FormItem>
-                        <div className="flex items-center justify-between mb-2">
-                          <FormLabel className="text-sm font-semibold flex items-center">
+                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-2">
+                          <FormLabel className="text-base sm:text-sm font-semibold flex items-center">
                             <i className="fas fa-lightbulb text-primary mr-2"></i>
                             {t('storybook.create.storyIdea.label')}
                           </FormLabel>
@@ -266,7 +266,7 @@ export default function Create() {
                                     {t('storybook.create.styleGuide.categories.realistic.title')}
                                   </h3>
                                   <div className="flex flex-wrap gap-2">
-                                    {t('storybook.create.styleGuide.categories.realistic.keywords', { returnObjects: true }).map((style: string) => (
+                                    {(t('storybook.create.styleGuide.categories.realistic.keywords', { returnObjects: true }) as string[]).map((style: string) => (
                                       <span key={style} className="px-3 py-1 bg-primary/10 text-primary rounded-full text-sm">
                                         {style}
                                       </span>
@@ -282,7 +282,7 @@ export default function Create() {
                                     {t('storybook.create.styleGuide.categories.cartoon.title')}
                                   </h3>
                                   <div className="flex flex-wrap gap-2">
-                                    {t('storybook.create.styleGuide.categories.cartoon.keywords', { returnObjects: true }).map((style: string) => (
+                                    {(t('storybook.create.styleGuide.categories.cartoon.keywords', { returnObjects: true }) as string[]).map((style: string) => (
                                       <span key={style} className="px-3 py-1 bg-secondary/10 text-secondary rounded-full text-sm">
                                         {style}
                                       </span>
@@ -298,7 +298,7 @@ export default function Create() {
                                     {t('storybook.create.styleGuide.categories.traditional.title')}
                                   </h3>
                                   <div className="flex flex-wrap gap-2">
-                                    {t('storybook.create.styleGuide.categories.traditional.keywords', { returnObjects: true }).map((style: string) => (
+                                    {(t('storybook.create.styleGuide.categories.traditional.keywords', { returnObjects: true }) as string[]).map((style: string) => (
                                       <span key={style} className="px-3 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 rounded-full text-sm">
                                         {style}
                                       </span>
@@ -314,7 +314,7 @@ export default function Create() {
                                     {t('storybook.create.styleGuide.categories.digital.title')}
                                   </h3>
                                   <div className="flex flex-wrap gap-2">
-                                    {t('storybook.create.styleGuide.categories.digital.keywords', { returnObjects: true }).map((style: string) => (
+                                    {(t('storybook.create.styleGuide.categories.digital.keywords', { returnObjects: true }) as string[]).map((style: string) => (
                                       <span key={style} className="px-3 py-1 bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 rounded-full text-sm">
                                         {style}
                                       </span>
@@ -330,7 +330,7 @@ export default function Create() {
                                     {t('storybook.create.styleGuide.categories.timePeriod.title')}
                                   </h3>
                                   <div className="flex flex-wrap gap-2">
-                                    {t('storybook.create.styleGuide.categories.timePeriod.keywords', { returnObjects: true }).map((style: string) => (
+                                    {(t('storybook.create.styleGuide.categories.timePeriod.keywords', { returnObjects: true }) as string[]).map((style: string) => (
                                       <span key={style} className="px-3 py-1 bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 rounded-full text-sm">
                                         {style}
                                       </span>
@@ -346,7 +346,7 @@ export default function Create() {
                                     {t('storybook.create.styleGuide.categories.artistic.title')}
                                   </h3>
                                   <div className="flex flex-wrap gap-2">
-                                    {t('storybook.create.styleGuide.categories.artistic.keywords', { returnObjects: true }).map((style: string) => (
+                                    {(t('storybook.create.styleGuide.categories.artistic.keywords', { returnObjects: true }) as string[]).map((style: string) => (
                                       <span key={style} className="px-3 py-1 bg-pink-100 dark:bg-pink-900/30 text-pink-700 dark:text-pink-300 rounded-full text-sm">
                                         {style}
                                       </span>
@@ -362,7 +362,7 @@ export default function Create() {
                                     {t('storybook.create.styleGuide.categories.mood.title')}
                                   </h3>
                                   <div className="flex flex-wrap gap-2">
-                                    {t('storybook.create.styleGuide.categories.mood.keywords', { returnObjects: true }).map((style: string) => (
+                                    {(t('storybook.create.styleGuide.categories.mood.keywords', { returnObjects: true }) as string[]).map((style: string) => (
                                       <span key={style} className="px-3 py-1 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-full text-sm">
                                         {style}
                                       </span>
@@ -378,7 +378,7 @@ export default function Create() {
                                     {t('storybook.create.styleGuide.tips.title')}
                                   </h3>
                                   <ul className="space-y-2 text-sm text-muted-foreground">
-                                    {t('storybook.create.styleGuide.tips.items', { returnObjects: true }).map((tip: string, index: number) => (
+                                    {(t('storybook.create.styleGuide.tips.items', { returnObjects: true }) as string[]).map((tip: string, index: number) => (
                                       <li key={index}>{tip}</li>
                                     ))}
                                   </ul>
@@ -390,10 +390,13 @@ export default function Create() {
                         <FormControl>
                           <Textarea
                             {...field}
-                            rows={6}
+                            rows={8}
                             placeholder={t('storybook.create.storyIdea.placeholder')}
-                            className="resize-none rounded-2xl"
+                            className="resize-none rounded-2xl text-base sm:text-sm"
                             data-testid="input-story-prompt"
+                            style={{
+                              fontSize: '16px', // Prevents zoom on iOS
+                            }}
                           />
                         </FormControl>
                         <div className="text-sm text-muted-foreground">
@@ -411,16 +414,17 @@ export default function Create() {
                     name="author"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="text-sm font-semibold flex items-center">
+                        <FormLabel className="text-base sm:text-sm font-semibold flex items-center">
                           <i className="fas fa-user-pen text-primary mr-2"></i>
                           Author
-                          <span className="ml-auto text-muted-foreground font-normal text-xs">Optional</span>
+                          <span className="ml-auto text-muted-foreground font-normal text-xs sm:text-xs">Optional</span>
                         </FormLabel>
                         <FormControl>
                           <Input
                             {...field}
                             placeholder="Leave blank to use your name"
                             className="rounded-2xl"
+                            autoComplete="name"
                             data-testid="input-author"
                           />
                         </FormControl>
@@ -439,10 +443,10 @@ export default function Create() {
                     name="images"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="text-sm font-semibold flex items-center">
+                        <FormLabel className="text-base sm:text-sm font-semibold flex items-center">
                           <i className="fas fa-image text-secondary mr-2"></i>
                           {t('storybook.create.images.label')}
-                          <span className="ml-auto text-muted-foreground font-normal">{t('storybook.create.images.count')}</span>
+                          <span className="ml-auto text-muted-foreground font-normal text-xs sm:text-sm">{t('storybook.create.images.count')}</span>
                         </FormLabel>
                         <FormControl>
                           <FileUpload
@@ -461,7 +465,7 @@ export default function Create() {
 
                   <Button 
                     type="submit" 
-                    className="w-full py-4 rounded-2xl font-bold text-lg bg-primary text-primary-foreground hover:bg-primary/90 transition-colors shadow-lg"
+                    className="w-full py-4 sm:py-4 rounded-2xl font-bold text-lg bg-primary text-primary-foreground hover:bg-primary/90 transition-colors shadow-lg min-h-[56px] sm:min-h-[48px] active:scale-98"
                     disabled={createStoryMutation.isPending}
                     data-testid="button-generate-story"
                   >

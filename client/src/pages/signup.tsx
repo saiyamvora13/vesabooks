@@ -66,34 +66,35 @@ export default function Signup() {
   };
 
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center px-4">
+    <div className="min-h-screen bg-background flex items-center justify-center px-4 py-8">
       <SEO 
         title="Sign Up - AI Storybook Builder"
         description="Create your free account to start making magical, personalized children's storybooks with AI-generated illustrations."
         path="/signup"
       />
-      <Card className="w-full max-w-md rounded-2xl shadow-xl">
-        <CardContent className="p-8">
-          <div className="text-center mb-8">
-            <h1 className="text-3xl font-bold mb-2">{t('auth.signup.title')}</h1>
-            <p className="text-muted-foreground">
+      <Card className="w-full max-w-sm sm:max-w-md rounded-2xl shadow-xl">
+        <CardContent className="p-6 sm:p-8">
+          <div className="text-center mb-8 sm:mb-10">
+            <h1 className="text-2xl sm:text-3xl font-bold mb-2">{t('auth.signup.title')}</h1>
+            <p className="text-sm sm:text-base text-muted-foreground">
               {t('auth.signup.subtitle')}
             </p>
           </div>
 
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 sm:space-y-5">
               <FormField
                 control={form.control}
                 name="email"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>{t('common.labels.email')}</FormLabel>
+                    <FormLabel className="text-base sm:text-sm">{t('common.labels.email')}</FormLabel>
                     <FormControl>
                       <Input
                         {...field}
                         type="email"
                         placeholder={t('common.placeholders.email')}
+                        autoComplete="email"
                         className="rounded-lg"
                         data-testid="input-email"
                       />
@@ -108,12 +109,13 @@ export default function Signup() {
                 name="password"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>{t('common.labels.password')}</FormLabel>
+                    <FormLabel className="text-base sm:text-sm">{t('common.labels.password')}</FormLabel>
                     <FormControl>
                       <Input
                         {...field}
                         type="password"
                         placeholder={t('common.placeholders.passwordMinLength')}
+                        autoComplete="new-password"
                         className="rounded-lg"
                         data-testid="input-password"
                       />
@@ -128,12 +130,13 @@ export default function Signup() {
                 name="firstName"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>{t('common.labels.firstName')}</FormLabel>
+                    <FormLabel className="text-base sm:text-sm">{t('common.labels.firstName')}</FormLabel>
                     <FormControl>
                       <Input
                         {...field}
                         type="text"
                         placeholder={t('common.placeholders.firstName')}
+                        autoComplete="given-name"
                         className="rounded-lg"
                         data-testid="input-firstname"
                       />
@@ -148,12 +151,13 @@ export default function Signup() {
                 name="lastName"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>{t('common.labels.lastName')}</FormLabel>
+                    <FormLabel className="text-base sm:text-sm">{t('common.labels.lastName')}</FormLabel>
                     <FormControl>
                       <Input
                         {...field}
                         type="text"
                         placeholder={t('common.placeholders.lastName')}
+                        autoComplete="family-name"
                         className="rounded-lg"
                         data-testid="input-lastname"
                       />
@@ -165,14 +169,14 @@ export default function Signup() {
 
               <Button
                 type="submit"
-                className="w-full rounded-lg font-semibold"
+                className="w-full rounded-lg font-semibold text-base sm:text-sm"
                 disabled={signupMutation.isPending}
                 data-testid="button-signup"
               >
                 {signupMutation.isPending ? t('auth.signup.buttonLoading') : t('auth.signup.button')}
               </Button>
 
-              <div className="text-center text-sm text-muted-foreground">
+              <div className="text-center text-sm sm:text-sm text-muted-foreground pt-2">
                 {t('auth.signup.haveAccount')}{" "}
                 <Link 
                   href="/login" 

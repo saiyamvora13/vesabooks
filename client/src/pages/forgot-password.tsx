@@ -56,34 +56,35 @@ export default function ForgotPassword() {
   };
 
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center px-4">
+    <div className="min-h-screen bg-background flex items-center justify-center px-4 py-8">
       <SEO 
         title="Reset Password - AI Storybook Builder"
         description="Reset your password to regain access to your AI Storybook Builder account and continue creating personalized children's stories."
         path="/forgot-password"
       />
-      <Card className="w-full max-w-md rounded-2xl shadow-xl">
-        <CardContent className="p-8">
-          <div className="text-center mb-8">
-            <h1 className="text-3xl font-bold mb-2">{t('auth.forgotPassword.title')}</h1>
-            <p className="text-muted-foreground">
+      <Card className="w-full max-w-sm sm:max-w-md rounded-2xl shadow-xl">
+        <CardContent className="p-6 sm:p-8">
+          <div className="text-center mb-8 sm:mb-10">
+            <h1 className="text-2xl sm:text-3xl font-bold mb-2">{t('auth.forgotPassword.title')}</h1>
+            <p className="text-sm sm:text-base text-muted-foreground">
               {t('auth.forgotPassword.subtitle')}
             </p>
           </div>
 
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 sm:space-y-5">
               <FormField
                 control={form.control}
                 name="email"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>{t('common.labels.email')}</FormLabel>
+                    <FormLabel className="text-base sm:text-sm">{t('common.labels.email')}</FormLabel>
                     <FormControl>
                       <Input
                         {...field}
                         type="email"
                         placeholder={t('common.placeholders.email')}
+                        autoComplete="email"
                         className="rounded-lg"
                         data-testid="input-email"
                       />
@@ -95,14 +96,14 @@ export default function ForgotPassword() {
 
               <Button
                 type="submit"
-                className="w-full rounded-lg font-semibold"
+                className="w-full rounded-lg font-semibold text-base sm:text-sm"
                 disabled={forgotPasswordMutation.isPending}
                 data-testid="button-submit"
               >
                 {forgotPasswordMutation.isPending ? t('auth.forgotPassword.buttonLoading') : t('auth.forgotPassword.button')}
               </Button>
 
-              <div className="text-center text-sm text-muted-foreground">
+              <div className="text-center text-sm sm:text-sm text-muted-foreground pt-2">
                 {t('auth.forgotPassword.rememberPassword')}{" "}
                 <Link 
                   href="/login" 
