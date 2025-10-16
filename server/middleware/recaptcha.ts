@@ -13,6 +13,12 @@ export async function verifyRecaptcha(req: Request, res: Response, next: NextFun
   try {
     const { recaptchaToken } = req.body;
 
+    // Development bypass mode - skip verification
+    if (process.env.DEV_RECAPTCHA_BYPASS === 'true') {
+      console.log('[DEV] reCAPTCHA bypass enabled - skipping verification');
+      return next();
+    }
+
     if (!recaptchaToken) {
       return res.status(400).json({ 
         error: 'reCAPTCHA token is required' 
