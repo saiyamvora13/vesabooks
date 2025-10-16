@@ -59,10 +59,12 @@ export async function generatePrintReadyPDF(storybook: Storybook): Promise<Buffe
   // Helper function to fetch and embed image
   async function embedImage(imageUrl: string): Promise<any> {
     try {
-      const filename = imageUrl.split('/').pop();
-      if (!filename) return null;
+      // Extract path after /api/storage/ to preserve date-based folder structure
+      const storagePathMatch = imageUrl.match(/\/api\/storage\/(.+)/);
+      if (!storagePathMatch) return null;
       
-      const imageBuffer = await objectStorageService.getFileBuffer(filename);
+      const filePath = storagePathMatch[1];
+      const imageBuffer = await objectStorageService.getFileBuffer(filePath);
       
       // Optimize image before embedding (reduces PDF size by 80-90%)
       const optimizedBuffer = await optimizeImageForPDF(imageBuffer);
