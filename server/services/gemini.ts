@@ -54,15 +54,47 @@ function extractArtStyle(prompt: string, hasPhotos: boolean = false): string | u
   if (!hasStyleInstructions(prompt)) {
     // If photos are uploaded but no style specified, default to photo-realistic
     if (hasPhotos) {
-      return "photo-realistic";
+      return "photo-realistic, lifelike, natural lighting, high quality photographic style";
     }
     // No custom style and no photos, return undefined so we use the default children's book style
     return undefined;
   }
   
-  // User has specified a custom style
-  // Return a flag to indicate we should NOT add default style (Gemini will include the style in imagePrompts)
-  return "custom";
+  // User has specified a custom style - extract it from the prompt
+  const lowerPrompt = prompt.toLowerCase();
+  
+  // Look for common style patterns
+  const stylePatterns = [
+    /in\s+(?:the\s+)?style\s+of\s+([^.,;!?]+)/i,
+    /(?:as|like)\s+(?:a\s+)?([^.,;!?]*(?:painting|illustration|photo|photograph|cartoon|anime|drawing|sketch)[^.,;!?]*)/i,
+    /(photo-?realistic|photorealistic|realistic|cinematic|dramatic|noir|vintage|retro|modern|contemporary|minimalist|abstract|surreal|impressionist|watercolor|oil\s+painting|3d\s+render(?:ed)?|animated|cartoon|anime|manga)(?:\s+style)?/i,
+  ];
+  
+  for (const pattern of stylePatterns) {
+    const match = prompt.match(pattern);
+    if (match && match[1]) {
+      const extractedStyle = match[1].trim();
+      // Return the extracted style with "style" suffix if not already present
+      return extractedStyle.toLowerCase().includes('style') ? extractedStyle : `${extractedStyle} style`;
+    }
+  }
+  
+  // If we detected style keywords but couldn't extract specific style, return a generic description
+  if (lowerPrompt.includes('realistic') || lowerPrompt.includes('photo')) {
+    return "realistic, detailed, high quality style";
+  }
+  if (lowerPrompt.includes('cartoon') || lowerPrompt.includes('animated')) {
+    return "vibrant cartoon style, colorful, animated look";
+  }
+  if (lowerPrompt.includes('watercolor')) {
+    return "watercolor painting style, soft, artistic";
+  }
+  if (lowerPrompt.includes('cinematic')) {
+    return "cinematic style, dramatic lighting, movie-like quality";
+  }
+  
+  // Fallback: return undefined to use Gemini's interpretation
+  return undefined;
 }
 
 // Import and re-export from shared utility
@@ -404,13 +436,12 @@ export async function generateIllustration(
 
   while (retries > 0) {
     try {
-      // Build the full prompt based on style and whether we have a reference photo
+      // Build the full prompt with consistent style application
       let fullPrompt: string;
       
-      if (explicitStyle === "photo-realistic") {
-        // Photo-realistic style: emphasize matching the reference photo EXACTLY
-        if (baseImagePath && fs.existsSync(baseImagePath)) {
-          fullPrompt = `🔴 CRITICAL: The reference image shows the EXACT person who should appear in this illustration. 
+      // Step 1: Add photo-matching instructions if we have a reference photo
+      const photoMatchingPrefix = (baseImagePath && fs.existsSync(baseImagePath))
+        ? `🔴 CRITICAL: The reference image shows the EXACT person who should appear in this illustration.
 
 MATCH THE REFERENCE PHOTO EXACTLY:
 - Same age (if adult in photo, show adult - do NOT change to child)
@@ -418,32 +449,28 @@ MATCH THE REFERENCE PHOTO EXACTLY:
 - Same physical appearance and build
 - Recreate this EXACT person in the scene described below
 
-SCENE: ${imagePrompt}
-
-STYLE: Photo-realistic, lifelike, natural lighting, high quality photographic style.
-
-IMPORTANT: The person in your generated image MUST look like the person in the reference photo - same age, same features, same appearance. Only the scene/setting should match the description, but the person must match the photo EXACTLY.`;
-        } else {
-          fullPrompt = `${imagePrompt}, photo-realistic style, lifelike, natural lighting, high quality photographic appearance.`;
-        }
-      } else if (explicitStyle === "custom") {
-        // User specified a custom style - imagePrompt already includes it
-        if (baseImagePath && fs.existsSync(baseImagePath)) {
-          fullPrompt = `🔴 IMPORTANT: The reference image shows the person/character who should appear in this illustration. Match their physical appearance EXACTLY - same age, same features, same appearance. Only the scene should match the description below, the character must look like the person in the photo.
-
-${imagePrompt}`;
-        } else {
-          fullPrompt = imagePrompt;
-        }
+SCENE: `
+        : '';
+      
+      // Step 2: Add the scene description
+      const sceneDescription = imagePrompt;
+      
+      // Step 3: Add the style directive (CRITICAL: this must be consistent for ALL images)
+      let styleDirective: string;
+      if (explicitStyle) {
+        // Use the extracted style (e.g., "photo-realistic, lifelike..." or "watercolor painting style")
+        styleDirective = `\n\nSTYLE: ${explicitStyle}`;
       } else {
         // Default children's book style
-        if (baseImagePath && fs.existsSync(baseImagePath)) {
-          fullPrompt = `The reference image shows the character who should appear in this illustration. Match their appearance EXACTLY.
-
-${imagePrompt}, in the style of a vibrant and colorful children's book illustration, whimsical and gentle.`;
-        } else {
-          fullPrompt = `${imagePrompt}, in the style of a vibrant and colorful children's book illustration, whimsical and gentle.`;
-        }
+        styleDirective = ', in the style of a vibrant and colorful children\'s book illustration, whimsical and gentle';
+      }
+      
+      // Step 4: Combine everything
+      fullPrompt = photoMatchingPrefix + sceneDescription + styleDirective;
+      
+      // Add extra emphasis for photo matching
+      if (baseImagePath && fs.existsSync(baseImagePath)) {
+        fullPrompt += '\n\nIMPORTANT: The person in your generated image MUST look like the person in the reference photo - same age, same features, same appearance. Only the scene/setting should match the description, but the person must match the photo EXACTLY.';
       }
       
       console.log(`[generateIllustration] Full prompt sent to Gemini: ${fullPrompt.substring(0, 250)}...`);
