@@ -171,19 +171,13 @@ export default function Create() {
     try {
       setLastFormData(data); // Save form data for retry
       setRetryCount(0); // Reset retry count on new submission
-      createStoryMutation.mutate(data);
-      // Return a resolved promise to satisfy handleSubmit
-      return Promise.resolve();
+      
+      // Use mutateAsync to get a promise we can await and catch
+      await createStoryMutation.mutateAsync(data);
     } catch (error) {
+      // All mutation errors are caught here, preventing unhandled rejections
       console.error('Error in onSubmit:', error);
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      toast({
-        title: 'Generation failed',
-        description: errorMessage,
-        variant: "destructive",
-      });
-      // Return a resolved promise even on error (mutation handles the actual error)
-      return Promise.resolve();
+      // The mutation's onError callback handles the toast, but this catches the rejection
     }
   };
 
@@ -193,12 +187,18 @@ export default function Create() {
     setLocation(`/view/${storybookId}`);
   };
 
-  const handleRetry = () => {
+  const handleRetry = async () => {
     if (lastFormData) {
-      setRetryCount(prev => prev + 1);
-      setIsGenerating(false);
-      setSessionId(null);
-      createStoryMutation.mutate(lastFormData);
+      try {
+        setRetryCount(prev => prev + 1);
+        setIsGenerating(false);
+        setSessionId(null);
+        await createStoryMutation.mutateAsync(lastFormData);
+      } catch (error) {
+        // Catch any errors to prevent unhandled rejections
+        console.error('Error in handleRetry:', error);
+        // The mutation's onError callback handles the toast
+      }
     }
   };
 
