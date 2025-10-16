@@ -10,7 +10,7 @@ const Switch = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <SwitchPrimitives.Root
     className={cn(
-      "peer group relative inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-not-allowed disabled:opacity-50 data-[state=checked]:bg-primary data-[state=unchecked]:bg-input",
+      "peer group relative inline-flex h-8 w-14 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-not-allowed disabled:opacity-50 data-[state=checked]:bg-primary data-[state=unchecked]:bg-input",
       className
     )}
     {...props}
@@ -18,11 +18,11 @@ const Switch = React.forwardRef<
   >
     <SwitchPrimitives.Thumb
       className={cn(
-        "pointer-events-none relative flex items-center justify-center h-5 w-5 rounded-full bg-background shadow-lg ring-0 transition-transform duration-200 ease data-[state=checked]:translate-x-5 data-[state=unchecked]:translate-x-0"
+        "pointer-events-none relative flex items-center justify-center h-6 w-6 rounded-full bg-background shadow-lg ring-0 transition-transform duration-200 ease data-[state=checked]:translate-x-6 data-[state=unchecked]:translate-x-0"
       )}
     >
-      <Check className="absolute h-3 w-3 text-primary transition-opacity duration-200 group-data-[state=checked]:opacity-100 group-data-[state=unchecked]:opacity-0" />
-      <Minus className="absolute h-3 w-3 text-muted-foreground transition-opacity duration-200 group-data-[state=checked]:opacity-0 group-data-[state=unchecked]:opacity-100" />
+      <Check className="absolute h-3.5 w-3.5 text-primary transition-opacity duration-200 group-data-[state=checked]:opacity-100 group-data-[state=unchecked]:opacity-0" />
+      <Minus className="absolute h-3.5 w-3.5 text-muted-foreground transition-opacity duration-200 group-data-[state=checked]:opacity-0 group-data-[state=unchecked]:opacity-100" />
     </SwitchPrimitives.Thumb>
   </SwitchPrimitives.Root>
 ))
