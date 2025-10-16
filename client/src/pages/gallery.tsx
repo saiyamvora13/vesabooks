@@ -73,11 +73,11 @@ export default function Gallery() {
 
           {/* Gallery Grid */}
           {isLoading ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 min-[480px]:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
               {[...Array(8)].map((_, i) => (
                 <Card key={i} className="overflow-hidden">
                   <Skeleton className="aspect-[3/4] w-full" />
-                  <CardContent className="p-4 space-y-2">
+                  <CardContent className="p-3 sm:p-4 space-y-2">
                     <Skeleton className="h-6 w-3/4" />
                     <Skeleton className="h-4 w-1/2" />
                     <Skeleton className="h-4 w-2/3" />
@@ -87,11 +87,11 @@ export default function Gallery() {
             </div>
           ) : data && data.storybooks.length > 0 ? (
             <>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+              <div className="grid grid-cols-1 min-[480px]:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
                 {data.storybooks.map((storybook) => (
                   <Card
                     key={storybook.id}
-                    className="overflow-hidden group cursor-pointer hover:shadow-lg transition-shadow"
+                    className="overflow-hidden group cursor-pointer hover:shadow-lg transition-all duration-300 active:scale-[0.98] touch-manipulation"
                     onClick={() => handleViewStorybook(storybook.id)}
                     data-testid={`card-storybook-${storybook.id}`}
                   >
@@ -100,8 +100,9 @@ export default function Gallery() {
                       {storybook.coverImageUrl ? (
                         <img
                           src={storybook.coverImageUrl}
-                          alt={storybook.title}
+                          alt={`Cover image for ${storybook.title} by ${storybook.author}`}
                           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                          loading="lazy"
                           data-testid={`img-cover-${storybook.id}`}
                         />
                       ) : (
@@ -112,29 +113,29 @@ export default function Gallery() {
                     </div>
 
                     {/* Info */}
-                    <CardContent className="p-4">
-                      <h3 className="font-semibold text-lg mb-1 line-clamp-2" data-testid={`text-title-${storybook.id}`}>
+                    <CardContent className="p-3 sm:p-4">
+                      <h3 className="font-semibold text-base sm:text-lg mb-1 line-clamp-2" data-testid={`text-title-${storybook.id}`}>
                         {storybook.title}
                       </h3>
                       <p className="text-sm text-muted-foreground mb-3" data-testid={`text-author-${storybook.id}`}>
                         by {storybook.author}
                       </p>
 
-                      {/* Stats */}
-                      <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                      {/* Stats - More prominent on mobile */}
+                      <div className="flex items-center gap-3 sm:gap-4 text-sm sm:text-sm">
                         {storybook.averageRating !== null && storybook.ratingCount > 0 && (
                           <div className="flex items-center gap-1" data-testid={`text-rating-${storybook.id}`}>
-                            <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
-                            <span>{storybook.averageRating.toFixed(1)}</span>
-                            <span className="text-xs">({storybook.ratingCount})</span>
+                            <Star className="h-4 w-4 sm:h-4 sm:w-4 fill-yellow-400 text-yellow-400" />
+                            <span className="font-medium">{storybook.averageRating.toFixed(1)}</span>
+                            <span className="text-xs text-muted-foreground">({storybook.ratingCount})</span>
                           </div>
                         )}
-                        <div className="flex items-center gap-1" data-testid={`text-views-${storybook.id}`}>
-                          <Eye className="h-4 w-4" />
+                        <div className="flex items-center gap-1 text-muted-foreground" data-testid={`text-views-${storybook.id}`}>
+                          <Eye className="h-4 w-4 sm:h-4 sm:w-4" />
                           <span>{storybook.viewCount}</span>
                         </div>
-                        <div className="flex items-center gap-1" data-testid={`text-shares-${storybook.id}`}>
-                          <Share2 className="h-4 w-4" />
+                        <div className="flex items-center gap-1 text-muted-foreground" data-testid={`text-shares-${storybook.id}`}>
+                          <Share2 className="h-4 w-4 sm:h-4 sm:w-4" />
                           <span>{storybook.shareCount}</span>
                         </div>
                       </div>

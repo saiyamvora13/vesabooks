@@ -41,29 +41,33 @@ export default function ExamplesSection() {
           </p>
         </div>
 
-        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 min-[480px]:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 lg:gap-8">
           {featuredBooks.map((book, index) => (
-            <Card key={index} className="story-card rounded-3xl overflow-hidden shadow-lg">
-              <img 
-                src={book.image} 
-                alt={t('home.examples.imageAlt')} 
-                className="w-full h-48 object-cover"
-                loading="lazy"
-              />
-              <CardContent className="p-6">
-                <h3 className="text-xl font-bold mb-2">{book.title}</h3>
-                <p className="text-sm text-muted-foreground mb-4">{book.description}</p>
+            <Card key={index} className="story-card rounded-2xl sm:rounded-3xl overflow-hidden shadow-lg transition-all duration-300 hover:shadow-xl active:scale-[0.98] touch-manipulation">
+              <div className="aspect-[3/2] relative overflow-hidden">
+                <img 
+                  src={book.image} 
+                  alt={`Cover image for ${book.title} by ${book.author}`} 
+                  className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
+                  loading="lazy"
+                />
+              </div>
+              <CardContent className="p-4 sm:p-6">
+                <h3 className="text-lg sm:text-xl font-bold mb-2 line-clamp-2">{book.title}</h3>
+                <p className="text-sm text-muted-foreground mb-4 line-clamp-2">{book.description}</p>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center space-x-2">
-                    <div className="w-8 h-8 bg-gradient-to-br from-primary to-secondary rounded-full"></div>
-                    <span className="text-sm font-medium">{book.author}</span>
+                    <div className="w-6 h-6 sm:w-8 sm:h-8 bg-gradient-to-br from-primary to-secondary rounded-full"></div>
+                    <span className="text-xs sm:text-sm font-medium">{book.author}</span>
                   </div>
-                  <div className="flex items-center space-x-3 text-sm text-muted-foreground">
-                    <span className="flex items-center">
-                      <i className="fas fa-heart mr-1"></i> {book.likes}
+                  <div className="flex items-center space-x-2 sm:space-x-3 text-xs sm:text-sm">
+                    <span className="flex items-center text-muted-foreground">
+                      <i className="fas fa-heart mr-1"></i>
+                      <span className="font-medium">{book.likes}</span>
                     </span>
-                    <span className="flex items-center">
-                      <i className="fas fa-eye mr-1"></i> {book.views}
+                    <span className="flex items-center text-muted-foreground">
+                      <i className="fas fa-eye mr-1"></i>
+                      <span>{book.views}</span>
                     </span>
                   </div>
                 </div>

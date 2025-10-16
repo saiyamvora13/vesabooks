@@ -592,7 +592,7 @@ export default function Library() {
             </Button>
           </div>
         ) : isLoading ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 min-[480px]:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
             {[1, 2, 3, 4, 5, 6].map((i) => (
               <Card key={i} className="overflow-hidden animate-pulse">
                 <Skeleton className="h-48 w-full" />
@@ -612,19 +612,19 @@ export default function Library() {
             ))}
           </div>
         ) : storybooks && storybooks.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 min-[480px]:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
             {storybooks.map((storybook) => (
               <Card 
                 key={storybook.id} 
-                className="overflow-hidden hover:shadow-lg transition-shadow cursor-pointer group"
+                className="overflow-hidden hover:shadow-lg transition-all duration-300 active:scale-[0.98] cursor-pointer group touch-manipulation"
                 data-testid={`card-storybook-${storybook.id}`}
               >
                 <Link href={`/view/${storybook.id}`}>
-                  <div className="relative h-48 bg-gradient-to-br from-primary/20 to-secondary/20 overflow-hidden">
+                  <div className="relative aspect-[3/4] bg-gradient-to-br from-primary/20 to-secondary/20 overflow-hidden">
                     {storybook.pages[0]?.imageUrl ? (
                       <img 
                         src={storybook.pages[0].imageUrl} 
-                        alt={storybook.title}
+                        alt={`Cover image for ${storybook.title}`}
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                         data-testid={`img-cover-${storybook.id}`}
                         loading="lazy"
@@ -637,17 +637,17 @@ export default function Library() {
                   </div>
                 </Link>
                 
-                <CardHeader>
-                  <CardTitle className="line-clamp-1" data-testid={`text-title-${storybook.id}`}>
+                <CardHeader className="p-3 sm:p-6">
+                  <CardTitle className="line-clamp-2 text-base sm:text-lg" data-testid={`text-title-${storybook.id}`}>
                     {storybook.title}
                   </CardTitle>
-                  <CardDescription className="line-clamp-2" data-testid={`text-prompt-${storybook.id}`}>
+                  <CardDescription className="line-clamp-2 text-sm" data-testid={`text-prompt-${storybook.id}`}>
                     {storybook.prompt}
                   </CardDescription>
                 </CardHeader>
                 
-                <CardContent className="pb-3">
-                  <div className="flex items-center gap-1 text-sm text-muted-foreground mb-2">
+                <CardContent className="px-3 sm:px-6 pb-3">
+                  <div className="flex items-center gap-1 text-sm text-muted-foreground mb-3">
                     <Calendar className="h-4 w-4" />
                     <span data-testid={`text-date-${storybook.id}`}>
                       {formatDistanceToNow(new Date(storybook.createdAt), { addSuffix: true })}
@@ -656,15 +656,16 @@ export default function Library() {
                   <StorybookPurchaseButtons storybook={storybook} />
                 </CardContent>
                 
-                <CardFooter className="flex items-center justify-between gap-2 pt-3">
+                <CardFooter className="flex items-center justify-between gap-2 px-3 sm:px-6 pt-3 pb-3 sm:pb-6">
                   <Link href={`/view/${storybook.id}`} className="flex-1">
-                    <Button variant="outline" size="sm" className="w-full" data-testid={`button-view-${storybook.id}`}>
+                    <Button variant="outline" size="default" className="w-full h-10 sm:h-9" data-testid={`button-view-${storybook.id}`}>
                       {t('common.buttons.view')}
                     </Button>
                   </Link>
                   <Button
                     variant="destructive"
-                    size="sm"
+                    size="default"
+                    className="h-10 sm:h-9 px-3"
                     onClick={(e) => {
                       e.preventDefault();
                       setDeletingBookId(storybook.id);
