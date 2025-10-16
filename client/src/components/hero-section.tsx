@@ -72,19 +72,16 @@ export default function HeroSection() {
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="grid lg:grid-cols-2 gap-8 lg:gap-12 items-center">
+        <div className="grid lg:grid-cols-2 gap-6 sm:gap-8 lg:gap-12 items-center">
           {/* Hero Content */}
           <div className="text-center lg:text-left">
             <div className="inline-flex items-center space-x-2 px-3 sm:px-4 py-1.5 sm:py-2 bg-primary/10 rounded-full mb-4 sm:mb-6">
               <i className="fas fa-sparkles text-primary text-sm"></i>
-              <span className="text-xs sm:text-sm font-medium text-primary">{t('home.hero.badge')}</span>
+              <span className="text-xs sm:text-sm font-medium text-primary">Powered by Gen AI</span>
             </div>
             
             <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold mb-4 sm:mb-6 leading-tight">
-              <Trans 
-                i18nKey="home.hero.title"
-                components={{ gradient: <span className="gradient-text" /> }}
-              />
+              Create <span className="gradient-text">YOUR</span> Storybook in Minutes
             </h1>
             
             <p className="text-base sm:text-lg text-muted-foreground mb-6 sm:mb-8 max-w-xl mx-auto lg:mx-0">
@@ -137,7 +134,7 @@ export default function HeroSection() {
           </div>
 
           {/* Example Storybooks Showcase */}
-          <div className="relative mt-8 lg:mt-0">
+          <div className="relative mt-6 sm:mt-8 lg:mt-0">
             {booksLoading ? (
               <div className="grid grid-cols-2 gap-4">
                 <Skeleton className="h-64 w-full rounded-2xl" />
