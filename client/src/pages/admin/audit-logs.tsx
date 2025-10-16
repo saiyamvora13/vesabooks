@@ -2,13 +2,14 @@ import { useQuery } from "@tanstack/react-query";
 import ProtectedAdminRoute from "@/components/admin/ProtectedAdminRoute";
 import AdminLayout from "@/components/admin/AdminLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, ResponsiveTable, ResponsiveRow, ResponsiveHeader, ResponsiveBody } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { queryClient } from "@/lib/queryClient";
 import { AdminAuditLog, AdminUser } from "@shared/schema";
 import { FileText, User } from "lucide-react";
 import { format } from "date-fns";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface AuditLogWithAdmin extends AdminAuditLog {
   admin?: AdminUser;
@@ -23,6 +24,8 @@ export default function AuditLogs() {
     queryKey: ["/api/admin/users"],
   });
 
+  const isMobile = useIsMobile();
+
   const getAdminById = (id: string) => {
     return admins?.find(admin => admin.id === id);
   };
@@ -31,6 +34,8 @@ export default function AuditLogs() {
     ...log,
     admin: getAdminById(log.adminId),
   })) || [];
+
+  const headers = ["Admin", "Action", "Resource", "Timestamp"];
 
   return (
     <ProtectedAdminRoute requireSuperAdmin={true}>
@@ -68,19 +73,19 @@ export default function AuditLogs() {
                   <p className="text-slate-400">No audit logs found</p>
                 </div>
               ) : (
-                <div className="rounded-lg border border-slate-800 bg-slate-950">
-                  <Table data-testid="table-audit-logs">
-                    <TableHeader>
+                <div className={isMobile ? "" : "rounded-lg border border-slate-800 bg-slate-950"}>
+                  <ResponsiveTable data-testid="table-audit-logs">
+                    <ResponsiveHeader>
                       <TableRow className="border-slate-800 hover:bg-slate-900">
                         <TableHead className="text-slate-400">Admin</TableHead>
                         <TableHead className="text-slate-400">Action</TableHead>
                         <TableHead className="text-slate-400">Resource</TableHead>
                         <TableHead className="text-slate-400">Timestamp</TableHead>
                       </TableRow>
-                    </TableHeader>
-                    <TableBody>
+                    </ResponsiveHeader>
+                    <ResponsiveBody>
                       {logsWithAdmins.map((log) => (
-                        <TableRow key={log.id} className="border-slate-800 hover:bg-slate-900/50">
+                        <ResponsiveRow key={log.id} headers={headers} className={isMobile ? "" : "border-slate-800 hover:bg-slate-900/50"}>
                           <TableCell className="text-slate-100">
                             <div className="flex items-center gap-2">
                               <User className="w-4 h-4 text-slate-500" />
@@ -110,10 +115,10 @@ export default function AuditLogs() {
                           <TableCell className="text-slate-400">
                             {log.createdAt ? format(new Date(log.createdAt), 'MMM d, yyyy h:mm a') : '—'}
                           </TableCell>
-                        </TableRow>
+                        </ResponsiveRow>
                       ))}
-                    </TableBody>
-                  </Table>
+                    </ResponsiveBody>
+                  </ResponsiveTable>
                 </div>
               )}
             </CardContent>

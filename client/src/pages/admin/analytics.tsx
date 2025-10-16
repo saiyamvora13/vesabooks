@@ -4,11 +4,12 @@ import AdminLayout from "@/components/admin/AdminLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow, ResponsiveTable, ResponsiveRow, ResponsiveHeader, ResponsiveBody } from "@/components/ui/table";
 import { DollarSign, BookOpen, Users, Star, TrendingUp, RefreshCw } from "lucide-react";
 import { LineChart, Line, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from "recharts";
 import { Storybook } from "@shared/schema";
 import { queryClient } from "@/lib/queryClient";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface OverviewMetrics {
   totalRevenue: number;
@@ -64,6 +65,8 @@ export default function AdminAnalytics() {
     queryKey: ["/api/storybooks"],
   });
 
+  const isMobile = useIsMobile();
+
   const handleRefresh = () => {
     queryClient.invalidateQueries({ queryKey: ["/api/admin/analytics/overview"] });
     queryClient.invalidateQueries({ queryKey: ["/api/admin/analytics/revenue-trends"] });
@@ -105,6 +108,8 @@ export default function AdminAnalytics() {
     ?.filter(s => !s.deletedAt)
     ?.sort((a, b) => (Number(b.shareCount) + Number(b.viewCount)) - (Number(a.shareCount) + Number(a.viewCount)))
     ?.slice(0, 5) || [];
+
+  const tableHeaders = ["Title", "Author", "Views", "Shares", "Created"];
 
   return (
     <ProtectedAdminRoute>
@@ -334,37 +339,43 @@ export default function AdminAnalytics() {
               <CardTitle className="text-slate-100">Top Popular Stories</CardTitle>
             </CardHeader>
             <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow className="border-slate-800 hover:bg-slate-800/50">
-                    <TableHead className="text-slate-400">Title</TableHead>
-                    <TableHead className="text-slate-400">Author</TableHead>
-                    <TableHead className="text-slate-400 text-right">Views</TableHead>
-                    <TableHead className="text-slate-400 text-right">Shares</TableHead>
-                    <TableHead className="text-slate-400 text-right">Created</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {topRatedStories.map((story) => (
-                    <TableRow key={story.id} className="border-slate-800 hover:bg-slate-800/50" data-testid={`story-row-${story.id}`}>
-                      <TableCell className="text-slate-300 font-medium">{story.title}</TableCell>
-                      <TableCell className="text-slate-400">{story.author || 'Anonymous'}</TableCell>
-                      <TableCell className="text-slate-400 text-right">{Number(story.viewCount)}</TableCell>
-                      <TableCell className="text-slate-400 text-right">{Number(story.shareCount)}</TableCell>
-                      <TableCell className="text-slate-400 text-right">
-                        {story.createdAt ? new Date(story.createdAt).toLocaleDateString() : 'N/A'}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                  {topRatedStories.length === 0 && (
-                    <TableRow className="border-slate-800">
-                      <TableCell colSpan={5} className="text-center text-slate-500 py-8">
-                        No stories available
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
+              {topRatedStories.length === 0 ? (
+                <div className="text-center text-slate-500 py-8">
+                  No stories available
+                </div>
+              ) : (
+                <div className={isMobile ? "" : "rounded-lg border border-slate-800 bg-slate-950"}>
+                  <ResponsiveTable>
+                    <ResponsiveHeader>
+                      <TableRow className="border-slate-800 hover:bg-slate-800/50">
+                        <TableHead className="text-slate-400">Title</TableHead>
+                        <TableHead className="text-slate-400">Author</TableHead>
+                        <TableHead className="text-slate-400 text-right">Views</TableHead>
+                        <TableHead className="text-slate-400 text-right">Shares</TableHead>
+                        <TableHead className="text-slate-400 text-right">Created</TableHead>
+                      </TableRow>
+                    </ResponsiveHeader>
+                    <ResponsiveBody>
+                      {topRatedStories.map((story) => (
+                        <ResponsiveRow 
+                          key={story.id} 
+                          headers={tableHeaders} 
+                          className={isMobile ? "" : "border-slate-800 hover:bg-slate-800/50"} 
+                          data-testid={`story-row-${story.id}`}
+                        >
+                          <TableCell className="text-slate-300 font-medium">{story.title}</TableCell>
+                          <TableCell className="text-slate-400">{story.author || 'Anonymous'}</TableCell>
+                          <TableCell className={isMobile ? "" : "text-right"}>{Number(story.viewCount)}</TableCell>
+                          <TableCell className={isMobile ? "" : "text-right"}>{Number(story.shareCount)}</TableCell>
+                          <TableCell className={isMobile ? "" : "text-right"}>
+                            {story.createdAt ? new Date(story.createdAt).toLocaleDateString() : 'N/A'}
+                          </TableCell>
+                        </ResponsiveRow>
+                      ))}
+                    </ResponsiveBody>
+                  </ResponsiveTable>
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>
