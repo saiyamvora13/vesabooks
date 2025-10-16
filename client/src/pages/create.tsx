@@ -101,8 +101,10 @@ export default function Create() {
         });
 
         if (!response.ok) {
-          const error = await response.json();
-          throw new Error(error.message || "Failed to create storybook");
+          const errorData = await response.json();
+          // Backend returns either {error: string} or {message: string}
+          const errorMessage = errorData.error || errorData.message || "Failed to create storybook";
+          throw new Error(errorMessage);
         }
 
         return response.json();
@@ -157,9 +159,19 @@ export default function Create() {
   });
 
   const onSubmit = (data: CreateStoryForm) => {
-    setLastFormData(data); // Save form data for retry
-    setRetryCount(0); // Reset retry count on new submission
-    createStoryMutation.mutate(data);
+    try {
+      setLastFormData(data); // Save form data for retry
+      setRetryCount(0); // Reset retry count on new submission
+      createStoryMutation.mutate(data);
+    } catch (error) {
+      console.error('Error in onSubmit:', error);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      toast({
+        title: 'Generation failed',
+        description: errorMessage,
+        variant: "destructive",
+      });
+    }
   };
 
   const onGenerationComplete = (storybookId: string) => {
