@@ -32,15 +32,7 @@ Key features include:
 - **User Feedback & Rating System**: 1-5 star rating with optional text feedback, displayed as average ratings and counts.
 - **Page Regeneration**: Allows individual page regeneration for storybook owners while maintaining character and story continuity.
 - **Enhanced Admin Analytics Dashboard**: Comprehensive dashboard showing revenue, active users, completion rates, average ratings, popular themes, and user retention metrics using Recharts.
-- **Dynamic Music & Sound Effects**: AI-powered mood-adaptive audio system with 6 mood categories (calm, adventure, mystery, happy, suspense, dramatic), Gemini AI mood detection per page, real MP3 background music with synthetic fallback, professional sound effects (book-open, page-turn), and separate volume controls.
-  - **Music Library**: 
-    - Calm: "Softest of Feathers" by Calm Shores
-    - Adventure: "The Road to Odessa" by Lama House
-    - Mystery: "Magical Dream Dust" by John B. Lund
-    - Happy: "My Kitty Cat" by Luna The Cat
-    - Suspense: Synthetic (Web Audio API generated)
-    - Dramatic: Synthetic (Web Audio API generated)
-  - **Sound Effects**: Book-open and page-turn sounds from Epidemic Sound library
+- **Sound Effects**: Professional sound effects (book-open, page-turn) from Epidemic Sound library with volume controls and persistence. AudioManager handles deferred initialization with polling mechanism to apply persisted volume preferences after user interaction.
 
 ### Security & Monitoring
 - **Security Measures**: bcryptjs for password hashing (12 salt rounds), rate limiting for authentication and password reset endpoints, secure session storage (PostgreSQL), and Zod schema validation for all API endpoints.
