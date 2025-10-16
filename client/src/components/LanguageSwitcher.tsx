@@ -30,21 +30,16 @@ export default function LanguageSwitcher() {
   return (
     <Select value={currentLanguage.code} onValueChange={handleLanguageChange}>
       <SelectTrigger 
-        className="w-[140px] h-9 border-border/50 hover:border-border transition-colors"
+        className="w-[140px] h-9 border-border/50 hover:border-border transition-colors gap-2"
         data-testid="language-switcher"
       >
-        <div className="flex items-center gap-2">
-          <Globe className="h-4 w-4 text-foreground/70" />
-          <SelectValue />
-        </div>
+        <Globe className="h-4 w-4 text-foreground/70 shrink-0" />
+        <SelectValue />
       </SelectTrigger>
       <SelectContent>
         {languages.map((lang) => (
           <SelectItem key={lang.code} value={lang.code}>
-            <div className="flex items-center gap-2">
-              <Globe className="h-4 w-4 text-foreground/70" />
-              <span>{lang.name}</span>
-            </div>
+            {lang.name}
           </SelectItem>
         ))}
       </SelectContent>
