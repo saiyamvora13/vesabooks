@@ -50,9 +50,13 @@ function hasStyleInstructions(prompt: string): boolean {
 }
 
 // Helper function to extract the art style directive from user prompt for consistency
-function extractArtStyle(prompt: string): string | undefined {
+function extractArtStyle(prompt: string, hasPhotos: boolean = false): string | undefined {
   if (!hasStyleInstructions(prompt)) {
-    // No custom style, return undefined so we use the default children's book style
+    // If photos are uploaded but no style specified, default to photo-realistic
+    if (hasPhotos) {
+      return "photo-realistic";
+    }
+    // No custom style and no photos, return undefined so we use the default children's book style
     return undefined;
   }
   
@@ -154,8 +158,22 @@ export async function generateStoryFromPrompt(
    - END (pages ${beginningPages + middlePages + 1}-${pagesPerBook}): Resolve the conflict, show growth/learning, provide closure`;
     }
     
+    // Special instruction when photos are uploaded
+    const photoReferenceInstruction = hasImages 
+      ? `\n\n🔴 CRITICAL PHOTO REFERENCE INSTRUCTIONS 🔴
+${inspirationImagePaths.length} reference photo(s) have been provided. You MUST:
+1. DESCRIBE EXACTLY WHAT YOU SEE in the photos - same age, same physical features, same appearance
+2. If the photo shows adults, the character MUST be an adult (do NOT change to children)
+3. If the photo shows children, the character MUST be a child (do NOT change to adults)
+4. Match ALL physical details from the photo: age, gender, hair, eyes, skin tone, facial features, build
+5. The character description should read like a detailed description of the ACTUAL PERSON in the photo
+6. Only deviate from the photo if the user's prompt EXPLICITLY requests changes (e.g., "make me a superhero")
+
+These photos are NOT just "inspiration" - they are EXACT VISUAL REFERENCES for how characters should look.\n`
+      : '';
+
     const systemInstruction = hasCustomStyle
-      ? `You are a master storyteller crafting a complete ${pagesPerBook}-page narrative based on a user's prompt${hasImages ? ' and optional inspirational images' : ''}. 
+      ? `You are a master storyteller crafting a complete ${pagesPerBook}-page narrative based on a user's prompt${hasImages ? ' and EXACT reference photos' : ''}. ${photoReferenceInstruction}
 
 CRITICAL STORY STRUCTURE REQUIREMENTS:
 1. NARRATIVE ARC - ${narrativeStructure}
@@ -182,7 +200,7 @@ CRITICAL STORY STRUCTURE REQUIREMENTS:
 4. STORY ELEMENTS - Include: clear protagonist, conflict/problem, rising action, climax, and resolution.
 
 Respect the user's style preferences. Return JSON following the schema with exactly ${pagesPerBook} pages.`
-      : `You are a master children's storybook author crafting a complete ${pagesPerBook}-page story based on a user's prompt${hasImages ? ' and optional inspirational images' : ''}. Stories should be suitable for children aged 5-7.
+      : `You are a master children's storybook author crafting a complete ${pagesPerBook}-page story based on a user's prompt${hasImages ? ' and EXACT reference photos' : ''}. Stories should be suitable for children aged 5-7.${photoReferenceInstruction}
 
 CRITICAL STORY STRUCTURE REQUIREMENTS:
 1. NARRATIVE ARC - ${narrativeStructure}
@@ -252,7 +270,9 @@ Return JSON following the schema with exactly ${pagesPerBook} pages.`;
         },
         mainCharacterDescription: {
           type: Type.STRING,
-          description: "A VERY DETAILED physical description of the main character's PERMANENT features that will be used in ALL image prompts for visual consistency. CRITICAL: The character's core physical appearance must remain IDENTICAL across all 10+ illustrations. Front-load the most important features first. Include ONLY permanent features: (1) Age/type and gender, (2) Specific hair color and exact hairstyle, (3) Eye color, (4) Skin tone/fur color with any unique marks (freckles, birthmarks, scars, gaps in teeth, distinctive facial features), (5) Body type/build, (6) Any permanent distinctive features. DO NOT describe clothing here - clothing will be handled separately. Be extremely specific about permanent visual details that never change. Example: 'A 7-year-old girl with long curly bright red hair tied in two high pigtails, large emerald green eyes, fair skin with three small freckles across her nose, a small gap between her two front teeth, petite build, round face with a button nose.'"
+          description: hasImages 
+            ? `A VERY DETAILED physical description of the main character's PERMANENT features EXACTLY AS THEY APPEAR IN THE PROVIDED REFERENCE PHOTO(S). CRITICAL: Describe the ACTUAL PERSON in the photo - same age, same features, same appearance. Include: (1) EXACT age and gender AS SHOWN in the photo, (2) Specific hair color and exact hairstyle AS SEEN in the photo, (3) Eye color, (4) Skin tone with any unique marks (facial features, distinctive characteristics), (5) Body type/build, (6) Any other distinctive permanent features. DO NOT describe clothing here. DO NOT change their age (adults stay adults, children stay children). Example: 'A woman in her mid-30s with shoulder-length straight dark brown hair, warm brown eyes, medium olive skin tone, a friendly smile, slender build, and defined cheekbones.' This description will be used in ALL illustrations, so accuracy to the photo is CRITICAL.`
+            : "A VERY DETAILED physical description of the main character's PERMANENT features that will be used in ALL image prompts for visual consistency. CRITICAL: The character's core physical appearance must remain IDENTICAL across all 10+ illustrations. Front-load the most important features first. Include ONLY permanent features: (1) Age/type and gender, (2) Specific hair color and exact hairstyle, (3) Eye color, (4) Skin tone/fur color with any unique marks (freckles, birthmarks, scars, gaps in teeth, distinctive facial features), (5) Body type/build, (6) Any permanent distinctive features. DO NOT describe clothing here - clothing will be handled separately. Be extremely specific about permanent visual details that never change. Example: 'A 7-year-old girl with long curly bright red hair tied in two high pigtails, large emerald green eyes, fair skin with three small freckles across her nose, a small gap between her two front teeth, petite build, round face with a button nose.'"
         },
         defaultClothing: {
           type: Type.STRING,
@@ -334,7 +354,8 @@ Return JSON following the schema with exactly ${pagesPerBook} pages.`;
     }
 
     // Extract and store the art style from the original user prompt for consistency across all images
-    parsedJson.artStyle = extractArtStyle(prompt);
+    // If photos are uploaded and no style specified, default to photo-realistic
+    parsedJson.artStyle = extractArtStyle(prompt, hasImages);
 
     // Analyze mood for each page and log structured scene details
     if (parsedJson.pages && Array.isArray(parsedJson.pages)) {
@@ -383,17 +404,53 @@ export async function generateIllustration(
 
   while (retries > 0) {
     try {
-      // If explicit style is "custom", the imagePrompt already includes the style (from Gemini)
-      // If undefined, add default children's book style for consistency
-      const fullPrompt = explicitStyle === "custom"
-        ? imagePrompt // Already has custom style from Gemini
-        : `${imagePrompt}, in the style of a vibrant and colorful children's book illustration, whimsical and gentle.`;
+      // Build the full prompt based on style and whether we have a reference photo
+      let fullPrompt: string;
+      
+      if (explicitStyle === "photo-realistic") {
+        // Photo-realistic style: emphasize matching the reference photo EXACTLY
+        if (baseImagePath && fs.existsSync(baseImagePath)) {
+          fullPrompt = `🔴 CRITICAL: The reference image shows the EXACT person who should appear in this illustration. 
+
+MATCH THE REFERENCE PHOTO EXACTLY:
+- Same age (if adult in photo, show adult - do NOT change to child)
+- Same facial features, hair, eyes, skin tone
+- Same physical appearance and build
+- Recreate this EXACT person in the scene described below
+
+SCENE: ${imagePrompt}
+
+STYLE: Photo-realistic, lifelike, natural lighting, high quality photographic style.
+
+IMPORTANT: The person in your generated image MUST look like the person in the reference photo - same age, same features, same appearance. Only the scene/setting should match the description, but the person must match the photo EXACTLY.`;
+        } else {
+          fullPrompt = `${imagePrompt}, photo-realistic style, lifelike, natural lighting, high quality photographic appearance.`;
+        }
+      } else if (explicitStyle === "custom") {
+        // User specified a custom style - imagePrompt already includes it
+        if (baseImagePath && fs.existsSync(baseImagePath)) {
+          fullPrompt = `🔴 IMPORTANT: The reference image shows the person/character who should appear in this illustration. Match their physical appearance EXACTLY - same age, same features, same appearance. Only the scene should match the description below, the character must look like the person in the photo.
+
+${imagePrompt}`;
+        } else {
+          fullPrompt = imagePrompt;
+        }
+      } else {
+        // Default children's book style
+        if (baseImagePath && fs.existsSync(baseImagePath)) {
+          fullPrompt = `The reference image shows the character who should appear in this illustration. Match their appearance EXACTLY.
+
+${imagePrompt}, in the style of a vibrant and colorful children's book illustration, whimsical and gentle.`;
+        } else {
+          fullPrompt = `${imagePrompt}, in the style of a vibrant and colorful children's book illustration, whimsical and gentle.`;
+        }
+      }
       
       console.log(`[generateIllustration] Full prompt sent to Gemini: ${fullPrompt.substring(0, 250)}...`);
       
       const contentParts: any[] = [];
       
-      // Add base image if provided
+      // Add base image if provided (reference photo for character matching)
       if (baseImagePath && fs.existsSync(baseImagePath)) {
         const baseImageBytes = fs.readFileSync(baseImagePath);
         const baseImageMimeType = getMimeType(baseImagePath);
