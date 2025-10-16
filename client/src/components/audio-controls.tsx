@@ -160,7 +160,6 @@ export function AudioControls({ storybookId }: AudioControlsProps) {
           checked={musicEnabled}
           onCheckedChange={handleMusicEnabledChange}
           data-testid="switch-music-enabled"
-          className={isMobile ? "scale-125" : ""}
         />
       </div>
 
@@ -196,7 +195,6 @@ export function AudioControls({ storybookId }: AudioControlsProps) {
           checked={soundEffectsEnabled}
           onCheckedChange={handleSoundEffectsEnabledChange}
           data-testid="switch-effects-enabled"
-          className={isMobile ? "scale-125" : ""}
         />
       </div>
 
