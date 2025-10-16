@@ -57,6 +57,8 @@
   },
   "home": {
     "hero": {
+      "poweredByGenAI": "Propulsé par l'IA Générative",
+      "mainTitle": "Créez VOTRE Livre d'Histoires en Minutes",
       "title": "Créez des Livres d'Histoires <gradient>Magiques</gradient> en Minutes",
       "subtitle": "Transformez vos idées en magnifiques livres illustrés pour enfants grâce à l'IA. Aucune compétence en design requise—juste votre imagination !",
       "createStory": "Créer Votre Histoire",
@@ -66,6 +68,12 @@
         "activeUsers": "Utilisateurs Actifs",
         "rating": "Nouveau ⭐",
         "reviewPrompt": "Soyez notre premier critique !"
+      },
+      "floatingCards": {
+        "aiGenerated": "Généré par l'IA",
+        "aiGeneratedTime": "En 2-3 minutes",
+        "customArt": "Art Personnalisé",
+        "customArtStyle": "Votre style"
       }
     },
     "features": {

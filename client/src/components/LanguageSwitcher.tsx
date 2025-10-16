@@ -26,7 +26,7 @@ export default function LanguageSwitcher({ testId = "language-switcher" }: { tes
       <select 
         value={currentLangCode} 
         onChange={handleLanguageChange}
-        className="h-9 w-[100px] px-3 py-1 text-sm rounded-md border border-border/50 hover:border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 cursor-pointer transition-colors"
+        className="h-9 w-[130px] px-3 py-1 text-sm rounded-md border border-border/50 hover:border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 cursor-pointer transition-colors"
         data-testid={testId}
       >
         {languages.map((lang) => (

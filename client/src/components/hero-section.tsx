@@ -77,11 +77,11 @@ export default function HeroSection() {
           <div className="text-center lg:text-left">
             <div className="inline-flex items-center space-x-2 px-3 sm:px-4 py-1.5 sm:py-2 bg-primary/10 rounded-full mb-4 sm:mb-6">
               <i className="fas fa-sparkles text-primary text-sm"></i>
-              <span className="text-xs sm:text-sm font-medium text-primary">Powered by Gen AI</span>
+              <span className="text-xs sm:text-sm font-medium text-primary">{t('home.hero.poweredByGenAI')}</span>
             </div>
             
             <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold mb-4 sm:mb-6 leading-tight">
-              Create YOUR Storybook in Minutes
+              {t('home.hero.mainTitle')}
             </h1>
             
             <p className="text-base sm:text-lg text-muted-foreground mb-6 sm:mb-8 max-w-xl mx-auto lg:mx-0">
@@ -195,8 +195,8 @@ export default function HeroSection() {
                       <i className="fas fa-wand-magic-sparkles text-[hsl(258,90%,20%)]"></i>
                     </div>
                     <div>
-                      <div className="text-sm font-semibold">AI Generated</div>
-                      <div className="text-xs text-muted-foreground">In 2-3 minutes</div>
+                      <div className="text-sm font-semibold">{t('home.hero.floatingCards.aiGenerated')}</div>
+                      <div className="text-xs text-muted-foreground">{t('home.hero.floatingCards.aiGeneratedTime')}</div>
                     </div>
                   </div>
                 </div>
@@ -207,8 +207,8 @@ export default function HeroSection() {
                       <i className="fas fa-palette text-[hsl(258,90%,20%)]"></i>
                     </div>
                     <div>
-                      <div className="text-sm font-semibold">Custom Art</div>
-                      <div className="text-xs text-muted-foreground">Your style</div>
+                      <div className="text-sm font-semibold">{t('home.hero.floatingCards.customArt')}</div>
+                      <div className="text-xs text-muted-foreground">{t('home.hero.floatingCards.customArtStyle')}</div>
                     </div>
                   </div>
                 </div>
