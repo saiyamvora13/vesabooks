@@ -44,6 +44,12 @@ Key features include:
 
 ### Security & Monitoring
 - **Security Measures**: bcryptjs for password hashing (12 salt rounds), rate limiting for authentication and password reset endpoints, secure session storage (PostgreSQL), and Zod schema validation for all API endpoints.
+- **Anonymous Story Creation Protection**: 
+  - **IP Rate Limiting**: Anonymous users limited to 3 story creations per day per IP address, with automatic daily reset at midnight
+  - **reCAPTCHA v3**: Bot protection with 0.5 minimum score threshold for anonymous story creation
+  - **Email-Gated Downloads**: Anonymous storybooks require email verification (6-digit code, 15-minute expiry) before EPUB/PDF download
+  - **Database Tables**: `ipRateLimits` (tracks IP usage) and `downloadVerifications` (manages email verification codes)
+  - Authenticated users bypass all anonymous restrictions
 - **Production Monitoring**: Utilizes Replit Analytics Dashboard and application logs to track HTTP 429 errors, request patterns, and identify problematic IPs. Best practices for monitoring and adjusting thresholds are defined.
 - **SEO & Accessibility**: Complete meta tags, sitemap at `/sitemap.xml`, robots.txt, and ARIA labels for accessibility.
 
