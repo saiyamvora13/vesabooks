@@ -3069,6 +3069,15 @@ async function generateStorybookAsync(
     const { ObjectStorageService } = await import("./objectStorage");
     const objectStorage = new ObjectStorageService();
 
+    // Upload inspiration images to Object Storage and save URLs for later use
+    const inspirationImageUrls: string[] = [];
+    for (let i = 0; i < imagePaths.length; i++) {
+      const imagePath = imagePaths[i];
+      const inspirationFileName = `${sessionId}_inspiration_${i}.jpg`;
+      const inspirationUrl = await objectStorage.uploadFile(imagePath, inspirationFileName);
+      inspirationImageUrls.push(inspirationUrl);
+    }
+
     // Use the first inspiration image as the base for cover image (if available)
     const baseImagePath = imagePaths.length > 0 ? imagePaths[0] : undefined;
     
@@ -3109,13 +3118,14 @@ async function generateStorybookAsync(
       const imageFileName = `${sessionId}_page_${page.pageNumber}.jpg`;
       const imagePath = path.join(generatedDir, imageFileName);
 
-      // Generate illustration for this page using the COVER IMAGE as reference for character consistency
+      // Generate illustration for this page using the UPLOADED PHOTO as reference for character consistency
       // IMPORTANT: Programmatically prepend character description with default clothing to ensure consistency
       // Only override clothing if the imagePrompt specifically mentions different clothing
       const pagePromptWithCharacter = fullCharacterDesc 
         ? `${fullCharacterDesc}. ${page.imagePrompt}`
         : page.imagePrompt;
-      await generateIllustration(pagePromptWithCharacter, imagePath, coverImagePath, artStyle);
+      // Use the first uploaded inspiration image (user's photo) as visual reference for all page illustrations
+      await generateIllustration(pagePromptWithCharacter, imagePath, baseImagePath, artStyle);
 
       // Upload to Object Storage
       const imageUrl = await objectStorage.uploadFile(imagePath, imageFileName);
@@ -3159,7 +3169,8 @@ async function generateStorybookAsync(
     const backCoverPromptWithCharacter = fullCharacterDesc 
       ? `${fullCharacterDesc}. ${backCoverBasePrompt}`
       : backCoverBasePrompt;
-    await generateIllustration(backCoverPromptWithCharacter, backCoverImagePath, coverImagePath, artStyle);
+    // Use the first uploaded inspiration image (user's photo) as visual reference for back cover
+    await generateIllustration(backCoverPromptWithCharacter, backCoverImagePath, baseImagePath, artStyle);
     
     // Upload back cover to Object Storage
     const backCoverImageUrl = await objectStorage.uploadFile(backCoverImagePath, backCoverImageFileName);
@@ -3183,7 +3194,7 @@ async function generateStorybookAsync(
       author,
       prompt,
       pages,
-      inspirationImages: [],
+      inspirationImages: inspirationImageUrls,
       coverImageUrl,
       backCoverImageUrl,
       mainCharacterDescription: generatedStory.mainCharacterDescription,
