@@ -33,6 +33,7 @@ export default function Navigation() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
       setLocation("/");
+      setMobileMenuOpen(false);
     },
   });
 
@@ -53,16 +54,26 @@ export default function Navigation() {
   }, []);
 
   return (
-    <nav className="sticky top-0 z-50 bg-card/95 backdrop-blur-lg border-b border-border">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center h-16">
-          {/* Logo */}
+    <>
+      {/* Mobile menu backdrop */}
+      {mobileMenuOpen && (
+        <div 
+          className="fixed inset-0 bg-black/30 backdrop-blur-sm z-40 md:hidden"
+          onClick={() => setMobileMenuOpen(false)}
+          aria-hidden="true"
+        />
+      )}
+      
+      <nav className="sticky top-0 z-50 bg-card/95 backdrop-blur-lg border-b border-border">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center h-16">
+          {/* Logo - Optimized for mobile */}
           <Link href="/">
-            <div className="flex items-center space-x-2 sm:space-x-3 cursor-pointer" data-testid="link-home">
-              <div className="w-9 h-9 sm:w-10 sm:h-10 gradient-bg rounded-xl flex items-center justify-center">
-                <i className="fas fa-book-open text-[hsl(258,90%,20%)] text-base sm:text-lg"></i>
+            <div className="flex items-center space-x-2 cursor-pointer" data-testid="link-home">
+              <div className="w-8 h-8 sm:w-10 sm:h-10 gradient-bg rounded-xl flex items-center justify-center">
+                <i className="fas fa-book-open text-[hsl(258,90%,20%)] text-sm sm:text-lg"></i>
               </div>
-              <span className="text-lg sm:text-xl font-bold font-display gradient-text">StoryBook AI</span>
+              <span className="text-base sm:text-xl font-bold font-display gradient-text">StoryBook AI</span>
             </div>
           </Link>
 
@@ -185,10 +196,10 @@ export default function Navigation() {
             </Link>
           </div>
 
-          {/* Mobile Menu Button */}
-          <div className="flex md:hidden items-center space-x-2">
+          {/* Mobile Menu Button - Optimized touch targets */}
+          <div className="flex md:hidden items-center gap-3">
             {!isLoading && isAuthenticated && user && (
-              <Avatar className="h-8 w-8">
+              <Avatar className="h-9 w-9">
                 <AvatarImage src={user.profileImageUrl || undefined} alt={user.firstName || user.email || "User"} style={{ objectFit: 'cover' }} />
                 <AvatarFallback className="gradient-bg !text-[hsl(258,90%,20%)] text-xs">
                   {user.firstName?.[0] || user.email?.[0] || 'U'}
@@ -197,109 +208,126 @@ export default function Navigation() {
             )}
             <Button
               variant="ghost"
-              size="sm"
-              className="p-2 text-foreground"
+              className="h-11 w-11 p-0 flex items-center justify-center text-foreground hover:bg-accent/10 transition-colors"
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
               data-testid="button-mobile-menu"
+              aria-label={mobileMenuOpen ? "Close menu" : "Open menu"}
             >
-              {mobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+              {mobileMenuOpen ? <X className="h-7 w-7" /> : <Menu className="h-7 w-7" />}
             </Button>
           </div>
         </div>
 
-        {/* Mobile Menu */}
-        {mobileMenuOpen && (
-          <div className="md:hidden py-4 border-t border-border">
-            <div className="flex flex-col space-y-4">
-              <Link href="/" onClick={() => setMobileMenuOpen(false)}>
-                <div className={`text-base px-3 py-2 rounded-lg ${location === '/' ? 'bg-primary/10 text-primary font-medium' : 'text-foreground/70 font-medium'}`}>
-                  {t('navigation.home')}
-                </div>
-              </Link>
-              <Link href="/create" onClick={() => setMobileMenuOpen(false)}>
-                <div className={`text-base px-3 py-2 rounded-lg ${location === '/create' ? 'bg-primary/10 text-primary font-medium' : 'text-foreground/70 font-medium'}`}>
-                  {t('navigation.createStory')}
-                </div>
-              </Link>
-              <Link href="/gallery" onClick={() => setMobileMenuOpen(false)}>
-                <div className={`text-base px-3 py-2 rounded-lg ${location === '/gallery' ? 'bg-primary/10 text-primary font-medium' : 'text-foreground/70 font-medium'}`} data-testid="link-gallery-mobile">
-                  Gallery
-                </div>
-              </Link>
-              {isAuthenticated && (
+        {/* Mobile Menu - Optimized for touch */}
+        <div 
+          className={`md:hidden border-t border-border bg-card/95 backdrop-blur-lg transition-all duration-300 ease-in-out overflow-hidden ${
+            mobileMenuOpen ? 'max-h-screen opacity-100 py-5' : 'max-h-0 opacity-0'
+          }`}
+        >
+          <div className="flex flex-col gap-2 px-4">
+            <Link href="/" onClick={() => setMobileMenuOpen(false)}>
+              <div className={`text-base px-4 py-3.5 rounded-xl transition-colors active:scale-[0.98] ${
+                location === '/' ? 'bg-primary/10 text-primary font-semibold' : 'text-foreground/70 font-medium hover:bg-accent/5'
+              }`}>
+                {t('navigation.home')}
+              </div>
+            </Link>
+            <Link href="/create" onClick={() => setMobileMenuOpen(false)}>
+              <div className={`text-base px-4 py-3.5 rounded-xl transition-colors active:scale-[0.98] ${
+                location === '/create' ? 'bg-primary/10 text-primary font-semibold' : 'text-foreground/70 font-medium hover:bg-accent/5'
+              }`}>
+                {t('navigation.createStory')}
+              </div>
+            </Link>
+            <Link href="/gallery" onClick={() => setMobileMenuOpen(false)}>
+              <div className={`text-base px-4 py-3.5 rounded-xl transition-colors active:scale-[0.98] ${
+                location === '/gallery' ? 'bg-primary/10 text-primary font-semibold' : 'text-foreground/70 font-medium hover:bg-accent/5'
+              }`} data-testid="link-gallery-mobile">
+                Gallery
+              </div>
+            </Link>
+            {isAuthenticated && (
+              <>
+                <Link href="/library" onClick={() => setMobileMenuOpen(false)}>
+                  <div className={`text-base px-4 py-3.5 rounded-xl transition-colors active:scale-[0.98] ${
+                    location === '/library' ? 'bg-primary/10 text-primary font-semibold' : 'text-foreground/70 font-medium hover:bg-accent/5'
+                  }`} data-testid="link-library-mobile">
+                    {t('navigation.myLibrary')}
+                  </div>
+                </Link>
+                <Link href="/purchases" onClick={() => setMobileMenuOpen(false)}>
+                  <div className={`text-base px-4 py-3.5 rounded-xl flex items-center transition-colors active:scale-[0.98] ${
+                    location === '/purchases' ? 'bg-primary/10 text-primary font-semibold' : 'text-foreground/70 font-medium hover:bg-accent/5'
+                  }`} data-testid="link-purchases">
+                    <ShoppingBag className="h-5 w-5 mr-3" />
+                    {t('navigation.myPurchases')}
+                  </div>
+                </Link>
+              </>
+            )}
+            <Link href="/cart" onClick={() => setMobileMenuOpen(false)}>
+              <div className={`text-base px-4 py-3.5 rounded-xl flex items-center justify-between transition-colors active:scale-[0.98] ${
+                location === '/cart' ? 'bg-primary/10 text-primary font-semibold' : 'text-foreground/70 font-medium hover:bg-accent/5'
+              }`} data-testid="link-cart-mobile">
+                <span className="flex items-center">
+                  <ShoppingCart className="h-5 w-5 mr-3" />
+                  {t('navigation.cart')}
+                </span>
+                {cartCount > 0 && (
+                  <Badge variant="destructive" className="ml-2" data-testid="badge-cart-count-mobile">
+                    {cartCount}
+                  </Badge>
+                )}
+              </div>
+            </Link>
+            
+            <div className="pt-4 mt-2 border-t border-border space-y-3">
+              <div className="px-2">
+                <LanguageSwitcher />
+              </div>
+              {!isLoading && !isAuthenticated ? (
                 <>
-                  <Link href="/library" onClick={() => setMobileMenuOpen(false)}>
-                    <div className={`text-base px-3 py-2 rounded-lg ${location === '/library' ? 'bg-primary/10 text-primary font-medium' : 'text-foreground/70 font-medium'}`} data-testid="link-library-mobile">
-                      {t('navigation.myLibrary')}
-                    </div>
+                  <Link href="/login" onClick={() => setMobileMenuOpen(false)}>
+                    <Button 
+                      variant="outline"
+                      className="w-full h-12 rounded-full text-base font-medium"
+                      data-testid="button-login-mobile"
+                    >
+                      {t('navigation.logIn')}
+                    </Button>
                   </Link>
-                  <Link href="/purchases" onClick={() => setMobileMenuOpen(false)}>
-                    <div className={`text-base px-3 py-2 rounded-lg flex items-center ${location === '/purchases' ? 'bg-primary/10 text-primary font-medium' : 'text-foreground/70 font-medium'}`} data-testid="link-purchases">
-                      <ShoppingBag className="h-5 w-5 mr-2" />
-                      {t('navigation.myPurchases')}
-                    </div>
+                  <Link href="/signup" onClick={() => setMobileMenuOpen(false)}>
+                    <Button 
+                      variant="outline"
+                      className="w-full h-12 rounded-full text-base font-medium"
+                      data-testid="button-signup-mobile"
+                    >
+                      {t('navigation.signUp')}
+                    </Button>
                   </Link>
                 </>
+              ) : (
+                <Button 
+                  onClick={() => logoutMutation.mutate()}
+                  variant="outline"
+                  className="w-full h-12 rounded-full text-base font-medium"
+                  data-testid="button-logout-mobile"
+                >
+                  <LogOut className="mr-2 h-4 w-4" />
+                  {t('navigation.logOut')}
+                </Button>
               )}
-              <Link href="/cart" onClick={() => setMobileMenuOpen(false)}>
-                <div className={`text-base px-3 py-2 rounded-lg flex items-center justify-between ${location === '/cart' ? 'bg-primary/10 text-primary font-medium' : 'text-foreground/70 font-medium'}`} data-testid="link-cart-mobile">
-                  <span className="flex items-center">
-                    <ShoppingCart className="h-5 w-5 mr-2" />
-                    {t('navigation.cart')}
-                  </span>
-                  {cartCount > 0 && (
-                    <Badge variant="destructive" className="ml-2" data-testid="badge-cart-count-mobile">
-                      {cartCount}
-                    </Badge>
-                  )}
-                </div>
-              </Link>
               
-              <div className="pt-4 border-t border-border space-y-3">
-                <LanguageSwitcher />
-                {!isLoading && !isAuthenticated ? (
-                  <>
-                    <Link href="/login" onClick={() => setMobileMenuOpen(false)}>
-                      <Button 
-                        variant="outline"
-                        className="w-full rounded-full"
-                        data-testid="button-login-mobile"
-                      >
-                        {t('navigation.logIn')}
-                      </Button>
-                    </Link>
-                    <Link href="/signup" onClick={() => setMobileMenuOpen(false)}>
-                      <Button 
-                        variant="outline"
-                        className="w-full rounded-full"
-                        data-testid="button-signup-mobile"
-                      >
-                        {t('navigation.signUp')}
-                      </Button>
-                    </Link>
-                  </>
-                ) : (
-                  <Button 
-                    onClick={() => logoutMutation.mutate()}
-                    variant="outline"
-                    className="w-full rounded-full"
-                    data-testid="button-logout-mobile"
-                  >
-                    <LogOut className="mr-2 h-4 w-4" />
-                    {t('navigation.logOut')}
-                  </Button>
-                )}
-                
-                <Link href="/create" onClick={() => setMobileMenuOpen(false)}>
-                  <Button className="w-full rounded-full gradient-bg !text-[hsl(258,90%,20%)]">
-                    {t('navigation.getStarted')}
-                  </Button>
-                </Link>
-              </div>
+              <Link href="/create" onClick={() => setMobileMenuOpen(false)}>
+                <Button className="w-full h-12 rounded-full gradient-bg !text-[hsl(258,90%,20%)] text-base font-medium">
+                  {t('navigation.getStarted')}
+                </Button>
+              </Link>
             </div>
           </div>
-        )}
+        </div>
       </div>
     </nav>
+    </>
   );
 }
