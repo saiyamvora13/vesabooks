@@ -1988,11 +1988,13 @@ Sitemap: ${baseUrl}/sitemap.xml`;
       }
 
       const { generatePrintReadyPDF } = await import('./services/printPdf');
-      // Use print purchase settings, or defaults
-      const bookSize = printPurchase?.bookSize || 'a5-portrait';
-      const spineText = printPurchase?.spineText || undefined;
-      const spineTextColor = printPurchase?.spineTextColor || undefined;
-      const spineBackgroundColor = printPurchase?.spineBackgroundColor || undefined;
+      
+      // Priority: query params > print purchase settings > defaults
+      const bookSize = (req.query.bookSize as string) || printPurchase?.bookSize || 'a5-portrait';
+      const spineText = (req.query.spineText as string) || printPurchase?.spineText || undefined;
+      const spineTextColor = (req.query.spineTextColor as string) || printPurchase?.spineTextColor || undefined;
+      const spineBackgroundColor = (req.query.spineBackgroundColor as string) || printPurchase?.spineBackgroundColor || undefined;
+      
       const pdfBuffer = await generatePrintReadyPDF(storybook, bookSize, spineText, spineTextColor, spineBackgroundColor);
 
       const filename = `${storybook.title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}-print.pdf`;
