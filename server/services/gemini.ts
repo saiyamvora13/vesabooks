@@ -442,14 +442,16 @@ export async function generateIllustration(
       
       // Step 1: Add photo-matching instructions if we have reference images
       const photoMatchingPrefix = hasReferences
-        ? `🔴 CRITICAL: ${validReferences.length} reference image${validReferences.length > 1 ? 's' : ''} provided showing the EXACT character who should appear in this illustration.
+        ? `Reference images provided showing the character for this illustration.
 
-MATCH THE REFERENCE IMAGES EXACTLY:
-- Same age (if adult in images, show adult - do NOT change to child)
-- Same facial features, hair, eyes, skin tone
-- Same physical appearance and build
-- The character MUST look identical to how they appear in the reference images
-- MAINTAIN VISUAL CONSISTENCY with the character shown in all reference images
+Use these references to understand the character's core appearance:
+- Keep their age, facial features, and overall look recognizable
+- The character should be identifiable across all scenes
+
+Create diverse and engaging scenes:
+- Vary the camera angle, distance, and framing for visual interest
+- Use different poses, expressions, and compositions
+- Make each illustration unique while keeping the character recognizable
 
 SCENE: `
         : '';
