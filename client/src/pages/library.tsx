@@ -545,13 +545,26 @@ function DownloadCustomizationDialog({ open, onOpenChange, storybook }: Download
     },
   });
 
+  // Reset form when dialog opens with current storybook title
+  useEffect(() => {
+    if (open) {
+      form.reset({
+        bookSize: 'a5-portrait',
+        spineText: storybook.title || '',
+        spineTextColor: '#000000',
+        spineBackgroundColor: '#FFFFFF',
+      });
+    }
+  }, [open, storybook.title, form]);
+
   const handleDownload = (values: BookOptionsFormValues) => {
-    const params = new URLSearchParams({
-      bookSize: values.bookSize,
-      ...(values.spineText && { spineText: values.spineText }),
-      spineTextColor: values.spineTextColor,
-      spineBackgroundColor: values.spineBackgroundColor,
-    });
+    const params = new URLSearchParams();
+    params.append('bookSize', values.bookSize);
+    if (values.spineText) {
+      params.append('spineText', values.spineText);
+    }
+    params.append('spineTextColor', values.spineTextColor);
+    params.append('spineBackgroundColor', values.spineBackgroundColor);
     
     window.open(`/api/storybooks/${storybook.id}/download-print-pdf?${params.toString()}`);
     
