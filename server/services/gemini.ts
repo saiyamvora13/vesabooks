@@ -19,7 +19,7 @@ export interface GeneratedStory {
   defaultClothing: string;
   storyArc: string;
   pages: StoryPage[];
-  artStyle?: string; // Optional: extracted art style from user prompt for consistency across all images
+  artStyle?: string; // User-selected illustration style from dropdown for consistency across all images
 }
 
 function getMimeType(filePath: string): string {
