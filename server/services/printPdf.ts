@@ -25,7 +25,10 @@ let cachedComicNeueFontBytes: ArrayBuffer | null = null;
  */
 export async function generatePrintReadyPDF(
   storybook: Storybook, 
-  bookSize: string = 'a5-portrait'
+  bookSize: string = 'a5-portrait',
+  spineText?: string,
+  spineTextColor?: string,
+  spineBackgroundColor?: string
 ): Promise<Buffer> {
   const pdfDoc = await PDFDocument.create();
   
@@ -38,7 +41,19 @@ export async function generatePrintReadyPDF(
   pdfDoc.setSubject('Children\'s Storybook - Professional Hardcover Print');
   pdfDoc.setProducer('AI Storybook Builder - Prodigi Hardcover Specs');
   pdfDoc.setCreator('pdf-lib');
-  pdfDoc.setKeywords(['storybook', 'print', 'hardcover', `${REQUIRED_DPI}dpi`]);
+  
+  // Include spine customization in keywords for print service
+  const keywords = ['storybook', 'print', 'hardcover', `${REQUIRED_DPI}dpi`];
+  if (spineText) {
+    keywords.push(`spine:${spineText}`);
+  }
+  if (spineTextColor) {
+    keywords.push(`spine-text-color:${spineTextColor}`);
+  }
+  if (spineBackgroundColor) {
+    keywords.push(`spine-bg-color:${spineBackgroundColor}`);
+  }
+  pdfDoc.setKeywords(keywords);
   
   // Get book dimensions based on selected size
   const { width: PAGE_WIDTH, height: PAGE_HEIGHT } = getBookDimensionsInPoints(bookSize);
@@ -77,48 +92,169 @@ export async function generatePrintReadyPDF(
     }
   }
   
-  // Helper function to draw image covering full page
-  function drawFullPageImage(page: any, image: any) {
+  // Helper function to draw image covering specified dimensions
+  function drawScaledImage(page: any, image: any, targetX: number, targetY: number, targetWidth: number, targetHeight: number) {
     const imgAspectRatio = image.width / image.height;
-    const pageAspectRatio = PAGE_WIDTH / PAGE_HEIGHT;
+    const targetAspectRatio = targetWidth / targetHeight;
     
-    let drawWidth = PAGE_WIDTH;
-    let drawHeight = PAGE_HEIGHT;
-    let x = 0;
-    let y = 0;
+    let drawWidth = targetWidth;
+    let drawHeight = targetHeight;
+    let x = targetX;
+    let y = targetY;
     
-    // Scale to cover page completely (no white space)
-    if (imgAspectRatio > pageAspectRatio) {
+    // Scale to cover area completely (no white space)
+    if (imgAspectRatio > targetAspectRatio) {
       // Image is wider - fit to height
-      drawHeight = PAGE_HEIGHT;
+      drawHeight = targetHeight;
       drawWidth = drawHeight * imgAspectRatio;
-      x = -(drawWidth - PAGE_WIDTH) / 2;
+      x = targetX - (drawWidth - targetWidth) / 2;
     } else {
       // Image is taller - fit to width
-      drawWidth = PAGE_WIDTH;
+      drawWidth = targetWidth;
       drawHeight = drawWidth / imgAspectRatio;
-      y = -(drawHeight - PAGE_HEIGHT) / 2;
+      y = targetY - (drawHeight - targetHeight) / 2;
     }
     
     page.drawImage(image, { x, y, width: drawWidth, height: drawHeight });
   }
   
-  // PAGE 1: FRONT COVER (full page image, no overlays)
-  const coverPage = pdfDoc.addPage([PAGE_WIDTH, PAGE_HEIGHT]);
-  const coverImageUrl = storybook.coverImageUrl || storybook.pages[0]?.imageUrl;
+  // Helper function to draw image covering full page
+  function drawFullPageImage(page: any, image: any) {
+    drawScaledImage(page, image, 0, 0, PAGE_WIDTH, PAGE_HEIGHT);
+  }
   
-  if (coverImageUrl) {
-    const coverImage = await embedImage(coverImageUrl);
-    if (coverImage) {
-      drawFullPageImage(coverPage, coverImage);
+  // Helper function to parse hex colors
+  const parseHexColor = (hex: string) => {
+    const cleaned = hex.replace('#', '');
+    const r = parseInt(cleaned.substring(0, 2), 16) / 255;
+    const g = parseInt(cleaned.substring(2, 4), 16) / 255;
+    const b = parseInt(cleaned.substring(4, 6), 16) / 255;
+    return { r, g, b };
+  };
+  
+  // Count content pages to calculate total page count
+  let contentPageCount = 0;
+  for (const page of storybook.pages) {
+    const hasImage = !!page.imageUrl;
+    const hasText = !!(page.text && page.text.trim());
+    if (hasImage || hasText) {
+      contentPageCount++;
+    }
+  }
+  
+  // Interior pages must be even for professional printing
+  // Add blank page if content page count is odd
+  let needsBlankPage = contentPageCount % 2 !== 0;
+  if (needsBlankPage) {
+    contentPageCount++; // Will add actual blank page later in the loop
+  }
+  
+  // Calculate total page count (1 wraparound cover + even interior pages)
+  const totalPages = 1 + contentPageCount;
+  
+  // Calculate spine width based on total page count
+  const spineWidthInches = Math.max(0.5, (totalPages * 0.002));
+  const SPINE_WIDTH = spineWidthInches * 72; // Convert to points
+  const SPREAD_WIDTH = PAGE_WIDTH + SPINE_WIDTH + PAGE_WIDTH;
+  
+  console.log(`📖 Creating wraparound cover spread: ${SPREAD_WIDTH.toFixed(2)} pts wide (back: ${PAGE_WIDTH.toFixed(2)} + spine: ${SPINE_WIDTH.toFixed(2)} + front: ${PAGE_WIDTH.toFixed(2)})`);
+  console.log(`📄 Total pages: ${totalPages} (1 wraparound cover + ${contentPageCount} interior pages${needsBlankPage ? ', includes 1 blank for even count' : ''})`);
+  
+  // PAGE 1: WRAPAROUND COVER SPREAD (back + spine + front)
+  const wraparoundCover = pdfDoc.addPage([SPREAD_WIDTH, PAGE_HEIGHT]);
+  
+  // SECTION 1: Draw back cover on left (0 to PAGE_WIDTH)
+  const backCoverImageUrl = storybook.backCoverImageUrl;
+  if (backCoverImageUrl) {
+    const backCoverImage = await embedImage(backCoverImageUrl);
+    if (backCoverImage) {
+      drawScaledImage(wraparoundCover, backCoverImage, 0, 0, PAGE_WIDTH, PAGE_HEIGHT);
     } else {
-      // Fallback: solid color background with centered title
-      coverPage.drawRectangle({
+      // Fallback: "The End" on back cover
+      wraparoundCover.drawRectangle({
         x: 0,
         y: 0,
         width: PAGE_WIDTH,
         height: PAGE_HEIGHT,
-        color: rgb(0.976, 0.969, 0.953), // Soft background
+        color: rgb(0.976, 0.969, 0.953),
+      });
+      
+      const endText = "The End";
+      const endFontSize = 32;
+      const endTextWidth = boldFont.widthOfTextAtSize(endText, endFontSize);
+      
+      wraparoundCover.drawText(endText, {
+        x: PAGE_WIDTH / 2 - endTextWidth / 2,
+        y: PAGE_HEIGHT / 2,
+        size: endFontSize,
+        font: boldFont,
+        color: rgb(0.2, 0.25, 0.31),
+      });
+    }
+  } else {
+    // Default back cover: "The End"
+    wraparoundCover.drawRectangle({
+      x: 0,
+      y: 0,
+      width: PAGE_WIDTH,
+      height: PAGE_HEIGHT,
+      color: rgb(0.976, 0.969, 0.953),
+    });
+    
+    const endText = "The End";
+    const endFontSize = 32;
+    const endTextWidth = boldFont.widthOfTextAtSize(endText, endFontSize);
+    
+    wraparoundCover.drawText(endText, {
+      x: PAGE_WIDTH / 2 - endTextWidth / 2,
+      y: PAGE_HEIGHT / 2,
+      size: endFontSize,
+      font: boldFont,
+      color: rgb(0.2, 0.25, 0.31),
+    });
+  }
+  
+  // SECTION 2: Draw spine in middle (PAGE_WIDTH to PAGE_WIDTH + SPINE_WIDTH)
+  const bgColor = spineBackgroundColor ? parseHexColor(spineBackgroundColor) : { r: 1, g: 1, b: 1 };
+  const textColor = spineTextColor ? parseHexColor(spineTextColor) : { r: 0, g: 0, b: 0 };
+  
+  wraparoundCover.drawRectangle({
+    x: PAGE_WIDTH,
+    y: 0,
+    width: SPINE_WIDTH,
+    height: PAGE_HEIGHT,
+    color: rgb(bgColor.r, bgColor.g, bgColor.b),
+  });
+  
+  if (spineText) {
+    const spineFontSize = Math.min(24, SPINE_WIDTH * 0.7);
+    const spineTextWidth = boldFont.widthOfTextAtSize(spineText, spineFontSize);
+    
+    // Draw spine text rotated 90 degrees (reads from bottom to top when book is on shelf)
+    wraparoundCover.drawText(spineText, {
+      x: PAGE_WIDTH + SPINE_WIDTH / 2 + spineFontSize / 3,
+      y: PAGE_HEIGHT / 2 - spineTextWidth / 2,
+      size: spineFontSize,
+      font: boldFont,
+      color: rgb(textColor.r, textColor.g, textColor.b),
+      rotate: { angle: 90, type: 'degrees' },
+    });
+  }
+  
+  // SECTION 3: Draw front cover on right (PAGE_WIDTH + SPINE_WIDTH to end)
+  const coverImageUrl = storybook.coverImageUrl || storybook.pages[0]?.imageUrl;
+  if (coverImageUrl) {
+    const coverImage = await embedImage(coverImageUrl);
+    if (coverImage) {
+      drawScaledImage(wraparoundCover, coverImage, PAGE_WIDTH + SPINE_WIDTH, 0, PAGE_WIDTH, PAGE_HEIGHT);
+    } else {
+      // Fallback: solid color background with centered title
+      wraparoundCover.drawRectangle({
+        x: PAGE_WIDTH + SPINE_WIDTH,
+        y: 0,
+        width: PAGE_WIDTH,
+        height: PAGE_HEIGHT,
+        color: rgb(0.976, 0.969, 0.953),
       });
       
       const titleFontSize = 28;
@@ -131,14 +267,41 @@ export async function generatePrintReadyPDF(
         finalTitleSize = (maxTitleWidth / titleWidth) * titleFontSize;
       }
       
-      coverPage.drawText(titleText, {
-        x: PAGE_WIDTH / 2 - boldFont.widthOfTextAtSize(titleText, finalTitleSize) / 2,
+      wraparoundCover.drawText(titleText, {
+        x: PAGE_WIDTH + SPINE_WIDTH + PAGE_WIDTH / 2 - boldFont.widthOfTextAtSize(titleText, finalTitleSize) / 2,
         y: PAGE_HEIGHT / 2,
         size: finalTitleSize,
         font: boldFont,
         color: rgb(0.12, 0.16, 0.23),
       });
     }
+  } else {
+    // Fallback: solid color background with centered title
+    wraparoundCover.drawRectangle({
+      x: PAGE_WIDTH + SPINE_WIDTH,
+      y: 0,
+      width: PAGE_WIDTH,
+      height: PAGE_HEIGHT,
+      color: rgb(0.976, 0.969, 0.953),
+    });
+    
+    const titleFontSize = 28;
+    const titleText = storybook.title;
+    const titleWidth = boldFont.widthOfTextAtSize(titleText, titleFontSize);
+    const maxTitleWidth = PAGE_WIDTH - 2 * SAFETY_MARGIN_POINTS;
+    
+    let finalTitleSize = titleFontSize;
+    if (titleWidth > maxTitleWidth) {
+      finalTitleSize = (maxTitleWidth / titleWidth) * titleFontSize;
+    }
+    
+    wraparoundCover.drawText(titleText, {
+      x: PAGE_WIDTH + SPINE_WIDTH + PAGE_WIDTH / 2 - boldFont.widthOfTextAtSize(titleText, finalTitleSize) / 2,
+      y: PAGE_HEIGHT / 2,
+      size: finalTitleSize,
+      font: boldFont,
+      color: rgb(0.12, 0.16, 0.23),
+    });
   }
   
   // CONTENT PAGES: Image and text pages (alternating or combined based on content)
@@ -297,13 +460,9 @@ export async function generatePrintReadyPDF(
     }
   }
   
-  // Calculate total page count including back cover that will be added
-  const currentPageCount = pdfDoc.getPageCount();
-  const totalPagesWithBackCover = currentPageCount + 1; // +1 for back cover
-  
-  // Add blank page if total will be odd (to make final count even)
-  if (totalPagesWithBackCover % 2 !== 0) {
-    console.warn(`⚠️ Adding blank page to ensure even page count (current: ${currentPageCount}, with back cover: ${totalPagesWithBackCover}).`);
+  // Add blank page if needed to make total even
+  if (needsBlankPage) {
+    console.log(`📄 Adding blank page to ensure even page count`);
     const blankPage = pdfDoc.addPage([PAGE_WIDTH, PAGE_HEIGHT]);
     blankPage.drawRectangle({
       x: 0,
@@ -311,58 +470,6 @@ export async function generatePrintReadyPDF(
       width: PAGE_WIDTH,
       height: PAGE_HEIGHT,
       color: rgb(1, 1, 1), // White blank page
-    });
-  }
-  
-  // LAST PAGE: BACK COVER (full page image, no overlays)
-  const backCoverPage = pdfDoc.addPage([PAGE_WIDTH, PAGE_HEIGHT]);
-  
-  if (storybook.backCoverImageUrl) {
-    const backCoverImage = await embedImage(storybook.backCoverImageUrl);
-    if (backCoverImage) {
-      drawFullPageImage(backCoverPage, backCoverImage);
-    } else {
-      // Fallback: "The End" page
-      backCoverPage.drawRectangle({
-        x: 0,
-        y: 0,
-        width: PAGE_WIDTH,
-        height: PAGE_HEIGHT,
-        color: rgb(0.976, 0.969, 0.953),
-      });
-      
-      const endText = "The End";
-      const endFontSize = 32;
-      const endTextWidth = boldFont.widthOfTextAtSize(endText, endFontSize);
-      
-      backCoverPage.drawText(endText, {
-        x: PAGE_WIDTH / 2 - endTextWidth / 2,
-        y: PAGE_HEIGHT / 2,
-        size: endFontSize,
-        font: boldFont,
-        color: rgb(0.2, 0.25, 0.31),
-      });
-    }
-  } else {
-    // Default back cover: "The End"
-    backCoverPage.drawRectangle({
-      x: 0,
-      y: 0,
-      width: PAGE_WIDTH,
-      height: PAGE_HEIGHT,
-      color: rgb(0.976, 0.969, 0.953),
-    });
-    
-    const endText = "The End";
-    const endFontSize = 32;
-    const endTextWidth = boldFont.widthOfTextAtSize(endText, endFontSize);
-    
-    backCoverPage.drawText(endText, {
-      x: PAGE_WIDTH / 2 - endTextWidth / 2,
-      y: PAGE_HEIGHT / 2,
-      size: endFontSize,
-      font: boldFont,
-      color: rgb(0.2, 0.25, 0.31),
     });
   }
   

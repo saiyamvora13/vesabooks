@@ -183,9 +183,12 @@ export async function sendInvoiceEmail(
     if (purchase.type === 'print') {
       const storybook = await storage.getStorybook(purchase.storybookId);
       if (storybook) {
-        // Use bookSize from purchase, or default to 'a5-portrait'
+        // Use print purchase settings, or defaults
         const bookSize = purchase.bookSize || 'a5-portrait';
-        const pdfBuffer = await generatePrintReadyPDF(storybook, bookSize);
+        const spineText = purchase.spineText || undefined;
+        const spineTextColor = purchase.spineTextColor || undefined;
+        const spineBackgroundColor = purchase.spineBackgroundColor || undefined;
+        const pdfBuffer = await generatePrintReadyPDF(storybook, bookSize, spineText, spineTextColor, spineBackgroundColor);
         const filename = `${storybook.title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}-print.pdf`;
         attachments.push({
           filename,
