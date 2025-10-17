@@ -267,12 +267,12 @@ Return JSON following the schema with exactly ${pagesPerBook} pages.`;
         mainCharacterDescription: {
           type: Type.STRING,
           description: hasImages 
-            ? `A VERY DETAILED physical description of the main character's PERMANENT features EXACTLY AS THEY APPEAR IN THE PROVIDED REFERENCE PHOTO(S). CRITICAL: Describe the ACTUAL PERSON in the photo - same age, same features, same appearance. Include: (1) EXACT age and gender AS SHOWN in the photo, (2) Specific hair color and exact hairstyle AS SEEN in the photo, (3) Eye color, (4) Skin tone with any unique marks (facial features, distinctive characteristics), (5) Body type/build, (6) Any other distinctive permanent features. DO NOT describe clothing here. DO NOT change their age (adults stay adults, children stay children). Example: 'A woman in her mid-30s with shoulder-length straight dark brown hair, warm brown eyes, medium olive skin tone, a friendly smile, slender build, and defined cheekbones.' This description will be used in ALL illustrations, so accuracy to the photo is CRITICAL.`
-            : "A VERY DETAILED physical description of the main character's PERMANENT features that will be used in ALL image prompts for visual consistency. CRITICAL: The character's core physical appearance must remain IDENTICAL across all 10+ illustrations. Front-load the most important features first. Include ONLY permanent features: (1) Age/type and gender, (2) Specific hair color and exact hairstyle, (3) Eye color, (4) Skin tone/fur color with any unique marks (freckles, birthmarks, scars, gaps in teeth, distinctive facial features), (5) Body type/build, (6) Any permanent distinctive features. DO NOT describe clothing here - clothing will be handled separately. Be extremely specific about permanent visual details that never change. Example: 'A 7-year-old girl with long curly bright red hair tied in two high pigtails, large emerald green eyes, fair skin with three small freckles across her nose, a small gap between her two front teeth, petite build, round face with a button nose.'"
+            ? `Detailed physical description of the character's permanent features based on the reference photos. Include: age, gender, hair (color and style), eyes, skin tone, unique marks, body type, and facial features. Keep their age as shown in the photos. Example: 'A woman in her mid-30s with shoulder-length straight dark brown hair, warm brown eyes, medium olive skin tone, a friendly smile, slender build, and defined cheekbones.'`
+            : "Detailed physical description of the character's permanent features for visual consistency. Include: age/type, gender, hair (color and style), eyes, skin tone, unique marks (freckles, scars, etc.), body type, and facial features. Don't include clothing. Example: 'A 7-year-old girl with long curly bright red hair in two high pigtails, large emerald green eyes, fair skin with three freckles on her nose, a small gap between her front teeth, petite build, round face with a button nose.'"
         },
         defaultClothing: {
           type: Type.STRING,
-          description: "The character's DEFAULT clothing that they wear in MOST scenes. This will be applied automatically to maintain consistency across illustrations unless a specific scene requires different clothing (swimming, sleeping, etc.). Be specific about colors, patterns, and style. Example: 'wearing a bright yellow sundress with small white daisies, white sandals, and a matching yellow headband' or 'wearing a blue t-shirt with a rocket ship logo, red shorts, and white sneakers with green laces'. This clothing will be used throughout the story except when the scene context explicitly requires different attire."
+          description: "The character's standard outfit for normal scenes. Be specific about colors, patterns, and style. Example: 'wearing a bright yellow sundress with small white daisies, white sandals, and a matching yellow headband' or 'wearing a blue t-shirt with a rocket ship logo, red shorts, and white sneakers with green laces'."
         },
         storyArc: {
           type: Type.STRING,
@@ -300,26 +300,24 @@ Return JSON following the schema with exactly ${pagesPerBook} pages.`;
               },
               main_action: {
                 type: Type.STRING,
-                description: "The PRIMARY action happening in this page's text. Be very specific about what the character(s) are doing. Examples: 'discovering a glowing time machine', 'running through a forest chasing butterflies', 'meeting Abraham Lincoln in his office'. This should be a specific action verb and what they're doing.",
+                description: "The primary action happening in this page. Be specific. Examples: 'discovering a glowing time machine', 'running through a forest chasing butterflies', 'meeting Abraham Lincoln in his office'.",
               },
               setting: {
                 type: Type.STRING,
-                description: "The SPECIFIC location where this scene takes place. Include descriptive details about the environment. Examples: 'a dusty basement with cobwebs and old furniture', 'busy Victorian street with horse carriages and gas lamps', 'Lincoln's presidential office with tall windows and a large wooden desk'. Be as detailed as possible.",
+                description: "The specific location where this scene takes place with descriptive details. Examples: 'a dusty basement with cobwebs and old furniture', 'busy Victorian street with horse carriages and gas lamps'.",
               },
               key_objects: {
                 type: Type.ARRAY,
                 items: { type: Type.STRING },
-                description: "List of IMPORTANT objects, items, or secondary characters that appear in this scene and should be visible in the illustration. Examples: ['ornate brass time machine with swirling energy', 'old yellowed paper with mysterious writing', 'Abraham Lincoln in his black suit', 'glowing blue crystal', 'wooden telescope']. Include descriptive details for each object.",
+                description: "Important objects, items, or secondary characters that should appear in the illustration. Include descriptive details. Examples: ['ornate brass time machine with swirling energy', 'Abraham Lincoln in his black suit', 'glowing blue crystal'].",
               },
               emotional_tone: {
                 type: Type.STRING,
-                description: "The emotional context or atmosphere of this scene. Examples: 'excited discovery', 'worried confusion', 'joyful celebration', 'tense anticipation', 'peaceful contentment'. This helps set the mood of the illustration.",
+                description: "The emotional atmosphere of this scene. Examples: 'excited discovery', 'worried confusion', 'joyful celebration', 'tense anticipation'.",
               },
               imagePrompt: {
                 type: Type.STRING,
-                description: hasCustomStyle
-                  ? "AUTOMATICALLY CONSTRUCTED from the structured metadata. Format: '[main_action] in [setting], featuring [key_objects]. [emotional_tone] atmosphere.' DO NOT mention character appearance or default clothing - they will be prepended. Only specify different clothing if the scene REQUIRES it (e.g., 'wearing pajamas' for bedtime)."
-                  : "AUTOMATICALLY CONSTRUCTED from the structured metadata. Format: '[main_action] in [setting], featuring [key_objects]. [emotional_tone] atmosphere.' The children's book illustration style will be added. DO NOT mention character appearance or default clothing - they will be prepended. Only specify different clothing if the scene REQUIRES it.",
+                description: "Constructed from the structured metadata. Format: '[main_action] in [setting], featuring [key_objects]. [emotional_tone] atmosphere.' Don't mention character appearance or default clothing - they will be added automatically. Only specify different clothing if the scene requires it (e.g., 'wearing pajamas' for bedtime).",
               },
             },
             required: ["pageNumber", "text", "main_action", "setting", "key_objects", "emotional_tone", "imagePrompt"],
