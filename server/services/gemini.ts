@@ -231,31 +231,27 @@ Return JSON following the schema with exactly ${pagesPerBook} pages.`;
       properties: {
         title: {
           type: Type.STRING,
-          description: hasCustomStyle 
-            ? "A creative and catchy title for the story that matches the requested style and tone."
-            : "A creative and catchy title for the children's story.",
+          description: "The story title.",
         },
         author: {
           type: Type.STRING,
-          description: "The author's name for the storybook.",
+          description: "The author name.",
         },
         mainCharacterDescription: {
           type: Type.STRING,
-          description: hasImages 
-            ? `Detailed physical description of the character's permanent features based on the reference photos. Include: age, gender, hair (color and style), eyes, skin tone, unique marks, body type, and facial features. Keep their age as shown in the photos. Example: 'A woman in her mid-30s with shoulder-length straight dark brown hair, warm brown eyes, medium olive skin tone, a friendly smile, slender build, and defined cheekbones.'`
-            : "Detailed physical description of the character's permanent features for visual consistency. Include: age/type, gender, hair (color and style), eyes, skin tone, unique marks (freckles, scars, etc.), body type, and facial features. Don't include clothing. Example: 'A 7-year-old girl with long curly bright red hair in two high pigtails, large emerald green eyes, fair skin with three freckles on her nose, a small gap between her front teeth, petite build, round face with a button nose.'"
+          description: "Detailed physical description of the main character.",
         },
         defaultClothing: {
           type: Type.STRING,
-          description: "The character's standard outfit for normal scenes. Be specific about colors, patterns, and style. Example: 'wearing a bright yellow sundress with small white daisies, white sandals, and a matching yellow headband' or 'wearing a blue t-shirt with a rocket ship logo, red shorts, and white sneakers with green laces'."
+          description: "The character's typical outfit.",
         },
         storyArc: {
           type: Type.STRING,
-          description: `A brief summary of the story's narrative arc in 2-3 sentences. Describe: (1) The beginning - who is the character and their normal world, (2) The middle - what problem/adventure they encounter, (3) The end - how it resolves and what they learn. This ensures the ${pagesPerBook} pages follow a cohesive storyline.`
+          description: "Brief summary of the story arc.",
         },
         coverImagePrompt: {
           type: Type.STRING,
-          description: "A detailed, descriptive prompt for an AI image generator to create the cover image. Describe a compelling scene representing the story's theme, specify the setting, and include artistic style details. (Note: The character description will be added automatically, so focus on the scene, action, and environment.)"
+          description: "Description of the cover scene (character description will be added automatically).",
         },
         pages: {
           type: Type.ARRAY,
@@ -265,34 +261,32 @@ Return JSON following the schema with exactly ${pagesPerBook} pages.`;
             properties: {
               pageNumber: {
                 type: Type.NUMBER,
-                description: `The page number (1 to ${pagesPerBook}).`,
+                description: "Page number.",
               },
               text: {
                 type: Type.STRING,
-                description: hasCustomStyle
-                  ? "The narrative text for this page (100-150 words). Ensure it flows naturally from the previous page and advances the story arc. Match the tone specified in the user's prompt."
-                  : "The narrative text for this page (100-150 words). Ensure it flows naturally from the previous page and advances the story arc. Use clear, engaging language for children aged 5-7.",
+                description: "Page narrative text (100-150 words).",
               },
               main_action: {
                 type: Type.STRING,
-                description: "The primary action happening in this page. Be specific. Examples: 'discovering a glowing time machine', 'running through a forest chasing butterflies', 'meeting Abraham Lincoln in his office'.",
+                description: "Primary action in this scene.",
               },
               setting: {
                 type: Type.STRING,
-                description: "The specific location where this scene takes place with descriptive details. Examples: 'a dusty basement with cobwebs and old furniture', 'busy Victorian street with horse carriages and gas lamps'.",
+                description: "Location and environment.",
               },
               key_objects: {
                 type: Type.ARRAY,
                 items: { type: Type.STRING },
-                description: "Important objects, items, or secondary characters that should appear in the illustration. Include descriptive details. Examples: ['ornate brass time machine with swirling energy', 'Abraham Lincoln in his black suit', 'glowing blue crystal'].",
+                description: "Important objects or characters to include.",
               },
               emotional_tone: {
                 type: Type.STRING,
-                description: "The emotional atmosphere of this scene. Examples: 'excited discovery', 'worried confusion', 'joyful celebration', 'tense anticipation'.",
+                description: "Emotional atmosphere.",
               },
               imagePrompt: {
                 type: Type.STRING,
-                description: "Constructed from the structured metadata. Format: '[main_action] in [setting], featuring [key_objects]. [emotional_tone] atmosphere.' Don't mention character appearance or default clothing - they will be added automatically. Only specify different clothing if the scene requires it (e.g., 'wearing pajamas' for bedtime).",
+                description: "Scene description for illustration.",
               },
             },
             required: ["pageNumber", "text", "main_action", "setting", "key_objects", "emotional_tone", "imagePrompt"],
