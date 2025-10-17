@@ -496,7 +496,7 @@ export default function Create() {
                           <i className="fas fa-palette text-primary mr-2"></i>
                           Illustration Style
                         </FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <Select onValueChange={field.onChange} value={field.value || "vibrant and colorful children's book illustration"}>
                           <FormControl>
                             <SelectTrigger className="rounded-2xl" data-testid="select-illustration-style">
                               <SelectValue placeholder="Select illustration style" />
