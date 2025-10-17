@@ -3197,7 +3197,7 @@ async function generateStorybookAsync(
     const backCoverImagePath = path.join(generatedDir, backCoverImageFileName);
     
     // Create back cover prompt that complements the front cover
-    const backCoverBasePrompt = `Create a back cover illustration for a children's storybook that complements the front cover. Show the character in a different scene that hints at the adventure without spoiling it. Maintain the same artistic style and color palette as the front cover.`;
+    const backCoverBasePrompt = `Create a back cover illustration that complements the front cover. Show the character in a different scene that hints at the adventure without spoiling it.`;
     
     // Build the back cover image prompt using the centralized utility function
     const backCoverPromptWithCharacter = buildFinalImagePrompt({
