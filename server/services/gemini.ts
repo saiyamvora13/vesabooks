@@ -121,7 +121,7 @@ export async function generateStoryFromPrompt(
    - END (pages ${beginningPages + middlePages + 1}-${pagesPerBook}): Resolve the conflict, show growth/learning, provide closure`;
     }
     
-    const systemInstruction = `You are a children's storybook author creating a ${pagesPerBook}-page story${hasImages ? ' using the provided reference photos for character inspiration' : ''}. Make it suitable for ages 5-7.
+    const systemInstruction = `You are a storybook author creating a ${pagesPerBook}-page illustrated story${hasImages ? ' using the provided reference photos for character inspiration' : ''}. ${hasImages ? 'IMPORTANT: Maintain the actual age and appearance of people from the reference photos - if an adult is shown, keep them as an adult; if a child is shown, keep them as a child.' : ''}
 
 Create a cohesive story following ${narrativeStructure}
 
@@ -303,7 +303,7 @@ export async function generateIllustration(
       
       // Step 1: Add photo-matching instructions if we have reference images
       const photoMatchingPrefix = hasReferences
-        ? `Reference images provided for character inspiration.\n\n`
+        ? `Reference images provided for character inspiration. IMPORTANT: Maintain the actual age and appearance of people from the reference photos - if an adult is shown, keep them as an adult with appropriate adult features and proportions; if a child is shown, keep them as a child.\n\n`
         : '';
       
       // Step 2: Add the scene description
@@ -315,8 +315,8 @@ export async function generateIllustration(
         // Use the extracted style (e.g., "photo-realistic, lifelike..." or "watercolor painting style")
         styleDirective = `\n\nSTYLE: ${explicitStyle}`;
       } else {
-        // Default children's book style
-        styleDirective = ', in the style of a vibrant and colorful children\'s book illustration, whimsical and gentle';
+        // Default illustrated storybook style
+        styleDirective = ', in the style of a vibrant and colorful illustrated storybook';
       }
       
       // Step 4: Combine everything
