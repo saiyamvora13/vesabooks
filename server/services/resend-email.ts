@@ -183,7 +183,9 @@ export async function sendInvoiceEmail(
     if (purchase.type === 'print') {
       const storybook = await storage.getStorybook(purchase.storybookId);
       if (storybook) {
-        const pdfBuffer = await generatePrintReadyPDF(storybook);
+        // Use bookSize from purchase, or default to 'a5-portrait'
+        const bookSize = purchase.bookSize || 'a5-portrait';
+        const pdfBuffer = await generatePrintReadyPDF(storybook, bookSize);
         const filename = `${storybook.title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}-print.pdf`;
         attachments.push({
           filename,

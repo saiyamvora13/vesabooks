@@ -4,22 +4,29 @@ import type { Storybook } from "@shared/schema";
 import { ObjectStorageService } from "../objectStorage";
 import { readFileSync } from 'fs';
 import { join } from 'path';
-import sharp from 'sharp';
-
-// Constants in points (72 points = 1 inch)
-const INCH_TO_POINTS = 72;
-const TRIM_WIDTH = 6 * INCH_TO_POINTS;  // 432 points
-const TRIM_HEIGHT = 9 * INCH_TO_POINTS;  // 648 points
-const BLEED = 0.125 * INCH_TO_POINTS;    // 9 points
-const PAGE_WIDTH = TRIM_WIDTH + (2 * BLEED);  // 450 points
-const PAGE_HEIGHT = TRIM_HEIGHT + (2 * BLEED); // 666 points
-const SAFE_MARGIN = 0.5 * INCH_TO_POINTS;      // 36 points from trim edge
-const SPINE_MARGIN = 0.75 * INCH_TO_POINTS;    // 54 points on spine side
+import { 
+  getBookDimensionsInPoints, 
+  SAFETY_MARGIN_POINTS, 
+  validatePageCount,
+  REQUIRED_DPI 
+} from '@shared/bookSizes';
 
 // Cache font bytes to avoid blocking event loop with repeated readFileSync
 let cachedComicNeueFontBytes: ArrayBuffer | null = null;
 
-export async function generatePrintReadyPDF(storybook: Storybook): Promise<Buffer> {
+/**
+ * Generates a professional print-ready PDF for hardcover photo books
+ * Follows Prodigi hardcover photo book specifications:
+ * - Single-page layout (each PDF page is one element)
+ * - No bleed (print service auto-generates)
+ * - 10mm safety margins for text/logos
+ * - 300 DPI resolution
+ * - Even page count (24-300 pages)
+ */
+export async function generatePrintReadyPDF(
+  storybook: Storybook, 
+  bookSize: string = 'a5-portrait'
+): Promise<Buffer> {
   const pdfDoc = await PDFDocument.create();
   
   // Register fontkit to enable custom font embedding
@@ -27,21 +34,14 @@ export async function generatePrintReadyPDF(storybook: Storybook): Promise<Buffe
   
   // Set PDF metadata for print compliance
   pdfDoc.setTitle(storybook.title);
-  pdfDoc.setAuthor('AI Storybook Builder');
-  pdfDoc.setSubject('Children\'s Storybook - Print Ready');
-  pdfDoc.setProducer('AI Storybook Builder - Print Ready PDF');
+  pdfDoc.setAuthor(storybook.author || 'AI Storyteller');
+  pdfDoc.setSubject('Children\'s Storybook - Professional Hardcover Print');
+  pdfDoc.setProducer('AI Storybook Builder - Prodigi Hardcover Specs');
   pdfDoc.setCreator('pdf-lib');
+  pdfDoc.setKeywords(['storybook', 'print', 'hardcover', `${REQUIRED_DPI}dpi`]);
   
-  // Print specifications implemented:
-  // - Trim size: 6" × 9" (432 × 648 points)
-  // - Bleed: 0.125" (9 points) on all sides
-  // - Safe area: 0.5" from trim edge (36 points)
-  // - Spine margin: 0.75" for binding (54 points)
-  // - All text positioned from trim edge, not page edge
-  // 
-  // Note: For full PDF/X-4 or PDF/X-1a compliance, post-process with Ghostscript or Adobe tools
-  // to add TrimBox, BleedBox, and convert to CMYK color space
-  // This PDF is structured correctly for print with proper dimensions, bleed, and safe areas
+  // Get book dimensions based on selected size
+  const { width: PAGE_WIDTH, height: PAGE_HEIGHT } = getBookDimensionsInPoints(bookSize);
   
   const objectStorageService = new ObjectStorageService();
   
@@ -51,25 +51,25 @@ export async function generatePrintReadyPDF(storybook: Storybook): Promise<Buffe
     cachedComicNeueFontBytes = readFileSync(fontPath);
   }
   const font = await pdfDoc.embedFont(cachedComicNeueFontBytes);
-  const boldFont = await pdfDoc.embedFont(StandardFonts.HelveticaBold); // Keep bold for titles
+  const boldFont = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
   
-  // Import from shared utility
+  // Import image optimization utility
   const { optimizeImageForPDF } = await import('../utils/imageOptimization');
   
   // Helper function to fetch and embed image
   async function embedImage(imageUrl: string): Promise<any> {
     try {
-      // Extract path after /api/storage/ to preserve date-based folder structure
+      // Extract path after /api/storage/
       const storagePathMatch = imageUrl.match(/\/api\/storage\/(.+)/);
       if (!storagePathMatch) return null;
       
       const filePath = storagePathMatch[1];
       const imageBuffer = await objectStorageService.getFileBuffer(filePath);
       
-      // Optimize image before embedding (reduces PDF size by 80-90%)
+      // Optimize image for 300 DPI print quality
       const optimizedBuffer = await optimizeImageForPDF(imageBuffer);
       
-      // Embed as JPEG (optimized images are always JPEG)
+      // Embed as JPEG
       return await pdfDoc.embedJpg(optimizedBuffer);
     } catch (error) {
       console.error('Error embedding image:', error);
@@ -77,184 +77,109 @@ export async function generatePrintReadyPDF(storybook: Storybook): Promise<Buffe
     }
   }
   
-  // Add cover page with full-bleed cover image
+  // Helper function to draw image covering full page
+  function drawFullPageImage(page: any, image: any) {
+    const imgAspectRatio = image.width / image.height;
+    const pageAspectRatio = PAGE_WIDTH / PAGE_HEIGHT;
+    
+    let drawWidth = PAGE_WIDTH;
+    let drawHeight = PAGE_HEIGHT;
+    let x = 0;
+    let y = 0;
+    
+    // Scale to cover page completely (no white space)
+    if (imgAspectRatio > pageAspectRatio) {
+      // Image is wider - fit to height
+      drawHeight = PAGE_HEIGHT;
+      drawWidth = drawHeight * imgAspectRatio;
+      x = -(drawWidth - PAGE_WIDTH) / 2;
+    } else {
+      // Image is taller - fit to width
+      drawWidth = PAGE_WIDTH;
+      drawHeight = drawWidth / imgAspectRatio;
+      y = -(drawHeight - PAGE_HEIGHT) / 2;
+    }
+    
+    page.drawImage(image, { x, y, width: drawWidth, height: drawHeight });
+  }
+  
+  // PAGE 1: FRONT COVER (full page image, no overlays)
   const coverPage = pdfDoc.addPage([PAGE_WIDTH, PAGE_HEIGHT]);
   const coverImageUrl = storybook.coverImageUrl || storybook.pages[0]?.imageUrl;
   
   if (coverImageUrl) {
     const coverImage = await embedImage(coverImageUrl);
     if (coverImage) {
-      const imgAspectRatio = coverImage.width / coverImage.height;
-      const pageAspectRatio = PAGE_WIDTH / PAGE_HEIGHT;
+      drawFullPageImage(coverPage, coverImage);
+    } else {
+      // Fallback: solid color background with centered title
+      coverPage.drawRectangle({
+        x: 0,
+        y: 0,
+        width: PAGE_WIDTH,
+        height: PAGE_HEIGHT,
+        color: rgb(0.976, 0.969, 0.953), // Soft background
+      });
       
-      let drawWidth = PAGE_WIDTH;
-      let drawHeight = PAGE_HEIGHT;
-      let x = 0;
-      let y = 0;
+      const titleFontSize = 28;
+      const titleText = storybook.title;
+      const titleWidth = boldFont.widthOfTextAtSize(titleText, titleFontSize);
+      const maxTitleWidth = PAGE_WIDTH - 2 * SAFETY_MARGIN_POINTS;
       
-      // Scale to cover page with bleed (no white space)
-      if (imgAspectRatio > pageAspectRatio) {
-        // Image is wider - fit to height
-        drawHeight = PAGE_HEIGHT;
-        drawWidth = drawHeight * imgAspectRatio;
-        x = -(drawWidth - PAGE_WIDTH) / 2;
-      } else {
-        // Image is taller - fit to width
-        drawWidth = PAGE_WIDTH;
-        drawHeight = drawWidth / imgAspectRatio;
-        y = -(drawHeight - PAGE_HEIGHT) / 2;
+      let finalTitleSize = titleFontSize;
+      if (titleWidth > maxTitleWidth) {
+        finalTitleSize = (maxTitleWidth / titleWidth) * titleFontSize;
       }
       
-      coverPage.drawImage(coverImage, {
-        x,
-        y,
-        width: drawWidth,
-        height: drawHeight,
+      coverPage.drawText(titleText, {
+        x: PAGE_WIDTH / 2 - boldFont.widthOfTextAtSize(titleText, finalTitleSize) / 2,
+        y: PAGE_HEIGHT / 2,
+        size: finalTitleSize,
+        font: boldFont,
+        color: rgb(0.12, 0.16, 0.23),
       });
     }
-    
-    // Add transparent overlays at top and bottom
-    // Top gradient overlay for title
-    const topOverlayHeight = 120;
-    coverPage.drawRectangle({
-      x: 0,
-      y: PAGE_HEIGHT - topOverlayHeight, // Top of page (PDF Y-axis is bottom-up)
-      width: PAGE_WIDTH,
-      height: topOverlayHeight,
-      color: rgb(0, 0, 0),
-      opacity: 0.6, // Semi-transparent dark overlay
-    });
-    
-    // Bottom gradient overlay for author
-    const bottomOverlayHeight = 80;
-    coverPage.drawRectangle({
-      x: 0,
-      y: 0, // Bottom of page
-      width: PAGE_WIDTH,
-      height: bottomOverlayHeight,
-      color: rgb(0, 0, 0),
-      opacity: 0.6, // Semi-transparent dark overlay
-    });
-    
-    // Draw title text at top with white color
-    const titleFontSize = 24;
-    const titleText = storybook.title;
-    const titleWidth = boldFont.widthOfTextAtSize(titleText, titleFontSize);
-    const maxTitleWidth = PAGE_WIDTH - 2 * BLEED - 2 * SAFE_MARGIN; // Text safe area from trim
-    
-    let finalTitleSize = titleFontSize;
-    if (titleWidth > maxTitleWidth) {
-      finalTitleSize = (maxTitleWidth / titleWidth) * titleFontSize;
-    }
-    
-    coverPage.drawText(titleText, {
-      x: PAGE_WIDTH / 2 - boldFont.widthOfTextAtSize(titleText, finalTitleSize) / 2,
-      y: PAGE_HEIGHT - (topOverlayHeight / 2) - 10, // Center in top overlay
-      size: finalTitleSize,
-      font: boldFont,
-      color: rgb(1, 1, 1), // White color for contrast
-    });
-    
-    // Draw author text at bottom with white color
-    const authorText = `By ${storybook.author || 'AI Storyteller'}`;
-    coverPage.drawText(authorText, {
-      x: PAGE_WIDTH / 2 - font.widthOfTextAtSize(authorText, 12) / 2,
-      y: bottomOverlayHeight / 2 - 6, // Center in bottom overlay
-      size: 12,
-      font: font,
-      color: rgb(1, 1, 1), // White color for contrast
-    });
-  } else {
-    // Text-only cover page
-    const titleFontSize = 32;
-    const titleText = storybook.title;
-    const titleWidth = boldFont.widthOfTextAtSize(titleText, titleFontSize);
-    const maxTitleWidth = PAGE_WIDTH - 2 * BLEED - 2 * SAFE_MARGIN; // Text safe area from trim
-    
-    let finalTitleSize = titleFontSize;
-    if (titleWidth > maxTitleWidth) {
-      finalTitleSize = (maxTitleWidth / titleWidth) * titleFontSize;
-    }
-    
-    coverPage.drawText(titleText, {
-      x: PAGE_WIDTH / 2 - boldFont.widthOfTextAtSize(titleText, finalTitleSize) / 2,
-      y: PAGE_HEIGHT / 2 + 20,
-      size: finalTitleSize,
-      font: boldFont,
-      color: rgb(0.12, 0.16, 0.23),
-    });
-    
-    const authorText = `By ${storybook.author || 'AI Storyteller'}`;
-    coverPage.drawText(authorText, {
-      x: PAGE_WIDTH / 2 - font.widthOfTextAtSize(authorText, 14) / 2,
-      y: PAGE_HEIGHT / 2 - 20,
-      size: 14,
-      font: font,
-      color: rgb(0.28, 0.33, 0.41),
-    });
   }
   
-  // Add story pages: LEFT = image (full bleed), RIGHT = text (safe margins)
+  // CONTENT PAGES: Image and text pages (alternating or combined based on content)
   for (let i = 0; i < storybook.pages.length; i++) {
     const page = storybook.pages[i];
+    const hasImage = !!page.imageUrl;
+    const hasText = !!(page.text && page.text.trim());
     
-    // LEFT PAGE: Full-bleed image
-    const leftPage = pdfDoc.addPage([PAGE_WIDTH, PAGE_HEIGHT]);
-    
-    if (page.imageUrl) {
+    if (hasImage && hasText) {
+      // COMBINED LAYOUT: Image with text overlay in safe area
+      const contentPage = pdfDoc.addPage([PAGE_WIDTH, PAGE_HEIGHT]);
+      
+      // Draw full-page image
       const pageImage = await embedImage(page.imageUrl);
       if (pageImage) {
-        const imgAspectRatio = pageImage.width / pageImage.height;
-        const pageAspectRatio = PAGE_WIDTH / PAGE_HEIGHT;
-        
-        let drawWidth = PAGE_WIDTH;
-        let drawHeight = PAGE_HEIGHT;
-        let x = 0;
-        let y = 0;
-        
-        // Scale to cover page with bleed (no white space)
-        if (imgAspectRatio > pageAspectRatio) {
-          // Image is wider - fit to height
-          drawHeight = PAGE_HEIGHT;
-          drawWidth = drawHeight * imgAspectRatio;
-          x = -(drawWidth - PAGE_WIDTH) / 2;
-        } else {
-          // Image is taller - fit to width
-          drawWidth = PAGE_WIDTH;
-          drawHeight = drawWidth / imgAspectRatio;
-          y = -(drawHeight - PAGE_HEIGHT) / 2;
-        }
-        
-        leftPage.drawImage(pageImage, {
-          x,
-          y,
-          width: drawWidth,
-          height: drawHeight,
-        });
+        drawFullPageImage(contentPage, pageImage);
       }
-    }
-    
-    // RIGHT PAGE: Text with safe margins
-    const rightPage = pdfDoc.addPage([PAGE_WIDTH, PAGE_HEIGHT]);
-    
-    // Calculate text area with safe margins FROM TRIM EDGE
-    // Trim edge is BLEED distance from page edge
-    const textX = BLEED + SPINE_MARGIN; // Left margin from trim (spine side)
-    const textY = PAGE_HEIGHT - BLEED - SAFE_MARGIN; // Top margin from trim
-    const textWidth = PAGE_WIDTH - BLEED - SPINE_MARGIN - BLEED - SAFE_MARGIN; // Width between margins
-    const textHeight = PAGE_HEIGHT - 2 * BLEED - 2 * SAFE_MARGIN; // Height between top and bottom safe areas
-    
-    // Render text if page has content (skip for image-only pages)
-    const pageText = page.text || '';
-    if (pageText.trim()) {
-      // Format and draw text - kid-friendly sizing and centered vertically
-      const fontSize = 16; // Larger font for kids ages 6-12
-      const lineHeight = fontSize * 1.8; // More spacing for easier reading
-      const words = pageText.split(' ');
+      
+      // Draw semi-transparent overlay for text readability
+      const textAreaHeight = PAGE_HEIGHT * 0.3; // Bottom 30% of page
+      contentPage.drawRectangle({
+        x: 0,
+        y: 0,
+        width: PAGE_WIDTH,
+        height: textAreaHeight,
+        color: rgb(0, 0, 0),
+        opacity: 0.6,
+      });
+      
+      // Draw text in safe area
+      const fontSize = 14;
+      const lineHeight = fontSize * 1.6;
+      const textX = SAFETY_MARGIN_POINTS;
+      const textY = textAreaHeight - SAFETY_MARGIN_POINTS;
+      const textWidth = PAGE_WIDTH - 2 * SAFETY_MARGIN_POINTS;
+      
+      // Word wrap text
+      const words = page.text.split(' ');
       const lines: string[] = [];
       let currentLine = '';
       
-      // Word wrap text
       for (const word of words) {
         const testLine = currentLine + (currentLine ? ' ' : '') + word;
         const testWidth = font.widthOfTextAtSize(testLine, fontSize);
@@ -270,105 +195,191 @@ export async function generatePrintReadyPDF(storybook: Storybook): Promise<Buffe
         lines.push(currentLine);
       }
       
-      // Calculate total text height to center it vertically (only if it fits)
-      const totalTextHeight = lines.length * lineHeight;
-      const availableHeight = textHeight;
-      // Only center if text fits in available space; otherwise top-align to ensure all text renders
-      const verticalOffset = totalTextHeight <= availableHeight 
-        ? (availableHeight - totalTextHeight) / 2 
-        : 0;
-      
-      // Start drawing from centered position (or top if text is too long)
-      let currentY = textY - verticalOffset;
-      
-      // Draw each line of text
+      // Draw text lines
+      let currentY = textY;
       for (const line of lines) {
-        // Check if there's room for this line (baseline must be above safe margin)
-        if (currentY - fontSize < BLEED + SAFE_MARGIN) break;
+        if (currentY - fontSize < SAFETY_MARGIN_POINTS) break;
         
-        rightPage.drawText(line, {
+        contentPage.drawText(line, {
           x: textX,
           y: currentY - fontSize,
           size: fontSize,
           font: font,
-          color: rgb(0.15, 0.2, 0.28), // Slightly softer color for kids
+          color: rgb(1, 1, 1), // White text on dark overlay
         });
         
         currentY -= lineHeight;
       }
-    }
-    
-    // Add page number at bottom (within safe area) - kid-friendly style
-    const pageNumText = `${i + 1}`;
-    const pageNumSize = 12; // Slightly larger for kids
-    const pageNumX = PAGE_WIDTH - BLEED - SAFE_MARGIN - font.widthOfTextAtSize(pageNumText, pageNumSize);
-    rightPage.drawText(pageNumText, {
-      x: pageNumX,
-      y: BLEED + SAFE_MARGIN + 10, // Position within safe area, 10pts above safe margin
-      size: pageNumSize,
-      font: font,
-      color: rgb(0.5, 0.5, 0.5),
-    });
-  }
-  
-  // Add end page (no page number)
-  const endPage = pdfDoc.addPage([PAGE_WIDTH, PAGE_HEIGHT]);
-  
-  // If back cover image exists, use it; otherwise show "The End" text
-  if (storybook.backCoverImageUrl) {
-    const backCoverImage = await embedImage(storybook.backCoverImageUrl);
-    if (backCoverImage) {
-      const imgAspectRatio = backCoverImage.width / backCoverImage.height;
-      const pageAspectRatio = PAGE_WIDTH / PAGE_HEIGHT;
       
-      let drawWidth = PAGE_WIDTH;
-      let drawHeight = PAGE_HEIGHT;
-      let x = 0;
-      let y = 0;
-      
-      // Scale to cover page with bleed (no white space)
-      if (imgAspectRatio > pageAspectRatio) {
-        // Image is wider - fit to height
-        drawHeight = PAGE_HEIGHT;
-        drawWidth = drawHeight * imgAspectRatio;
-        x = -(drawWidth - PAGE_WIDTH) / 2;
-      } else {
-        // Image is taller - fit to width
-        drawWidth = PAGE_WIDTH;
-        drawHeight = drawWidth / imgAspectRatio;
-        y = -(drawHeight - PAGE_HEIGHT) / 2;
+    } else if (hasImage) {
+      // IMAGE-ONLY PAGE
+      const imagePage = pdfDoc.addPage([PAGE_WIDTH, PAGE_HEIGHT]);
+      const pageImage = await embedImage(page.imageUrl);
+      if (pageImage) {
+        drawFullPageImage(imagePage, pageImage);
       }
       
-      endPage.drawImage(backCoverImage, {
-        x,
-        y,
-        width: drawWidth,
-        height: drawHeight,
+    } else if (hasText) {
+      // TEXT-ONLY PAGE
+      const textPage = pdfDoc.addPage([PAGE_WIDTH, PAGE_HEIGHT]);
+      
+      // Soft background
+      textPage.drawRectangle({
+        x: 0,
+        y: 0,
+        width: PAGE_WIDTH,
+        height: PAGE_HEIGHT,
+        color: rgb(0.976, 0.969, 0.953),
+      });
+      
+      // Text area with safety margins
+      const fontSize = 16;
+      const lineHeight = fontSize * 1.8;
+      const textX = SAFETY_MARGIN_POINTS;
+      const textY = PAGE_HEIGHT - SAFETY_MARGIN_POINTS;
+      const textWidth = PAGE_WIDTH - 2 * SAFETY_MARGIN_POINTS;
+      const textHeight = PAGE_HEIGHT - 2 * SAFETY_MARGIN_POINTS;
+      
+      // Word wrap text
+      const words = page.text.split(' ');
+      const lines: string[] = [];
+      let currentLine = '';
+      
+      for (const word of words) {
+        const testLine = currentLine + (currentLine ? ' ' : '') + word;
+        const testWidth = font.widthOfTextAtSize(testLine, fontSize);
+        
+        if (testWidth > textWidth && currentLine) {
+          lines.push(currentLine);
+          currentLine = word;
+        } else {
+          currentLine = testLine;
+        }
+      }
+      if (currentLine) {
+        lines.push(currentLine);
+      }
+      
+      // Center text vertically if it fits
+      const totalTextHeight = lines.length * lineHeight;
+      const verticalOffset = totalTextHeight <= textHeight 
+        ? (textHeight - totalTextHeight) / 2 
+        : 0;
+      
+      let currentY = textY - verticalOffset;
+      
+      // Draw text lines
+      for (const line of lines) {
+        if (currentY - fontSize < SAFETY_MARGIN_POINTS) break;
+        
+        textPage.drawText(line, {
+          x: textX,
+          y: currentY - fontSize,
+          size: fontSize,
+          font: font,
+          color: rgb(0.15, 0.2, 0.28),
+        });
+        
+        currentY -= lineHeight;
+      }
+      
+      // Add page number in safe area
+      const pageNumText = `${i + 1}`;
+      const pageNumSize = 11;
+      const pageNumX = PAGE_WIDTH - SAFETY_MARGIN_POINTS - font.widthOfTextAtSize(pageNumText, pageNumSize);
+      textPage.drawText(pageNumText, {
+        x: pageNumX,
+        y: SAFETY_MARGIN_POINTS,
+        size: pageNumSize,
+        font: font,
+        color: rgb(0.5, 0.5, 0.5),
       });
     }
-  } else {
-    // Create gradient-like background with soft colors
-    endPage.drawRectangle({
+  }
+  
+  // Calculate total page count including back cover that will be added
+  const currentPageCount = pdfDoc.getPageCount();
+  const totalPagesWithBackCover = currentPageCount + 1; // +1 for back cover
+  
+  // Add blank page if total will be odd (to make final count even)
+  if (totalPagesWithBackCover % 2 !== 0) {
+    console.warn(`⚠️ Adding blank page to ensure even page count (current: ${currentPageCount}, with back cover: ${totalPagesWithBackCover}).`);
+    const blankPage = pdfDoc.addPage([PAGE_WIDTH, PAGE_HEIGHT]);
+    blankPage.drawRectangle({
       x: 0,
       y: 0,
       width: PAGE_WIDTH,
       height: PAGE_HEIGHT,
-      color: rgb(0.976, 0.969, 0.953), // #f9f7f3
+      color: rgb(1, 1, 1), // White blank page
+    });
+  }
+  
+  // LAST PAGE: BACK COVER (full page image, no overlays)
+  const backCoverPage = pdfDoc.addPage([PAGE_WIDTH, PAGE_HEIGHT]);
+  
+  if (storybook.backCoverImageUrl) {
+    const backCoverImage = await embedImage(storybook.backCoverImageUrl);
+    if (backCoverImage) {
+      drawFullPageImage(backCoverPage, backCoverImage);
+    } else {
+      // Fallback: "The End" page
+      backCoverPage.drawRectangle({
+        x: 0,
+        y: 0,
+        width: PAGE_WIDTH,
+        height: PAGE_HEIGHT,
+        color: rgb(0.976, 0.969, 0.953),
+      });
+      
+      const endText = "The End";
+      const endFontSize = 32;
+      const endTextWidth = boldFont.widthOfTextAtSize(endText, endFontSize);
+      
+      backCoverPage.drawText(endText, {
+        x: PAGE_WIDTH / 2 - endTextWidth / 2,
+        y: PAGE_HEIGHT / 2,
+        size: endFontSize,
+        font: boldFont,
+        color: rgb(0.2, 0.25, 0.31),
+      });
+    }
+  } else {
+    // Default back cover: "The End"
+    backCoverPage.drawRectangle({
+      x: 0,
+      y: 0,
+      width: PAGE_WIDTH,
+      height: PAGE_HEIGHT,
+      color: rgb(0.976, 0.969, 0.953),
     });
     
-    // Draw "The End" text centered
     const endText = "The End";
-    const endFontSize = 36;
+    const endFontSize = 32;
     const endTextWidth = boldFont.widthOfTextAtSize(endText, endFontSize);
     
-    endPage.drawText(endText, {
+    backCoverPage.drawText(endText, {
       x: PAGE_WIDTH / 2 - endTextWidth / 2,
       y: PAGE_HEIGHT / 2,
       size: endFontSize,
       font: boldFont,
-      color: rgb(0.2, 0.25, 0.31), // Slate 800
+      color: rgb(0.2, 0.25, 0.31),
     });
   }
+  
+  // Final validation
+  const finalPageCount = pdfDoc.getPageCount();
+  const finalValidation = validatePageCount(finalPageCount);
+  
+  if (!finalValidation.valid) {
+    console.error(`❌ Page count validation failed: ${finalValidation.message}`);
+    throw new Error(finalValidation.message);
+  }
+  
+  if (finalValidation.message) {
+    console.warn(`⚠️ ${finalValidation.message}`);
+  }
+  
+  console.log(`✅ Print-ready PDF generated: ${finalPageCount} pages, ${bookSize} format, ${REQUIRED_DPI} DPI`);
   
   const pdfBytes = await pdfDoc.save();
   return Buffer.from(pdfBytes);

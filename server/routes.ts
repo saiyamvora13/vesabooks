@@ -1988,7 +1988,9 @@ Sitemap: ${baseUrl}/sitemap.xml`;
       }
 
       const { generatePrintReadyPDF } = await import('./services/printPdf');
-      const pdfBuffer = await generatePrintReadyPDF(storybook);
+      // Use bookSize from purchase, or default to 'a5-portrait'
+      const bookSize = printPurchase?.bookSize || 'a5-portrait';
+      const pdfBuffer = await generatePrintReadyPDF(storybook, bookSize);
 
       const filename = `${storybook.title.replace(/[^a-z0-9]/gi, '_').toLowerCase()}-print.pdf`;
       res.setHeader('Content-Type', 'application/pdf');
