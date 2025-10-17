@@ -376,18 +376,7 @@ export async function generateIllustration(
       
       // Step 1: Add photo-matching instructions if we have reference images
       const photoMatchingPrefix = hasReferences
-        ? `Reference images provided showing the character for this illustration.
-
-Use these references to understand the character's core appearance:
-- Keep their age, facial features, and overall look recognizable
-- The character should be identifiable across all scenes
-
-Create diverse and engaging scenes:
-- Vary the camera angle, distance, and framing for visual interest
-- Use different poses, expressions, and compositions
-- Make each illustration unique while keeping the character recognizable
-
-SCENE: `
+        ? `Reference images provided for character inspiration.\n\n`
         : '';
       
       // Step 2: Add the scene description
