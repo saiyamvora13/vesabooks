@@ -2446,17 +2446,27 @@ Sitemap: ${baseUrl}/sitemap.xml`;
 
       // Create purchase records with idempotency
       for (const item of items) {
-        const { storybookId, type, price } = item;
+        const { storybookId, type, price, bookSize, spineText, spineTextColor, spineBackgroundColor } = item;
 
         try {
-          const purchase = await storage.createPurchase({
+          const purchaseData: any = {
             userId,
             storybookId,
             type,
             price: price.toString(),
             stripePaymentIntentId: paymentIntent.id,
             status: 'completed',
-          });
+          };
+          
+          // Include book customization for print purchases
+          if (type === 'print') {
+            purchaseData.bookSize = bookSize || 'a5-portrait';
+            purchaseData.spineText = spineText || '';
+            purchaseData.spineTextColor = spineTextColor || '#000000';
+            purchaseData.spineBackgroundColor = spineBackgroundColor || '#FFFFFF';
+          }
+          
+          const purchase = await storage.createPurchase(purchaseData);
           createdPurchases.push(purchase);
         } catch (error: any) {
           // Handle duplicate purchase (unique constraint violation)
@@ -2643,7 +2653,7 @@ Sitemap: ${baseUrl}/sitemap.xml`;
       const processedItems = [];
 
       for (const item of items) {
-        const { storybookId, type } = item;
+        const { storybookId, type, bookSize, spineText, spineTextColor, spineBackgroundColor } = item;
         
         // Validate type
         if (type !== 'digital' && type !== 'print') {
@@ -2674,13 +2684,23 @@ Sitemap: ${baseUrl}/sitemap.xml`;
 
         total += serverPrice;
 
-        processedItems.push({
+        const processedItem: any = {
           storybookId,
           type,
           price: serverPrice,
           originalPrice,
           discount,
-        });
+        };
+        
+        // Include book customization for print purchases
+        if (type === 'print') {
+          processedItem.bookSize = bookSize || 'a5-portrait';
+          processedItem.spineText = spineText || '';
+          processedItem.spineTextColor = spineTextColor || '#000000';
+          processedItem.spineBackgroundColor = spineBackgroundColor || '#FFFFFF';
+        }
+        
+        processedItems.push(processedItem);
       }
 
       // Create Stripe Payment Intent
@@ -2790,17 +2810,27 @@ Sitemap: ${baseUrl}/sitemap.xml`;
         
         // Create purchase records with duplicate handling
         for (const item of items) {
-          const { storybookId, type, price } = item;
+          const { storybookId, type, price, bookSize, spineText, spineTextColor, spineBackgroundColor } = item;
           
           try {
-            const purchase = await storage.createPurchase({
+            const purchaseData: any = {
               userId,
               storybookId,
               type,
               price: price.toString(),
               stripePaymentIntentId: session.payment_intent as string,
               status: 'completed',
-            });
+            };
+            
+            // Include book customization for print purchases
+            if (type === 'print') {
+              purchaseData.bookSize = bookSize || 'a5-portrait';
+              purchaseData.spineText = spineText || '';
+              purchaseData.spineTextColor = spineTextColor || '#000000';
+              purchaseData.spineBackgroundColor = spineBackgroundColor || '#FFFFFF';
+            }
+            
+            const purchase = await storage.createPurchase(purchaseData);
             createdPurchases.push(purchase);
             console.log(`Webhook created purchase for payment intent ${session.payment_intent}, storybookId ${storybookId}`);
           } catch (error: any) {
@@ -2873,17 +2903,27 @@ Sitemap: ${baseUrl}/sitemap.xml`;
         
         // Create purchase records with duplicate handling
         for (const item of items) {
-          const { storybookId, type, price } = item;
+          const { storybookId, type, price, bookSize, spineText, spineTextColor, spineBackgroundColor } = item;
           
           try {
-            const purchase = await storage.createPurchase({
+            const purchaseData: any = {
               userId,
               storybookId,
               type,
               price: price.toString(),
               stripePaymentIntentId: paymentIntent.id,
               status: 'completed',
-            });
+            };
+            
+            // Include book customization for print purchases
+            if (type === 'print') {
+              purchaseData.bookSize = bookSize || 'a5-portrait';
+              purchaseData.spineText = spineText || '';
+              purchaseData.spineTextColor = spineTextColor || '#000000';
+              purchaseData.spineBackgroundColor = spineBackgroundColor || '#FFFFFF';
+            }
+            
+            const purchase = await storage.createPurchase(purchaseData);
             createdPurchases.push(purchase);
             console.log(`Webhook created purchase for payment intent ${paymentIntent.id}, storybookId ${storybookId}`);
           } catch (error: any) {

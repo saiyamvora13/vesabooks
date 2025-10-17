@@ -27,10 +27,28 @@ import { addToCart, isInCart, removeFromCart } from "@/lib/cartUtils";
 import { SEO } from "@/components/SEO";
 import { loadStripe } from "@stripe/stripe-js";
 import { Elements, PaymentElement, useStripe, useElements } from "@stripe/react-stripe-js";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { getAllBookSizes } from "@shared/bookSizes";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
 
 // Validate Stripe public key exists
 const stripePublicKey = import.meta.env.VITE_STRIPE_PUBLIC_KEY;
 const stripePromise = stripePublicKey ? loadStripe(stripePublicKey) : null;
+
+// Form schema for book options
+const bookOptionsSchema = z.object({
+  bookSize: z.string().default('a5-portrait'),
+  spineText: z.string().max(50, 'Spine text must be 50 characters or less').optional(),
+  spineTextColor: z.string().regex(/^#[0-9A-Fa-f]{6}$/, 'Must be a valid hex color').default('#000000'),
+  spineBackgroundColor: z.string().regex(/^#[0-9A-Fa-f]{6}$/, 'Must be a valid hex color').default('#FFFFFF'),
+});
+
+type BookOptionsFormValues = z.infer<typeof bookOptionsSchema>;
 
 interface Storybook {
   id: string;
@@ -47,9 +65,13 @@ interface CheckoutPaymentFormProps {
   price: number;
   type: 'digital' | 'print';
   onSuccess: () => void;
+  bookSize?: string;
+  spineText?: string;
+  spineTextColor?: string;
+  spineBackgroundColor?: string;
 }
 
-function CheckoutPaymentForm({ storybookId, title, price, type, onSuccess }: CheckoutPaymentFormProps) {
+function CheckoutPaymentForm({ storybookId, title, price, type, onSuccess, bookSize, spineText, spineTextColor, spineBackgroundColor }: CheckoutPaymentFormProps) {
   const { t } = useTranslation();
   const stripe = useStripe();
   const elements = useElements();
@@ -83,9 +105,19 @@ function CheckoutPaymentForm({ storybookId, title, price, type, onSuccess }: Che
         });
       } else if (paymentIntent && paymentIntent.status === 'succeeded') {
         try {
-          const response = await apiRequest('POST', '/api/purchases/create', { 
+          const purchaseData: any = { 
             paymentIntentId: paymentIntent.id 
-          });
+          };
+          
+          // Include book customization data for print purchases
+          if (type === 'print') {
+            purchaseData.bookSize = bookSize;
+            purchaseData.spineText = spineText;
+            purchaseData.spineTextColor = spineTextColor;
+            purchaseData.spineBackgroundColor = spineBackgroundColor;
+          }
+          
+          const response = await apiRequest('POST', '/api/purchases/create', purchaseData);
 
           if (!response.ok) {
             throw new Error('Failed to create purchases');
@@ -162,27 +194,70 @@ interface CheckoutDialogProps {
 function CheckoutDialog({ open, onOpenChange, storybook, type, price }: CheckoutDialogProps) {
   const { t } = useTranslation();
   const { toast } = useToast();
+  const [step, setStep] = useState<1 | 2>(1);
   const [clientSecret, setClientSecret] = useState<string>("");
   const [isCreatingPaymentIntent, setIsCreatingPaymentIntent] = useState(false);
   const [error, setError] = useState<string>("");
+  
+  // Book options state
+  const [bookSize, setBookSize] = useState<string>('a5-portrait');
+  const [spineText, setSpineText] = useState<string>('');
+  const [spineTextColor, setSpineTextColor] = useState<string>('#000000');
+  const [spineBackgroundColor, setSpineBackgroundColor] = useState<string>('#FFFFFF');
+  
+  const form = useForm<BookOptionsFormValues>({
+    resolver: zodResolver(bookOptionsSchema),
+    defaultValues: {
+      bookSize: 'a5-portrait',
+      spineText: '',
+      spineTextColor: '#000000',
+      spineBackgroundColor: '#FFFFFF',
+    },
+  });
 
+  // Reset state when dialog opens
   useEffect(() => {
-    // Check if Stripe is configured
+    if (open) {
+      // For digital purchases, skip book options and go straight to payment
+      if (type === 'digital') {
+        setStep(2);
+      } else {
+        setStep(1);
+      }
+      setClientSecret("");
+      setError("");
+      form.reset();
+      setBookSize('a5-portrait');
+      setSpineText('');
+      setSpineTextColor('#000000');
+      setSpineBackgroundColor('#FFFFFF');
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, type]);
+
+  // Create payment intent when moving to step 2
+  useEffect(() => {
     if (!stripePublicKey) {
       setError("Stripe is not configured. Please contact support.");
       return;
     }
 
-    // Reset state when dialog opens
-    if (open) {
-      setClientSecret("");
-      setError("");
+    if (open && step === 2 && !clientSecret) {
       setIsCreatingPaymentIntent(true);
 
       const createPaymentIntent = async () => {
         try {
+          // Build item with customization data for print purchases
+          const item: any = { storybookId: storybook.id, type, price };
+          if (type === 'print') {
+            item.bookSize = bookSize;
+            item.spineText = spineText;
+            item.spineTextColor = spineTextColor;
+            item.spineBackgroundColor = spineBackgroundColor;
+          }
+          
           const response = await apiRequest('POST', '/api/create-payment-intent', { 
-            items: [{ storybookId: storybook.id, type, price }] 
+            items: [item] 
           });
           
           if (!response.ok) {
@@ -212,7 +287,15 @@ function CheckoutDialog({ open, onOpenChange, storybook, type, price }: Checkout
       createPaymentIntent();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, storybook.id, type, price]);
+  }, [open, step, storybook.id, type, price, clientSecret, bookSize, spineText, spineTextColor, spineBackgroundColor]);
+
+  const handleBookOptionsSubmit = (values: BookOptionsFormValues) => {
+    setBookSize(values.bookSize);
+    setSpineText(values.spineText || '');
+    setSpineTextColor(values.spineTextColor);
+    setSpineBackgroundColor(values.spineBackgroundColor);
+    setStep(2);
+  };
 
   const handleSuccess = () => {
     queryClient.invalidateQueries({ queryKey: ['/api/purchases/check'] });
@@ -221,6 +304,7 @@ function CheckoutDialog({ open, onOpenChange, storybook, type, price }: Checkout
 
   const handleClose = (isOpen: boolean) => {
     if (!isOpen) {
+      setStep(1);
       setClientSecret("");
       setError("");
     }
@@ -239,54 +323,201 @@ function CheckoutDialog({ open, onOpenChange, storybook, type, price }: Checkout
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <CreditCard className="h-5 w-5" />
-            Complete Purchase
+            {step === 1 ? (
+              <>
+                <BookOpen className="h-5 w-5" />
+                Book Options
+              </>
+            ) : (
+              <>
+                <CreditCard className="h-5 w-5" />
+                Complete Purchase
+              </>
+            )}
           </DialogTitle>
         </DialogHeader>
 
-        {error ? (
-          <div className="flex flex-col items-center justify-center py-8">
-            <X className="h-12 w-12 text-destructive mb-4" />
-            <p className="text-sm text-destructive text-center">{error}</p>
-            <Button 
-              variant="outline" 
-              onClick={() => handleClose(false)} 
-              className="mt-4"
-              data-testid="button-close-error"
-            >
-              Close
-            </Button>
-          </div>
-        ) : isCreatingPaymentIntent || !clientSecret ? (
-          <div className="flex flex-col items-center justify-center py-8">
-            <Loader2 className="h-8 w-8 animate-spin text-primary mb-4" />
-            <p className="text-sm text-muted-foreground">Preparing checkout...</p>
-          </div>
-        ) : (
+        {/* Book Options Form - Step 1 (only for print) */}
+        {step === 1 && type === 'print' && (
           <div className="space-y-4">
             <div className="bg-muted/50 p-4 rounded-lg">
               <p className="font-medium text-sm">{storybook.title}</p>
-              <Badge variant={type === 'digital' ? 'default' : 'secondary'} className="mt-2">
-                {type === 'digital' ? 'E-book' : 'Print Edition'}
-              </Badge>
+              <Badge variant="secondary" className="mt-2">Print Edition</Badge>
             </div>
 
-            {stripePromise && options ? (
-              <Elements stripe={stripePromise} options={options}>
-                <CheckoutPaymentForm 
-                  storybookId={storybook.id}
-                  title={storybook.title}
-                  price={price}
-                  type={type}
-                  onSuccess={handleSuccess}
+            <Form {...form}>
+              <form onSubmit={form.handleSubmit(handleBookOptionsSubmit)} className="space-y-4">
+                <FormField
+                  control={form.control}
+                  name="bookSize"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Book Size</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger data-testid="select-book-size">
+                            <SelectValue placeholder="Select book size" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {getAllBookSizes().map((size) => (
+                            <SelectItem key={size.id} value={size.id} data-testid={`option-book-size-${size.id}`}>
+                              {size.name} ({size.widthInches}" × {size.heightInches}")
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
                 />
-              </Elements>
+
+                <FormField
+                  control={form.control}
+                  name="spineText"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Spine Text (Optional)</FormLabel>
+                      <FormControl>
+                        <Input 
+                          placeholder="Enter spine text (max 50 chars)" 
+                          maxLength={50}
+                          data-testid="input-spine-text"
+                          {...field} 
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="spineTextColor"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Spine Text Color</FormLabel>
+                      <div className="flex gap-2">
+                        <FormControl>
+                          <Input 
+                            type="color" 
+                            className="w-16 h-10 p-1"
+                            data-testid="input-spine-text-color"
+                            {...field} 
+                          />
+                        </FormControl>
+                        <FormControl>
+                          <Input 
+                            type="text" 
+                            placeholder="#000000"
+                            data-testid="input-spine-text-color-hex"
+                            {...field} 
+                          />
+                        </FormControl>
+                      </div>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="spineBackgroundColor"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Spine Background Color</FormLabel>
+                      <div className="flex gap-2">
+                        <FormControl>
+                          <Input 
+                            type="color" 
+                            className="w-16 h-10 p-1"
+                            data-testid="input-spine-bg-color"
+                            {...field} 
+                          />
+                        </FormControl>
+                        <FormControl>
+                          <Input 
+                            type="text" 
+                            placeholder="#FFFFFF"
+                            data-testid="input-spine-bg-color-hex"
+                            {...field} 
+                          />
+                        </FormControl>
+                      </div>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <Button
+                  type="submit"
+                  className="w-full gradient-bg hover:opacity-90 !text-[hsl(258,90%,20%)]"
+                  data-testid="button-continue-to-payment"
+                >
+                  Continue to Payment
+                </Button>
+              </form>
+            </Form>
+          </div>
+        )}
+
+        {/* Payment Form - Step 2 */}
+        {step === 2 && (
+          <>
+            {error ? (
+              <div className="flex flex-col items-center justify-center py-8">
+                <X className="h-12 w-12 text-destructive mb-4" />
+                <p className="text-sm text-destructive text-center">{error}</p>
+                <Button 
+                  variant="outline" 
+                  onClick={() => handleClose(false)} 
+                  className="mt-4"
+                  data-testid="button-close-error"
+                >
+                  Close
+                </Button>
+              </div>
+            ) : isCreatingPaymentIntent || !clientSecret ? (
+              <div className="flex flex-col items-center justify-center py-8">
+                <Loader2 className="h-8 w-8 animate-spin text-primary mb-4" />
+                <p className="text-sm text-muted-foreground">Preparing checkout...</p>
+              </div>
             ) : (
-              <div className="flex flex-col items-center justify-center py-4">
-                <p className="text-sm text-destructive">Unable to load payment system</p>
+              <div className="space-y-4">
+                <div className="bg-muted/50 p-4 rounded-lg">
+                  <p className="font-medium text-sm">{storybook.title}</p>
+                  <Badge variant={type === 'digital' ? 'default' : 'secondary'} className="mt-2">
+                    {type === 'digital' ? 'E-book' : 'Print Edition'}
+                  </Badge>
+                  {type === 'print' && bookSize && (
+                    <p className="text-xs text-muted-foreground mt-2">
+                      Size: {getAllBookSizes().find(s => s.id === bookSize)?.name}
+                    </p>
+                  )}
+                </div>
+
+                {stripePromise && options ? (
+                  <Elements stripe={stripePromise} options={options}>
+                    <CheckoutPaymentForm 
+                      storybookId={storybook.id}
+                      title={storybook.title}
+                      price={price}
+                      type={type}
+                      onSuccess={handleSuccess}
+                      bookSize={type === 'print' ? bookSize : undefined}
+                      spineText={type === 'print' ? spineText : undefined}
+                      spineTextColor={type === 'print' ? spineTextColor : undefined}
+                      spineBackgroundColor={type === 'print' ? spineBackgroundColor : undefined}
+                    />
+                  </Elements>
+                ) : (
+                  <div className="flex flex-col items-center justify-center py-4">
+                    <p className="text-sm text-destructive">Unable to load payment system</p>
+                  </div>
+                )}
               </div>
             )}
-          </div>
+          </>
         )}
       </DialogContent>
     </Dialog>
