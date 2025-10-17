@@ -43,9 +43,6 @@ const stripePromise = stripePublicKey ? loadStripe(stripePublicKey) : null;
 // Form schema for book options
 const bookOptionsSchema = z.object({
   bookSize: z.string().default('a5-portrait'),
-  spineText: z.string().max(50, 'Spine text must be 50 characters or less').optional(),
-  spineTextColor: z.string().regex(/^#[0-9A-Fa-f]{6}$/, 'Must be a valid hex color').default('#000000'),
-  spineBackgroundColor: z.string().regex(/^#[0-9A-Fa-f]{6}$/, 'Must be a valid hex color').default('#FFFFFF'),
 });
 
 type BookOptionsFormValues = z.infer<typeof bookOptionsSchema>;
@@ -66,12 +63,9 @@ interface CheckoutPaymentFormProps {
   type: 'digital' | 'print';
   onSuccess: () => void;
   bookSize?: string;
-  spineText?: string;
-  spineTextColor?: string;
-  spineBackgroundColor?: string;
 }
 
-function CheckoutPaymentForm({ storybookId, title, price, type, onSuccess, bookSize, spineText, spineTextColor, spineBackgroundColor }: CheckoutPaymentFormProps) {
+function CheckoutPaymentForm({ storybookId, title, price, type, onSuccess, bookSize }: CheckoutPaymentFormProps) {
   const { t } = useTranslation();
   const stripe = useStripe();
   const elements = useElements();
@@ -112,9 +106,6 @@ function CheckoutPaymentForm({ storybookId, title, price, type, onSuccess, bookS
           // Include book customization data for print purchases
           if (type === 'print') {
             purchaseData.bookSize = bookSize;
-            purchaseData.spineText = spineText;
-            purchaseData.spineTextColor = spineTextColor;
-            purchaseData.spineBackgroundColor = spineBackgroundColor;
           }
           
           const response = await apiRequest('POST', '/api/purchases/create', purchaseData);
@@ -201,17 +192,11 @@ function CheckoutDialog({ open, onOpenChange, storybook, type, price }: Checkout
   
   // Book options state
   const [bookSize, setBookSize] = useState<string>('a5-portrait');
-  const [spineText, setSpineText] = useState<string>('');
-  const [spineTextColor, setSpineTextColor] = useState<string>('#000000');
-  const [spineBackgroundColor, setSpineBackgroundColor] = useState<string>('#FFFFFF');
   
   const form = useForm<BookOptionsFormValues>({
     resolver: zodResolver(bookOptionsSchema),
     defaultValues: {
       bookSize: 'a5-portrait',
-      spineText: '',
-      spineTextColor: '#000000',
-      spineBackgroundColor: '#FFFFFF',
     },
   });
 
@@ -228,9 +213,6 @@ function CheckoutDialog({ open, onOpenChange, storybook, type, price }: Checkout
       setError("");
       form.reset();
       setBookSize('a5-portrait');
-      setSpineText('');
-      setSpineTextColor('#000000');
-      setSpineBackgroundColor('#FFFFFF');
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, type]);
@@ -251,9 +233,6 @@ function CheckoutDialog({ open, onOpenChange, storybook, type, price }: Checkout
           const item: any = { storybookId: storybook.id, type, price };
           if (type === 'print') {
             item.bookSize = bookSize;
-            item.spineText = spineText;
-            item.spineTextColor = spineTextColor;
-            item.spineBackgroundColor = spineBackgroundColor;
           }
           
           const response = await apiRequest('POST', '/api/create-payment-intent', { 
@@ -287,13 +266,10 @@ function CheckoutDialog({ open, onOpenChange, storybook, type, price }: Checkout
       createPaymentIntent();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, step, storybook.id, type, price, clientSecret, bookSize, spineText, spineTextColor, spineBackgroundColor]);
+  }, [open, step, storybook.id, type, price, clientSecret, bookSize]);
 
   const handleBookOptionsSubmit = (values: BookOptionsFormValues) => {
     setBookSize(values.bookSize);
-    setSpineText(values.spineText || '');
-    setSpineTextColor(values.spineTextColor);
-    setSpineBackgroundColor(values.spineBackgroundColor);
     setStep(2);
   };
 
@@ -372,83 +348,6 @@ function CheckoutDialog({ open, onOpenChange, storybook, type, price }: Checkout
                   )}
                 />
 
-                <FormField
-                  control={form.control}
-                  name="spineText"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Spine Text (Optional)</FormLabel>
-                      <FormControl>
-                        <Input 
-                          placeholder="Enter spine text (max 50 chars)" 
-                          maxLength={50}
-                          data-testid="input-spine-text"
-                          {...field} 
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="spineTextColor"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Spine Text Color</FormLabel>
-                      <div className="flex gap-2">
-                        <FormControl>
-                          <Input 
-                            type="color" 
-                            className="w-16 h-10 p-1"
-                            data-testid="input-spine-text-color"
-                            {...field} 
-                          />
-                        </FormControl>
-                        <FormControl>
-                          <Input 
-                            type="text" 
-                            placeholder="#000000"
-                            data-testid="input-spine-text-color-hex"
-                            {...field} 
-                          />
-                        </FormControl>
-                      </div>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="spineBackgroundColor"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Spine Background Color</FormLabel>
-                      <div className="flex gap-2">
-                        <FormControl>
-                          <Input 
-                            type="color" 
-                            className="w-16 h-10 p-1"
-                            data-testid="input-spine-bg-color"
-                            {...field} 
-                          />
-                        </FormControl>
-                        <FormControl>
-                          <Input 
-                            type="text" 
-                            placeholder="#FFFFFF"
-                            data-testid="input-spine-bg-color-hex"
-                            {...field} 
-                          />
-                        </FormControl>
-                      </div>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
                 <Button
                   type="submit"
                   className="w-full gradient-bg hover:opacity-90 !text-[hsl(258,90%,20%)]"
@@ -505,9 +404,6 @@ function CheckoutDialog({ open, onOpenChange, storybook, type, price }: Checkout
                       type={type}
                       onSuccess={handleSuccess}
                       bookSize={type === 'print' ? bookSize : undefined}
-                      spineText={type === 'print' ? spineText : undefined}
-                      spineTextColor={type === 'print' ? spineTextColor : undefined}
-                      spineBackgroundColor={type === 'print' ? spineBackgroundColor : undefined}
                     />
                   </Elements>
                 ) : (
@@ -539,32 +435,21 @@ function DownloadCustomizationDialog({ open, onOpenChange, storybook }: Download
     resolver: zodResolver(bookOptionsSchema),
     defaultValues: {
       bookSize: 'a5-portrait',
-      spineText: storybook.title || '',
-      spineTextColor: '#000000',
-      spineBackgroundColor: '#FFFFFF',
     },
   });
 
-  // Reset form when dialog opens with current storybook title
+  // Reset form when dialog opens
   useEffect(() => {
     if (open) {
       form.reset({
         bookSize: 'a5-portrait',
-        spineText: storybook.title || '',
-        spineTextColor: '#000000',
-        spineBackgroundColor: '#FFFFFF',
       });
     }
-  }, [open, storybook.title, form]);
+  }, [open, form]);
 
   const handleDownload = (values: BookOptionsFormValues) => {
     const params = new URLSearchParams();
     params.append('bookSize', values.bookSize);
-    if (values.spineText) {
-      params.append('spineText', values.spineText);
-    }
-    params.append('spineTextColor', values.spineTextColor);
-    params.append('spineBackgroundColor', values.spineBackgroundColor);
     
     window.open(`/api/storybooks/${storybook.id}/download-print-pdf?${params.toString()}`);
     
@@ -618,70 +503,6 @@ function DownloadCustomizationDialog({ open, onOpenChange, storybook }: Download
                   </FormItem>
                 )}
               />
-
-              <FormField
-                control={form.control}
-                name="spineText"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Spine Text (Optional)</FormLabel>
-                    <FormControl>
-                      <Input 
-                        placeholder="Enter spine text" 
-                        {...field} 
-                        data-testid="input-spine-text"
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <div className="grid grid-cols-2 gap-4">
-                <FormField
-                  control={form.control}
-                  name="spineTextColor"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Text Color</FormLabel>
-                      <div className="flex gap-2 items-center">
-                        <FormControl>
-                          <Input 
-                            type="color" 
-                            {...field} 
-                            className="h-10 w-full cursor-pointer"
-                            data-testid="input-spine-text-color"
-                          />
-                        </FormControl>
-                        <span className="text-xs text-muted-foreground">{field.value}</span>
-                      </div>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="spineBackgroundColor"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Background Color</FormLabel>
-                      <div className="flex gap-2 items-center">
-                        <FormControl>
-                          <Input 
-                            type="color" 
-                            {...field} 
-                            className="h-10 w-full cursor-pointer"
-                            data-testid="input-spine-background-color"
-                          />
-                        </FormControl>
-                        <span className="text-xs text-muted-foreground">{field.value}</span>
-                      </div>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
 
               <div className="flex gap-2 pt-2">
                 <Button
