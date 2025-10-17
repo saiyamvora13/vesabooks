@@ -11,6 +11,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { FileUpload } from "@/components/ui/file-upload";
 import { ProgressTracker } from "@/components/ui/progress-tracker";
 import Navigation from "@/components/navigation";
@@ -47,6 +48,7 @@ export default function Create() {
   const createStorySchema = useMemo(() => z.object({
     prompt: z.string().min(10, t('common.validation.promptMinLength')),
     author: z.string().optional(),
+    illustrationStyle: z.string().default("vibrant and colorful children's book illustration"),
     images: z.array(z.instanceof(File)).min(0).max(5, t('common.validation.maxImagesExceeded')),
   }), [i18n.language]);
 
@@ -59,6 +61,7 @@ export default function Create() {
     defaultValues: {
       prompt: "",
       author: "",
+      illustrationStyle: "vibrant and colorful children's book illustration",
       images: [],
     },
   });
@@ -78,6 +81,7 @@ export default function Create() {
       if (data.author) {
         formData.append("author", data.author);
       }
+      formData.append("illustrationStyle", data.illustrationStyle);
       data.images.forEach(image => {
         formData.append("images", image);
       });
@@ -476,6 +480,45 @@ export default function Create() {
                         <div className="text-sm text-muted-foreground">
                           <i className="fas fa-info-circle mr-1"></i>
                           If left blank, your full name will be used as the author
+                        </div>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  {/* Illustration Style */}
+                  <FormField
+                    control={form.control}
+                    name="illustrationStyle"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-base sm:text-sm font-semibold flex items-center">
+                          <i className="fas fa-palette text-primary mr-2"></i>
+                          Illustration Style
+                        </FormLabel>
+                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                          <FormControl>
+                            <SelectTrigger className="rounded-2xl" data-testid="select-illustration-style">
+                              <SelectValue placeholder="Select illustration style" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="vibrant and colorful children's book illustration">Vibrant and colorful children's book illustration</SelectItem>
+                            <SelectItem value="watercolor illustration style with soft, dreamy colors and gentle blending">Watercolor Illustration</SelectItem>
+                            <SelectItem value="digital cartoon style with bold colors and clean lines">Digital Cartoon Style</SelectItem>
+                            <SelectItem value="3D digital art style with depth and dimensionality">3D Digital Art</SelectItem>
+                            <SelectItem value="vintage storybook style with classic, nostalgic aesthetic">Vintage Storybook</SelectItem>
+                            <SelectItem value="kawaii cute style with adorable characters and big eyes">Kawaii/Cute Style</SelectItem>
+                            <SelectItem value="comic book style with dynamic panels and bold outlines">Comic Book Style</SelectItem>
+                            <SelectItem value="pastel drawing style with gentle, chalk-like textures">Pastel Drawing</SelectItem>
+                            <SelectItem value="realistic illustration with photo-realistic, detailed artwork">Realistic Illustration</SelectItem>
+                            <SelectItem value="minimalist flat design with simple shapes and limited colors">Minimalist Flat Design</SelectItem>
+                            <SelectItem value="oil painting style with rich textures and classic artistic feel">Oil Painting Style</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <div className="text-sm text-muted-foreground">
+                          <i className="fas fa-info-circle mr-1"></i>
+                          Choose the art style for your storybook illustrations
                         </div>
                         <FormMessage />
                       </FormItem>
