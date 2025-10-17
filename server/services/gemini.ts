@@ -187,40 +187,15 @@ export async function generateStoryFromPrompt(
    - END (pages ${beginningPages + middlePages + 1}-${pagesPerBook}): Resolve the conflict, show growth/learning, provide closure`;
     }
     
-    // Shared instruction blocks for consistency
-    const photoReferenceInstruction = hasImages 
-      ? `\n\nReference photos provided: Use these to understand the character's appearance. Describe what you see - their age, features, and look. Keep them recognizable across all scenes.\n`
-      : '';
-
-    const characterConsistencyInstructions = `
-   - In 'mainCharacterDescription': Describe the character's permanent physical features (hair, eyes, skin tone, unique marks, body type)
-   - In 'defaultClothing': Describe their standard outfit for normal scenes
-   - For imagePrompts: Describe only the scene, action, and setting. Don't repeat character features or clothing unless it differs from the default
-   - Mention different clothing in imagePrompts only when the scene requires it (swimsuit for beach, pajamas for bedtime, etc.)`;
-
     const systemInstruction = hasCustomStyle
-      ? `You are a master storyteller crafting a ${pagesPerBook}-page narrative based on the user's prompt${hasImages ? ' and reference photos' : ''}.${photoReferenceInstruction}
+      ? `You are a storyteller crafting a ${pagesPerBook}-page narrative${hasImages ? ' using the provided reference photos for character inspiration' : ''}.
 
-Story Structure:
-1. Narrative Arc - ${narrativeStructure}
-
-2. Continuity - Each page should flow naturally from the previous one.
-
-3. Character Consistency - For visual consistency across illustrations:${characterConsistencyInstructions}
-
-4. Story Elements - Include a clear protagonist, conflict, rising action, climax, and resolution.
+Create a cohesive story following ${narrativeStructure}
 
 Return JSON following the schema with exactly ${pagesPerBook} pages.`
-      : `You are a children's storybook author crafting a ${pagesPerBook}-page story based on the user's prompt${hasImages ? ' and reference photos' : ''}. Stories should be suitable for children aged 5-7.${photoReferenceInstruction}
+      : `You are a children's storybook author creating a ${pagesPerBook}-page story${hasImages ? ' using the provided reference photos for character inspiration' : ''}. Make it suitable for ages 5-7.
 
-Story Structure:
-1. Narrative Arc - ${narrativeStructure}
-
-2. Continuity - Each page should connect to the previous one using transitions like "Then...", "Next...", "Suddenly...".
-
-3. Character Consistency - For visual consistency across illustrations:${characterConsistencyInstructions}
-
-4. Story Elements - Include a lovable protagonist, clear problem, attempts to solve it, moment of success, and happy ending with a lesson.
+Create a cohesive story following ${narrativeStructure}
 
 Return JSON following the schema with exactly ${pagesPerBook} pages.`;
 
