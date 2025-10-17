@@ -187,73 +187,40 @@ export async function generateStoryFromPrompt(
    - END (pages ${beginningPages + middlePages + 1}-${pagesPerBook}): Resolve the conflict, show growth/learning, provide closure`;
     }
     
-    // Special instruction when photos are uploaded
+    // Shared instruction blocks for consistency
     const photoReferenceInstruction = hasImages 
-      ? `\n\n🔴 CRITICAL PHOTO REFERENCE INSTRUCTIONS 🔴
-${inspirationImagePaths.length} reference photo(s) have been provided. You MUST:
-1. DESCRIBE EXACTLY WHAT YOU SEE in the photos - same age, same physical features, same appearance
-2. If the photo shows adults, the character MUST be an adult (do NOT change to children)
-3. If the photo shows children, the character MUST be a child (do NOT change to adults)
-4. Match ALL physical details from the photo: age, gender, hair, eyes, skin tone, facial features, build
-5. The character description should read like a detailed description of the ACTUAL PERSON in the photo
-6. Only deviate from the photo if the user's prompt EXPLICITLY requests changes (e.g., "make me a superhero")
-
-These photos are NOT just "inspiration" - they are EXACT VISUAL REFERENCES for how characters should look.\n`
+      ? `\n\nReference photos provided: Use these to understand the character's appearance. Describe what you see - their age, features, and look. Keep them recognizable across all scenes.\n`
       : '';
 
+    const characterConsistencyInstructions = `
+   - In 'mainCharacterDescription': Describe the character's permanent physical features (hair, eyes, skin tone, unique marks, body type)
+   - In 'defaultClothing': Describe their standard outfit for normal scenes
+   - For imagePrompts: Describe only the scene, action, and setting. Don't repeat character features or clothing unless it differs from the default
+   - Mention different clothing in imagePrompts only when the scene requires it (swimsuit for beach, pajamas for bedtime, etc.)`;
+
     const systemInstruction = hasCustomStyle
-      ? `You are a master storyteller crafting a complete ${pagesPerBook}-page narrative based on a user's prompt${hasImages ? ' and EXACT reference photos' : ''}. ${photoReferenceInstruction}
+      ? `You are a master storyteller crafting a ${pagesPerBook}-page narrative based on the user's prompt${hasImages ? ' and reference photos' : ''}.${photoReferenceInstruction}
 
-CRITICAL STORY STRUCTURE REQUIREMENTS:
-1. NARRATIVE ARC - ${narrativeStructure}
+Story Structure:
+1. Narrative Arc - ${narrativeStructure}
 
-2. CONTINUITY - Each page must flow naturally from the previous one. Avoid random disconnected scenes.
+2. Continuity - Each page should flow naturally from the previous one.
 
-3. CHARACTER CONSISTENCY - This is CRITICAL for visual consistency across all ${pagesPerBook}+ illustrations:
-   - In 'mainCharacterDescription': Create an EXTREMELY DETAILED description of PERMANENT physical features ONLY
-   - Front-load the most important features first (hair color/style, eye color, facial features)
-   - Include ONLY features that NEVER change: hair, eyes, skin tone, unique marks (freckles, birthmarks, scars, gaps in teeth), body type, facial structure
-   - In 'defaultClothing': Describe the character's STANDARD outfit they wear in normal scenes
-   - The default clothing will be maintained throughout the story UNLESS the scene context requires different clothing
-   - For imagePrompts: Describe ONLY the scene, action, and setting. Do NOT describe clothing unless it DIFFERS from the default
-   - NEVER repeat character features or default clothing in imagePrompts - they will be prepended automatically
-   - Context-appropriate clothing changes (ONLY mention these in imagePrompts when needed):
-     * Swimming/beach/pool scenes → "wearing a swimsuit"
-     * Bedtime/sleeping scenes → "wearing pajamas"
-     * Rain/storm scenes → "wearing a raincoat and boots"
-     * Winter/snow scenes → "wearing a winter coat, hat, and gloves"
-     * Formal events → "wearing formal attire" or "wearing a fancy dress/suit"
-     * Sports/exercise → "wearing athletic clothes"
-   - If the scene doesn't require special clothing, say NOTHING about clothing
+3. Character Consistency - For visual consistency across illustrations:${characterConsistencyInstructions}
 
-4. STORY ELEMENTS - Include: clear protagonist, conflict/problem, rising action, climax, and resolution.
+4. Story Elements - Include a clear protagonist, conflict, rising action, climax, and resolution.
 
-Respect the user's style preferences. Return JSON following the schema with exactly ${pagesPerBook} pages.`
-      : `You are a master children's storybook author crafting a complete ${pagesPerBook}-page story based on a user's prompt${hasImages ? ' and EXACT reference photos' : ''}. Stories should be suitable for children aged 5-7.${photoReferenceInstruction}
+Return JSON following the schema with exactly ${pagesPerBook} pages.`
+      : `You are a children's storybook author crafting a ${pagesPerBook}-page story based on the user's prompt${hasImages ? ' and reference photos' : ''}. Stories should be suitable for children aged 5-7.${photoReferenceInstruction}
 
-CRITICAL STORY STRUCTURE REQUIREMENTS:
-1. NARRATIVE ARC - ${narrativeStructure}
+Story Structure:
+1. Narrative Arc - ${narrativeStructure}
 
-2. CONTINUITY - Each page must connect to the previous one. No random jumps. Use transitions like "Then...", "Next...", "Suddenly...".
+2. Continuity - Each page should connect to the previous one using transitions like "Then...", "Next...", "Suddenly...".
 
-3. CHARACTER CONSISTENCY - This is CRITICAL for visual consistency across all ${pagesPerBook}+ illustrations:
-   - In 'mainCharacterDescription': Create an EXTREMELY DETAILED description of PERMANENT physical features ONLY
-   - Front-load the most important features first (hair color/style, eye color, facial features)
-   - Include ONLY features that NEVER change: hair, eyes, skin tone, unique marks (freckles, birthmarks, scars, gaps in teeth), body type, facial structure
-   - In 'defaultClothing': Describe the character's STANDARD outfit they wear in normal scenes
-   - The default clothing will be maintained throughout the story UNLESS the scene context requires different clothing
-   - For imagePrompts: Describe ONLY the scene, action, and setting. Do NOT describe clothing unless it DIFFERS from the default
-   - NEVER repeat character features or default clothing in imagePrompts - they will be prepended automatically
-   - Context-appropriate clothing changes (ONLY mention these in imagePrompts when needed):
-     * Swimming/beach/pool scenes → "wearing a swimsuit"
-     * Bedtime/sleeping scenes → "wearing pajamas"
-     * Rain/storm scenes → "wearing a raincoat and boots"
-     * Winter/snow scenes → "wearing a winter coat, hat, and gloves"
-     * Formal events → "wearing formal attire" or "wearing a fancy dress/suit"
-     * Sports/exercise → "wearing athletic clothes"
-   - If the scene doesn't require special clothing, say NOTHING about clothing
+3. Character Consistency - For visual consistency across illustrations:${characterConsistencyInstructions}
 
-4. STORY ELEMENTS - Include: lovable protagonist, clear problem, attempts to solve it, moment of success, happy ending with lesson.
+4. Story Elements - Include a lovable protagonist, clear problem, attempts to solve it, moment of success, and happy ending with a lesson.
 
 Return JSON following the schema with exactly ${pagesPerBook} pages.`;
 
