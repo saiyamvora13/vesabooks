@@ -499,7 +499,7 @@ export default function Create() {
                         <FormControl>
                           <Select 
                             onValueChange={field.onChange} 
-                            defaultValue={field.value}
+                            value={field.value ?? "vibrant and colorful children's book illustration"}
                           >
                             <SelectTrigger className="rounded-2xl" data-testid="select-illustration-style">
                               <SelectValue placeholder="Select illustration style" />
