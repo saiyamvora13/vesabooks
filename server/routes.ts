@@ -1584,7 +1584,7 @@ Sitemap: ${baseUrl}/sitemap.xml`;
     },
     async (req: any, res) => {
       try {
-        const { prompt, author } = req.body;
+        const { prompt, author, illustrationStyle } = req.body;
         const files = req.files as Express.Multer.File[] | undefined;
         
         // Determine user ID (authenticated or null for anonymous)
@@ -1601,6 +1601,9 @@ Sitemap: ${baseUrl}/sitemap.xml`;
         // Images are now optional - handle empty or undefined files
         const imagePaths = files ? files.map(f => f.path) : [];
         const imageFilenames = files ? files.map(f => f.filename) : [];
+
+        // Use provided illustration style or default
+        const finalIllustrationStyle = illustrationStyle || "vibrant and colorful children's book illustration";
 
         // Validate request
         const validationResult = createStorybookSchema.safeParse({
@@ -1635,8 +1638,8 @@ Sitemap: ${baseUrl}/sitemap.xml`;
           await storage.incrementIpStoryCount(ipAddress);
         }
 
-        // Start generation in background with userId (null for anonymous), author, and pagesPerBook
-        generateStorybookAsync(sessionId, userId, prompt, authorName, imagePaths, validatedPagesPerBook)
+        // Start generation in background with userId (null for anonymous), author, pagesPerBook, and illustrationStyle
+        generateStorybookAsync(sessionId, userId, prompt, authorName, imagePaths, validatedPagesPerBook, finalIllustrationStyle)
           .catch((error: unknown) => {
             console.error("Story generation failed:", error);
             const errorMessage = error instanceof Error ? error.message : 'Unknown error';
@@ -3069,7 +3072,8 @@ async function generateStorybookAsync(
   prompt: string,
   author: string,
   imagePaths: string[],
-  pagesPerBook: number = 3
+  pagesPerBook: number = 3,
+  illustrationStyle: string = "vibrant and colorful children's book illustration"
 ): Promise<void> {
   try {
     // Step 1: Processing images
@@ -3122,15 +3126,12 @@ async function generateStorybookAsync(
       mainCharacterDescription: generatedStory.mainCharacterDescription,
       defaultClothing: generatedStory.defaultClothing,
       scenePrompt: generatedStory.coverImagePrompt,
-      artStyle: generatedStory.artStyle,
+      artStyle: illustrationStyle,
     });
-    
-    // Extract art style for consistency across all images
-    const artStyle = generatedStory.artStyle;
     
     // For cover image: use all uploaded inspiration images as references
     const coverReferences = imagePaths.length > 0 ? imagePaths : undefined;
-    await generateIllustration(coverPromptWithCharacter, coverImagePath, coverReferences, artStyle);
+    await generateIllustration(coverPromptWithCharacter, coverImagePath, coverReferences, illustrationStyle);
     
     // Upload cover image to Object Storage
     const coverImageUrl = await objectStorage.uploadFile(coverImagePath, coverImageFileName);
@@ -3150,7 +3151,7 @@ async function generateStorybookAsync(
         mainCharacterDescription: generatedStory.mainCharacterDescription,
         defaultClothing: generatedStory.defaultClothing,
         scenePrompt: page.imagePrompt,
-        artStyle: generatedStory.artStyle,
+        artStyle: illustrationStyle,
       });
       
       // Progressive visual reference chain: use BOTH uploaded inspiration images AND cover image
@@ -3159,7 +3160,7 @@ async function generateStorybookAsync(
       if (fs.existsSync(coverImagePath)) {
         pageReferences.push(coverImagePath);
       }
-      await generateIllustration(pagePromptWithCharacter, imagePath, pageReferences.length > 0 ? pageReferences : undefined, artStyle);
+      await generateIllustration(pagePromptWithCharacter, imagePath, pageReferences.length > 0 ? pageReferences : undefined, illustrationStyle);
 
       // Upload to Object Storage
       const imageUrl = await objectStorage.uploadFile(imagePath, imageFileName);
@@ -3204,7 +3205,7 @@ async function generateStorybookAsync(
       mainCharacterDescription: generatedStory.mainCharacterDescription,
       defaultClothing: generatedStory.defaultClothing,
       scenePrompt: backCoverBasePrompt,
-      artStyle: generatedStory.artStyle,
+      artStyle: illustrationStyle,
     });
     
     // Progressive visual reference chain: use BOTH uploaded inspiration images AND cover image for back cover
@@ -3212,7 +3213,7 @@ async function generateStorybookAsync(
     if (fs.existsSync(coverImagePath)) {
       backCoverReferences.push(coverImagePath);
     }
-    await generateIllustration(backCoverPromptWithCharacter, backCoverImagePath, backCoverReferences.length > 0 ? backCoverReferences : undefined, artStyle);
+    await generateIllustration(backCoverPromptWithCharacter, backCoverImagePath, backCoverReferences.length > 0 ? backCoverReferences : undefined, illustrationStyle);
     
     // Upload back cover to Object Storage
     const backCoverImageUrl = await objectStorage.uploadFile(backCoverImagePath, backCoverImageFileName);
