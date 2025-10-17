@@ -496,26 +496,26 @@ export default function Create() {
                           <i className="fas fa-palette text-primary mr-2"></i>
                           Illustration Style
                         </FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value || "vibrant and colorful children's book illustration"}>
-                          <FormControl>
+                        <FormControl>
+                          <Select onValueChange={field.onChange} value={field.value || "vibrant and colorful children's book illustration"}>
                             <SelectTrigger className="rounded-2xl" data-testid="select-illustration-style">
                               <SelectValue placeholder="Select illustration style" />
                             </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            <SelectItem value="vibrant and colorful children's book illustration">Vibrant and colorful children's book illustration</SelectItem>
-                            <SelectItem value="watercolor illustration style with soft, dreamy colors and gentle blending">Watercolor Illustration</SelectItem>
-                            <SelectItem value="digital cartoon style with bold colors and clean lines">Digital Cartoon Style</SelectItem>
-                            <SelectItem value="3D digital art style with depth and dimensionality">3D Digital Art</SelectItem>
-                            <SelectItem value="vintage storybook style with classic, nostalgic aesthetic">Vintage Storybook</SelectItem>
-                            <SelectItem value="kawaii cute style with adorable characters and big eyes">Kawaii/Cute Style</SelectItem>
-                            <SelectItem value="comic book style with dynamic panels and bold outlines">Comic Book Style</SelectItem>
-                            <SelectItem value="pastel drawing style with gentle, chalk-like textures">Pastel Drawing</SelectItem>
-                            <SelectItem value="realistic illustration with photo-realistic, detailed artwork">Realistic Illustration</SelectItem>
-                            <SelectItem value="minimalist flat design with simple shapes and limited colors">Minimalist Flat Design</SelectItem>
-                            <SelectItem value="oil painting style with rich textures and classic artistic feel">Oil Painting Style</SelectItem>
-                          </SelectContent>
-                        </Select>
+                            <SelectContent>
+                              <SelectItem value="vibrant and colorful children's book illustration">Vibrant and colorful children's book illustration</SelectItem>
+                              <SelectItem value="watercolor illustration style with soft, dreamy colors and gentle blending">Watercolor Illustration</SelectItem>
+                              <SelectItem value="digital cartoon style with bold colors and clean lines">Digital Cartoon Style</SelectItem>
+                              <SelectItem value="3D digital art style with depth and dimensionality">3D Digital Art</SelectItem>
+                              <SelectItem value="vintage storybook style with classic, nostalgic aesthetic">Vintage Storybook</SelectItem>
+                              <SelectItem value="kawaii cute style with adorable characters and big eyes">Kawaii/Cute Style</SelectItem>
+                              <SelectItem value="comic book style with dynamic panels and bold outlines">Comic Book Style</SelectItem>
+                              <SelectItem value="pastel drawing style with gentle, chalk-like textures">Pastel Drawing</SelectItem>
+                              <SelectItem value="realistic illustration with photo-realistic, detailed artwork">Realistic Illustration</SelectItem>
+                              <SelectItem value="minimalist flat design with simple shapes and limited colors">Minimalist Flat Design</SelectItem>
+                              <SelectItem value="oil painting style with rich textures and classic artistic feel">Oil Painting Style</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </FormControl>
                         <div className="text-sm text-muted-foreground">
                           <i className="fas fa-info-circle mr-1"></i>
                           Choose the art style for your storybook illustrations
