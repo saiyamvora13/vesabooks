@@ -101,6 +101,10 @@ export const purchases = pgTable("purchases", {
   price: numeric("price").notNull(),
   stripePaymentIntentId: text("stripe_payment_intent_id").notNull(),
   status: text("status").notNull().default('pending'),
+  bookSize: text("book_size").default('a5-portrait'),
+  spineText: text("spine_text"),
+  spineTextColor: text("spine_text_color").default('#000000'),
+  spineBackgroundColor: text("spine_background_color").default('#FFFFFF'),
   createdAt: timestamp("created_at").defaultNow(),
 }, (table) => [
   index("idx_purchases_user").on(table.userId),
