@@ -472,11 +472,6 @@ SCENE: `
       // Step 4: Combine everything
       fullPrompt = photoMatchingPrefix + sceneDescription + styleDirective;
       
-      // Add extra emphasis for photo matching
-      if (hasReferences) {
-        fullPrompt += '\n\n🔴 CRITICAL: The character in your generated image MUST look EXACTLY like they appear in ALL reference images - same age, same facial features, same appearance. Only the scene/setting/pose should change. The character themselves must be VISUALLY IDENTICAL to the references.';
-      }
-      
       console.log(`[generateIllustration] Full prompt sent to Gemini: ${fullPrompt.substring(0, 250)}...`);
       
       const contentParts: any[] = [];
