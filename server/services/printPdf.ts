@@ -1,4 +1,4 @@
-import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
+import { PDFDocument, rgb, StandardFonts, degrees } from 'pdf-lib';
 import fontkit from '@pdf-lib/fontkit';
 import type { Storybook } from "@shared/schema";
 import { ObjectStorageService } from "../objectStorage";
@@ -132,25 +132,39 @@ export async function generatePrintReadyPDF(
     return { r, g, b };
   };
   
-  // Count content pages to calculate total page count
-  let contentPageCount = 0;
+  // Count actual content pages from storybook
+  let actualContentPages = 0;
   for (const page of storybook.pages) {
     const hasImage = !!page.imageUrl;
     const hasText = !!(page.text && page.text.trim());
     if (hasImage || hasText) {
-      contentPageCount++;
+      actualContentPages++;
     }
   }
   
-  // Interior pages must be even for professional printing
-  // Add blank page if content page count is odd
-  let needsBlankPage = contentPageCount % 2 !== 0;
-  if (needsBlankPage) {
-    contentPageCount++; // Will add actual blank page later in the loop
+  // Calculate minimum interior pages needed
+  // Total pages = 1 (wraparound cover) + interior pages
+  // Minimum total is 24, so minimum interior is 23
+  // But interior must be even, so minimum is 24 interior pages
+  const MIN_TOTAL_PAGES = 24;
+  const MIN_INTERIOR_PAGES = MIN_TOTAL_PAGES - 1; // 23
+  const MIN_EVEN_INTERIOR = MIN_INTERIOR_PAGES % 2 === 0 ? MIN_INTERIOR_PAGES : MIN_INTERIOR_PAGES + 1; // 24
+  
+  // Calculate required interior pages (must be at least minimum and must be even)
+  let requiredInteriorPages = Math.max(actualContentPages, MIN_EVEN_INTERIOR);
+  if (requiredInteriorPages % 2 !== 0) {
+    requiredInteriorPages++; // Make even
   }
   
-  // Calculate total page count (1 wraparound cover + even interior pages)
-  const totalPages = 1 + contentPageCount;
+  // Calculate how many blank pages we need to add
+  const blankPagesToAdd = requiredInteriorPages - actualContentPages;
+  
+  if (blankPagesToAdd > 0) {
+    console.log(`📄 Adding ${blankPagesToAdd} blank pages (${actualContentPages} content → ${requiredInteriorPages} total interior pages)`);
+  }
+  
+  // Calculate total page count (1 wraparound cover + interior pages)
+  const totalPages = 1 + requiredInteriorPages;
   
   // Calculate spine width based on total page count
   const spineWidthInches = Math.max(0.5, (totalPages * 0.002));
@@ -158,7 +172,7 @@ export async function generatePrintReadyPDF(
   const SPREAD_WIDTH = PAGE_WIDTH + SPINE_WIDTH + PAGE_WIDTH;
   
   console.log(`📖 Creating wraparound cover spread: ${SPREAD_WIDTH.toFixed(2)} pts wide (back: ${PAGE_WIDTH.toFixed(2)} + spine: ${SPINE_WIDTH.toFixed(2)} + front: ${PAGE_WIDTH.toFixed(2)})`);
-  console.log(`📄 Total pages: ${totalPages} (1 wraparound cover + ${contentPageCount} interior pages${needsBlankPage ? ', includes 1 blank for even count' : ''})`);
+  console.log(`📄 Total pages: ${totalPages} (1 wraparound cover + ${requiredInteriorPages} interior pages)`);
   
   // PAGE 1: WRAPAROUND COVER SPREAD (back + spine + front)
   const wraparoundCover = pdfDoc.addPage([SPREAD_WIDTH, PAGE_HEIGHT]);
@@ -237,7 +251,7 @@ export async function generatePrintReadyPDF(
       size: spineFontSize,
       font: boldFont,
       color: rgb(textColor.r, textColor.g, textColor.b),
-      rotate: { angle: 90, type: 'degrees' },
+      rotate: degrees(90),
     });
   }
   
@@ -460,9 +474,8 @@ export async function generatePrintReadyPDF(
     }
   }
   
-  // Add blank page if needed to make total even
-  if (needsBlankPage) {
-    console.log(`📄 Adding blank page to ensure even page count`);
+  // Add blank pages to meet minimum page count
+  for (let i = 0; i < blankPagesToAdd; i++) {
     const blankPage = pdfDoc.addPage([PAGE_WIDTH, PAGE_HEIGHT]);
     blankPage.drawRectangle({
       x: 0,
