@@ -3090,7 +3090,7 @@ async function generateStorybookAsync(
       message: `Generating ${pagesPerBook}-page story outline...`,
     });
 
-    const generatedStory = await generateStoryFromPrompt(prompt, imagePaths, pagesPerBook);
+    const generatedStory = await generateStoryFromPrompt(prompt, imagePaths, pagesPerBook, illustrationStyle);
 
     // Step 3: Generate illustrations
     await storage.setGenerationProgress(sessionId, {
@@ -3243,7 +3243,7 @@ async function generateStorybookAsync(
       mainCharacterDescription: generatedStory.mainCharacterDescription,
       defaultClothing: generatedStory.defaultClothing,
       storyArc: generatedStory.storyArc,
-      artStyle: generatedStory.artStyle,
+      artStyle: illustrationStyle,
     });
 
     // Track story completion (non-blocking)

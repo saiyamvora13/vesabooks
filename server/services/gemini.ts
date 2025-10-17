@@ -29,70 +29,6 @@ function getMimeType(filePath: string): string {
   return 'image/jpeg'; // default fallback
 }
 
-// Helper function to detect if the prompt already contains style instructions
-function hasStyleInstructions(prompt: string): boolean {
-  const lowerPrompt = prompt.toLowerCase();
-  
-  // Check for explicit style keywords
-  const styleKeywords = [
-    'style', 'realistic', 'photorealistic', 'photo-realistic', 'photograph',
-    'cartoon', 'animated', 'anime', 'manga',
-    'oil painting', 'watercolor', 'sketch', 'drawing', 'pencil',
-    '3d', 'cgi', 'rendered', 'render',
-    'vintage', 'retro', 'modern', 'contemporary',
-    'abstract', 'surreal', 'impressionist',
-    'noir', 'black and white', 'monochrome',
-    'cinematic', 'dramatic lighting',
-    'minimalist', 'detailed', 'hyper-realistic'
-  ];
-  
-  return styleKeywords.some(keyword => lowerPrompt.includes(keyword));
-}
-
-// Helper function to extract the art style directive from user prompt for consistency
-function extractArtStyle(prompt: string, hasPhotos: boolean = false): string | undefined {
-  if (!hasStyleInstructions(prompt)) {
-    // No custom style specified, return undefined so we use the default children's book style
-    // This applies regardless of whether photos are uploaded or not
-    return undefined;
-  }
-  
-  // User has specified a custom style - extract it from the prompt
-  const lowerPrompt = prompt.toLowerCase();
-  
-  // Look for common style patterns
-  const stylePatterns = [
-    /in\s+(?:the\s+)?style\s+of\s+([^.,;!?]+)/i,
-    /(?:as|like)\s+(?:a\s+)?([^.,;!?]*(?:painting|illustration|photo|photograph|cartoon|anime|drawing|sketch)[^.,;!?]*)/i,
-    /(photo-?realistic|photorealistic|realistic|cinematic|dramatic|noir|vintage|retro|modern|contemporary|minimalist|abstract|surreal|impressionist|watercolor|oil\s+painting|3d\s+render(?:ed)?|animated|cartoon|anime|manga)(?:\s+style)?/i,
-  ];
-  
-  for (const pattern of stylePatterns) {
-    const match = prompt.match(pattern);
-    if (match && match[1]) {
-      const extractedStyle = match[1].trim();
-      // Return the extracted style with "style" suffix if not already present
-      return extractedStyle.toLowerCase().includes('style') ? extractedStyle : `${extractedStyle} style`;
-    }
-  }
-  
-  // If we detected style keywords but couldn't extract specific style, return a generic description
-  if (lowerPrompt.includes('realistic') || lowerPrompt.includes('photo')) {
-    return "realistic, detailed, high quality style";
-  }
-  if (lowerPrompt.includes('cartoon') || lowerPrompt.includes('animated')) {
-    return "vibrant cartoon style, colorful, animated look";
-  }
-  if (lowerPrompt.includes('watercolor')) {
-    return "watercolor painting style, soft, artistic";
-  }
-  if (lowerPrompt.includes('cinematic')) {
-    return "cinematic style, dramatic lighting, movie-like quality";
-  }
-  
-  // Fallback: return undefined to use Gemini's interpretation
-  return undefined;
-}
 
 // Import and re-export from shared utility
 import { optimizeImageForWeb } from '../utils/imageOptimization';
@@ -141,12 +77,10 @@ Return ONLY the single mood word that best matches the text.`;
 export async function generateStoryFromPrompt(
   prompt: string,
   inspirationImagePaths: string[],
-  pagesPerBook: number = 3
+  pagesPerBook: number = 3,
+  illustrationStyle: string = "vibrant and colorful children's book illustration"
 ): Promise<GeneratedStory> {
   try {
-    // Adapt system instruction based on whether user specified a style
-    const hasCustomStyle = hasStyleInstructions(prompt);
-    
     const hasImages = inspirationImagePaths && inspirationImagePaths.length > 0;
     
     // Calculate story structure pacing - simple and robust for all page counts
@@ -187,13 +121,7 @@ export async function generateStoryFromPrompt(
    - END (pages ${beginningPages + middlePages + 1}-${pagesPerBook}): Resolve the conflict, show growth/learning, provide closure`;
     }
     
-    const systemInstruction = hasCustomStyle
-      ? `You are a storyteller crafting a ${pagesPerBook}-page narrative${hasImages ? ' using the provided reference photos for character inspiration' : ''}.
-
-Create a cohesive story following ${narrativeStructure}
-
-Return JSON following the schema with exactly ${pagesPerBook} pages.`
-      : `You are a children's storybook author creating a ${pagesPerBook}-page story${hasImages ? ' using the provided reference photos for character inspiration' : ''}. Make it suitable for ages 5-7.
+    const systemInstruction = `You are a children's storybook author creating a ${pagesPerBook}-page story${hasImages ? ' using the provided reference photos for character inspiration' : ''}. Make it suitable for ages 5-7.
 
 Create a cohesive story following ${narrativeStructure}
 
@@ -316,9 +244,8 @@ Return JSON following the schema with exactly ${pagesPerBook} pages.`;
       parsedJson.author = "AI Storyteller";
     }
 
-    // Extract and store the art style from the original user prompt for consistency across all images
-    // If photos are uploaded and no style specified, default to photo-realistic
-    parsedJson.artStyle = extractArtStyle(prompt, hasImages);
+    // Store the user-selected illustration style from dropdown for consistency across all images
+    parsedJson.artStyle = illustrationStyle;
 
     // Analyze mood for each page and log structured scene details
     if (parsedJson.pages && Array.isArray(parsedJson.pages)) {
