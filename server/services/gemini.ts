@@ -179,7 +179,7 @@ Return JSON following the schema with exactly ${pagesPerBook} pages.`;
         },
         coverImagePrompt: {
           type: Type.STRING,
-          description: "Description of the cover scene (character description will be added automatically).",
+          description: "Description of the cover scene (character description will be added automatically). IMPORTANT: The cover illustration MUST include the story title displayed prominently at the top and the author name at the bottom, as decorative text that's part of the image composition.",
         },
         pages: {
           type: Type.ARRAY,
