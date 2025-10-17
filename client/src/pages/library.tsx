@@ -524,11 +524,185 @@ function CheckoutDialog({ open, onOpenChange, storybook, type, price }: Checkout
   );
 }
 
+interface DownloadCustomizationDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  storybook: Storybook;
+}
+
+function DownloadCustomizationDialog({ open, onOpenChange, storybook }: DownloadCustomizationDialogProps) {
+  const { t } = useTranslation();
+  const { toast } = useToast();
+  const bookSizes = getAllBookSizes();
+  
+  const form = useForm<BookOptionsFormValues>({
+    resolver: zodResolver(bookOptionsSchema),
+    defaultValues: {
+      bookSize: 'a5-portrait',
+      spineText: storybook.title || '',
+      spineTextColor: '#000000',
+      spineBackgroundColor: '#FFFFFF',
+    },
+  });
+
+  const handleDownload = (values: BookOptionsFormValues) => {
+    const params = new URLSearchParams({
+      bookSize: values.bookSize,
+      ...(values.spineText && { spineText: values.spineText }),
+      spineTextColor: values.spineTextColor,
+      spineBackgroundColor: values.spineBackgroundColor,
+    });
+    
+    window.open(`/api/storybooks/${storybook.id}/download-print-pdf?${params.toString()}`);
+    
+    toast({
+      title: "Download Started",
+      description: "Your print-ready PDF is being prepared for download.",
+    });
+    
+    onOpenChange(false);
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Download className="h-5 w-5" />
+            Print PDF Options
+          </DialogTitle>
+        </DialogHeader>
+
+        <div className="space-y-4">
+          <div className="bg-muted/50 p-4 rounded-lg">
+            <p className="font-medium text-sm">{storybook.title}</p>
+            <Badge variant="secondary" className="mt-2">Print Edition</Badge>
+          </div>
+
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(handleDownload)} className="space-y-4">
+              <FormField
+                control={form.control}
+                name="bookSize"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Book Size</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <FormControl>
+                        <SelectTrigger data-testid="select-book-size">
+                          <SelectValue placeholder="Select book size" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {bookSizes.map((size) => (
+                          <SelectItem key={size.id} value={size.id}>
+                            {size.name} ({size.widthInches}" × {size.heightInches}")
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="spineText"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Spine Text (Optional)</FormLabel>
+                    <FormControl>
+                      <Input 
+                        placeholder="Enter spine text" 
+                        {...field} 
+                        data-testid="input-spine-text"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="spineTextColor"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Text Color</FormLabel>
+                      <div className="flex gap-2 items-center">
+                        <FormControl>
+                          <Input 
+                            type="color" 
+                            {...field} 
+                            className="h-10 w-full cursor-pointer"
+                            data-testid="input-spine-text-color"
+                          />
+                        </FormControl>
+                        <span className="text-xs text-muted-foreground">{field.value}</span>
+                      </div>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="spineBackgroundColor"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Background Color</FormLabel>
+                      <div className="flex gap-2 items-center">
+                        <FormControl>
+                          <Input 
+                            type="color" 
+                            {...field} 
+                            className="h-10 w-full cursor-pointer"
+                            data-testid="input-spine-background-color"
+                          />
+                        </FormControl>
+                        <span className="text-xs text-muted-foreground">{field.value}</span>
+                      </div>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <div className="flex gap-2 pt-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => onOpenChange(false)}
+                  className="flex-1"
+                  data-testid="button-cancel-download"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  className="flex-1 gradient-bg hover:opacity-90 !text-[hsl(258,90%,20%)]"
+                  data-testid="button-confirm-download"
+                >
+                  <Download className="h-4 w-4 mr-1" />
+                  Download
+                </Button>
+              </div>
+            </form>
+          </Form>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 function StorybookPurchaseButtons({ storybook }: { storybook: Storybook }) {
   const { t } = useTranslation();
   const { toast } = useToast();
   const [cartUpdated, setCartUpdated] = useState(0);
   const [checkoutDialog, setCheckoutDialog] = useState<{ open: boolean; type?: 'digital' | 'print' }>({ open: false });
+  const [downloadDialog, setDownloadDialog] = useState(false);
 
   const { data: digitalPurchase } = useQuery<{ owned: boolean }>({
     queryKey: ['/api/purchases/check', storybook.id, 'digital', cartUpdated],
@@ -631,7 +805,7 @@ function StorybookPurchaseButtons({ storybook }: { storybook: Storybook }) {
               size="sm"
               variant="outline"
               className="w-full"
-              onClick={() => window.open(`/api/storybooks/${storybook.id}/download-print-pdf`)}
+              onClick={() => setDownloadDialog(true)}
               data-testid={`button-download-print-pdf-${storybook.id}`}
             >
               <Download className="h-4 w-4 mr-1" />
@@ -699,6 +873,12 @@ function StorybookPurchaseButtons({ storybook }: { storybook: Storybook }) {
           price={checkoutDialog.type === 'digital' ? digitalPrice : printPurchasePrice}
         />
       )}
+      
+      <DownloadCustomizationDialog
+        open={downloadDialog}
+        onOpenChange={setDownloadDialog}
+        storybook={storybook}
+      />
     </>
   );
 }
