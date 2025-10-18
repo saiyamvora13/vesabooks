@@ -18,19 +18,21 @@ export async function generateEpub(storybook: Storybook): Promise<Buffer> {
   // Use localhost HTTP URLs - epub-gen-memory will fetch and package images automatically
   const baseUrl = "http://localhost:5000";
 
-  // Generate composite cover image with title/author overlay for external cover
+  // Use the plain cover image (AI already generates title and author in the image)
   const coverImageUrl = storybook.coverImageUrl || storybook.pages[0]?.imageUrl;
   let compositeCoverPath: string | undefined;
   
   if (coverImageUrl) {
-    const compositeBuffer = await generateCompositeCoverImage(coverImageUrl, storybook.title);
-    if (compositeBuffer) {
-      // Save composite cover to uniquely named temporary file to avoid race conditions
-      const tempDir = os.tmpdir();
-      const uniqueId = randomUUID();
-      compositeCoverPath = path.join(tempDir, `epub-cover-${storybook.id}-${uniqueId}.png`);
-      fs.writeFileSync(compositeCoverPath, compositeBuffer);
-    }
+    // Download the plain cover image without text overlay
+    const objectStorageService = new ObjectStorageService();
+    const filePath = coverImageUrl.replace('/api/storage/', '');
+    const coverBuffer = await objectStorageService.getFileBuffer(filePath);
+    
+    // Save plain cover to temporary file for epub-gen-memory
+    const tempDir = os.tmpdir();
+    const uniqueId = randomUUID();
+    compositeCoverPath = path.join(tempDir, `epub-cover-${storybook.id}-${uniqueId}.png`);
+    fs.writeFileSync(compositeCoverPath, coverBuffer);
   }
 
   // Add each story page as separate left (image) and right (text) pages

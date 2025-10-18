@@ -28,7 +28,7 @@ Key features include:
   - This multi-layered approach ensures characters remain visually identifiable across all illustrations while allowing sufficient creative variation in scenes and compositions
 - **Image Style Consistency**: Users select from 10 professional illustration styles via a dropdown selector (watercolor, digital cartoon, 3D art, vintage, kawaii, comic book, pastel, realistic, minimalist, oil painting). The selected style is consistently applied to all illustrations (cover, pages, back cover), defaulting to "vibrant and colorful children's book illustration" if not specified. The style is stored in the database for page regeneration.
 - **E-Commerce System**: Integrated online store with Stripe payments, shopping cart, dual pricing (digital/print), and server-side price validation.
-- **EPUB E-book Download**: Allows downloading storybooks as EPUBs with composite covers, embedded illustrations, and mobile-responsive layouts.
+- **EPUB E-book Download**: Allows downloading storybooks as EPUBs with AI-generated covers (no text overlay since title/author are already in the AI-generated image), embedded illustrations, and mobile-responsive layouts.
 - **Print-Ready PDF Download**: Generates professional PDFs for print orders, adhering to commercial printing specifications.
 - **Error Handling & Retry Logic**: Automatic retry mechanisms for generation processes and a manual "Try Again" option.
 - **Persistent Image Storage**: Images are stored in Replit Object Storage with automatic optimization (JPEG compression, resized to 1200px max width) and organized in date-based folders.
