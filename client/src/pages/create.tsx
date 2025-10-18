@@ -497,7 +497,13 @@ export default function Create() {
                           Illustration Style
                         </FormLabel>
                         <Select 
-                          onValueChange={field.onChange} 
+                          onValueChange={(value) => {
+                            try {
+                              field.onChange(value);
+                            } catch (error) {
+                              console.error('Error in illustration style onChange:', error);
+                            }
+                          }} 
                           value={field.value ?? "vibrant and colorful children's book illustration"}
                         >
                           <FormControl>
