@@ -498,7 +498,7 @@ export default function Create() {
                         </FormLabel>
                         <Select 
                           onValueChange={field.onChange} 
-                          value={field.value}
+                          value={field.value ?? "vibrant and colorful children's book illustration"}
                         >
                           <FormControl>
                             <SelectTrigger className="rounded-2xl" data-testid="select-illustration-style">
