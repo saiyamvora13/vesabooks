@@ -487,52 +487,34 @@ export default function Create() {
                   />
 
                   {/* Illustration Style */}
-                  <FormField
-                    control={form.control}
-                    name="illustrationStyle"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel className="text-base sm:text-sm font-semibold flex items-center">
-                          <i className="fas fa-palette text-primary mr-2"></i>
-                          Illustration Style
-                        </FormLabel>
-                        <Select 
-                          onValueChange={(value) => {
-                            try {
-                              field.onChange(value);
-                            } catch (error) {
-                              console.error('Error in illustration style onChange:', error);
-                            }
-                          }} 
-                          value={field.value ?? "vibrant and colorful children's book illustration"}
-                        >
-                          <FormControl>
-                            <SelectTrigger className="rounded-2xl" data-testid="select-illustration-style">
-                              <SelectValue placeholder="Select illustration style" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            <SelectItem value="vibrant and colorful children's book illustration">Vibrant and colorful children's book illustration</SelectItem>
-                            <SelectItem value="watercolor illustration style with soft, dreamy colors and gentle blending">Watercolor Illustration</SelectItem>
-                            <SelectItem value="digital cartoon style with bold colors and clean lines">Digital Cartoon Style</SelectItem>
-                            <SelectItem value="3D digital art style with depth and dimensionality">3D Digital Art</SelectItem>
-                            <SelectItem value="vintage storybook style with classic, nostalgic aesthetic">Vintage Storybook</SelectItem>
-                            <SelectItem value="kawaii cute style with adorable characters and big eyes">Kawaii/Cute Style</SelectItem>
-                            <SelectItem value="comic book style with dynamic panels and bold outlines">Comic Book Style</SelectItem>
-                            <SelectItem value="pastel drawing style with gentle, chalk-like textures">Pastel Drawing</SelectItem>
-                            <SelectItem value="realistic illustration with photo-realistic, detailed artwork">Realistic Illustration</SelectItem>
-                            <SelectItem value="minimalist flat design with simple shapes and limited colors">Minimalist Flat Design</SelectItem>
-                            <SelectItem value="oil painting style with rich textures and classic artistic feel">Oil Painting Style</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        <div className="text-sm text-muted-foreground">
-                          <i className="fas fa-info-circle mr-1"></i>
-                          Choose the art style for your storybook illustrations
-                        </div>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                  <div className="space-y-2">
+                    <label className="text-base sm:text-sm font-semibold flex items-center">
+                      <i className="fas fa-palette text-primary mr-2"></i>
+                      Illustration Style
+                    </label>
+                    <select
+                      className="flex h-12 w-full items-center justify-between rounded-2xl border border-input bg-background px-4 py-3 text-base ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 md:h-10 md:px-3 md:py-2 md:text-sm"
+                      value={form.watch("illustrationStyle")}
+                      onChange={(e) => form.setValue("illustrationStyle", e.target.value)}
+                      data-testid="select-illustration-style"
+                    >
+                      <option value="vibrant and colorful children's book illustration">Vibrant and colorful children's book illustration</option>
+                      <option value="watercolor illustration style with soft, dreamy colors and gentle blending">Watercolor Illustration</option>
+                      <option value="digital cartoon style with bold colors and clean lines">Digital Cartoon Style</option>
+                      <option value="3D digital art style with depth and dimensionality">3D Digital Art</option>
+                      <option value="vintage storybook style with classic, nostalgic aesthetic">Vintage Storybook</option>
+                      <option value="kawaii cute style with adorable characters and big eyes">Kawaii/Cute Style</option>
+                      <option value="comic book style with dynamic panels and bold outlines">Comic Book Style</option>
+                      <option value="pastel drawing style with gentle, chalk-like textures">Pastel Drawing</option>
+                      <option value="realistic illustration with photo-realistic, detailed artwork">Realistic Illustration</option>
+                      <option value="minimalist flat design with simple shapes and limited colors">Minimalist Flat Design</option>
+                      <option value="oil painting style with rich textures and classic artistic feel">Oil Painting Style</option>
+                    </select>
+                    <div className="text-sm text-muted-foreground">
+                      <i className="fas fa-info-circle mr-1"></i>
+                      Choose the art style for your storybook illustrations
+                    </div>
+                  </div>
 
                   {/* Image Upload */}
                   <FormField
