@@ -48,7 +48,7 @@ export default function Create() {
   const createStorySchema = useMemo(() => z.object({
     prompt: z.string().min(10, t('common.validation.promptMinLength')),
     author: z.string().optional(),
-    age: z.string().optional(),
+    age: z.enum(["", "3-5", "6-8", "9-12"]).optional(),
     illustrationStyle: z.string().default("vibrant and colorful children's book illustration"),
     customIllustrationStyle: z.string().optional(),
     images: z.array(z.instanceof(File)).min(0).max(5, t('common.validation.maxImagesExceeded')),
