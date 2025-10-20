@@ -52,7 +52,7 @@ const Cover = ({ title, author, coverImageUrl }: { title: string; author: string
         <img 
           src={coverImageUrl} 
           alt="Story cover" 
-          className="absolute inset-0 w-full h-full object-contain" 
+          className="absolute inset-0 w-full h-full object-cover" 
           loading="lazy"
           onError={() => setImageError(true)}
         />
@@ -157,7 +157,6 @@ const TextPage = ({
       background: 'linear-gradient(135deg, #f9f7f3 0%, #faf8f5 50%, #f7f5f1 100%)',
     }}
   >
-    <div className={`absolute top-4 ${isMobile ? 'right-6' : 'right-8'} text-xs text-slate-500 tracking-widest uppercase font-serif`}>{author}</div>
     <div className={`overflow-y-auto ${isMobile ? 'flex-1 mt-8 mb-16' : 'max-w-2xl mx-auto'} scrollbar-thin scrollbar-thumb-slate-300`}>
       <p 
         className={`text-slate-800 dark:text-slate-200 ${

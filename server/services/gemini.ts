@@ -258,6 +258,10 @@ Return JSON following the schema with exactly ${pagesPerBook} pages.`;
 
     // Store the user-selected illustration style from dropdown for consistency across all images
     parsedJson.artStyle = illustrationStyle;
+    
+    // Update cover prompt to explicitly include the correct title and author
+    // This ensures the AI generates the cover with the user's specified author name
+    parsedJson.coverImagePrompt = `${parsedJson.coverImagePrompt}. IMPORTANT: Include the title "${parsedJson.title}" prominently at the top and the author name "${parsedJson.author}" at the bottom as decorative text integrated into the illustration.`;
 
     // Analyze mood for each page and log structured scene details
     if (parsedJson.pages && Array.isArray(parsedJson.pages)) {
