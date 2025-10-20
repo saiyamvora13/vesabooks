@@ -52,7 +52,7 @@ const Cover = ({ title, author, coverImageUrl }: { title: string; author: string
         <img 
           src={coverImageUrl} 
           alt="Story cover" 
-          className="absolute inset-0 w-full h-full object-cover" 
+          className="absolute inset-0 w-full h-full object-contain" 
           loading="lazy"
           onError={() => setImageError(true)}
         />
