@@ -99,7 +99,7 @@ const ImagePage = ({
       <img 
         src={page.imageUrl} 
         alt={`Illustration for page ${pageNum}`} 
-        className="w-full h-full object-contain md:object-cover transition-transform duration-200" 
+        className="w-full h-full object-contain transition-transform duration-200" 
         loading="lazy"
         style={{
           transform: `scale(${zoom}) translate(${position.x}px, ${position.y}px)`
