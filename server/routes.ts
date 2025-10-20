@@ -3140,7 +3140,7 @@ async function generateStorybookAsync(
       message: `Generating ${pagesPerBook}-page story outline...`,
     });
 
-    const generatedStory = await generateStoryFromPrompt(prompt, imagePaths, pagesPerBook, illustrationStyle, age);
+    const generatedStory = await generateStoryFromPrompt(prompt, imagePaths, pagesPerBook, illustrationStyle, age, author);
 
     // Step 3: Generate illustrations
     await storage.setGenerationProgress(sessionId, {

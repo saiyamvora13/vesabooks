@@ -79,7 +79,8 @@ export async function generateStoryFromPrompt(
   inspirationImagePaths: string[],
   pagesPerBook: number = 3,
   illustrationStyle: string = "vibrant and colorful children's book illustration",
-  age?: string
+  age?: string,
+  author?: string
 ): Promise<GeneratedStory> {
   try {
     const hasImages = inspirationImagePaths && inspirationImagePaths.length > 0;
@@ -252,9 +253,8 @@ Return JSON following the schema with exactly ${pagesPerBook} pages.`;
     }
 
     const parsedJson = JSON.parse(rawJson);
-    if (!parsedJson.author) {
-      parsedJson.author = "AI Storyteller";
-    }
+    // Always prefer user-provided author, then AI-generated, then fallback to "AI Storyteller"
+    parsedJson.author = author || parsedJson.author || "AI Storyteller";
 
     // Store the user-selected illustration style from dropdown for consistency across all images
     parsedJson.artStyle = illustrationStyle;
