@@ -1609,6 +1609,8 @@ Sitemap: ${baseUrl}/sitemap.xml`;
         const validationResult = createStorybookSchema.safeParse({
           prompt,
           author: authorName,
+          age,
+          illustrationStyle: finalIllustrationStyle,
           inspirationImages: imageFilenames,
         });
 

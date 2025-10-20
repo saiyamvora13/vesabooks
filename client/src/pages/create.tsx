@@ -52,7 +52,18 @@ export default function Create() {
     illustrationStyle: z.string().default("vibrant and colorful children's book illustration"),
     customIllustrationStyle: z.string().optional(),
     images: z.array(z.instanceof(File)).min(0).max(5, t('common.validation.maxImagesExceeded')),
-  }), [i18n.language]);
+  }).refine(
+    (data) => {
+      if (data.illustrationStyle === "custom") {
+        return data.customIllustrationStyle && data.customIllustrationStyle.trim().length > 0;
+      }
+      return true;
+    },
+    {
+      message: "Please describe your custom illustration style",
+      path: ["customIllustrationStyle"],
+    }
+  ), [i18n.language, t]);
 
   type CreateStoryForm = z.infer<typeof createStorySchema>;
 

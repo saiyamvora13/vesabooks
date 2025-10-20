@@ -80,7 +80,7 @@ export const insertStorybookSchema = createInsertSchema(storybooks).omit({
 export const createStorybookSchema = z.object({
   prompt: z.string().min(10, "Story prompt must be at least 10 characters"),
   author: z.string().optional(),
-  age: z.string().optional(),
+  age: z.enum(["3-5", "6-8", "9-12"]).optional(),
   illustrationStyle: z.string().optional(),
   inspirationImages: z.array(z.string()).min(0).max(5, "Maximum 5 images allowed"),
 });
