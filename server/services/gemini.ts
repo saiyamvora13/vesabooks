@@ -78,7 +78,8 @@ export async function generateStoryFromPrompt(
   prompt: string,
   inspirationImagePaths: string[],
   pagesPerBook: number = 3,
-  illustrationStyle: string = "vibrant and colorful children's book illustration"
+  illustrationStyle: string = "vibrant and colorful children's book illustration",
+  age?: string
 ): Promise<GeneratedStory> {
   try {
     const hasImages = inspirationImagePaths && inspirationImagePaths.length > 0;
@@ -121,7 +122,18 @@ export async function generateStoryFromPrompt(
    - END (pages ${beginningPages + middlePages + 1}-${pagesPerBook}): Resolve the conflict, show growth/learning, provide closure`;
     }
     
-    const systemInstruction = `You are a storybook author creating a ${pagesPerBook}-page illustrated story${hasImages ? ' using the provided reference photos for character inspiration' : ''}. ${hasImages ? 'IMPORTANT: Maintain the actual age and appearance of people from the reference photos - if an adult is shown, keep them as an adult; if a child is shown, keep them as a child.' : ''}
+    // Build age-appropriate content guidance
+    let ageGuidance = '';
+    if (age) {
+      const ageRanges = {
+        '3-5': 'Very simple vocabulary, short sentences, focus on basic concepts and colors. Stories should be about familiar experiences like playing, family, and animals. Keep themes light and positive.',
+        '6-8': 'Elementary vocabulary with some challenging words, clear narrative structure. Stories can include simple adventures, problem-solving, and beginning character development. Introduce basic moral lessons.',
+        '9-12': 'More advanced vocabulary and complex sentence structures. Stories can include deeper themes, multiple characters, and more sophisticated plots. Can handle mild suspense and emotional complexity.'
+      };
+      ageGuidance = ` The target reader age is ${age} years old. ${ageRanges[age as keyof typeof ageRanges] || 'Adapt the content appropriately for the specified age group.'}`;
+    }
+
+    const systemInstruction = `You are a storybook author creating a ${pagesPerBook}-page illustrated story${hasImages ? ' using the provided reference photos for character inspiration' : ''}.${ageGuidance} ${hasImages ? 'IMPORTANT: Maintain the actual age and appearance of people from the reference photos - if an adult is shown, keep them as an adult; if a child is shown, keep them as a child.' : ''}
 
 Create a cohesive story following ${narrativeStructure}
 
