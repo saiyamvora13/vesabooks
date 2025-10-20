@@ -866,9 +866,9 @@ export default function Library() {
               >
                 <Link href={`/view/${storybook.id}`}>
                   <div className="relative aspect-[3/4] bg-gradient-to-br from-primary/20 to-secondary/20 overflow-hidden">
-                    {storybook.pages[0]?.imageUrl ? (
+                    {storybook.coverImageUrl ? (
                       <img 
-                        src={storybook.pages[0].imageUrl} 
+                        src={storybook.coverImageUrl} 
                         alt={`Cover image for ${storybook.title}`}
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                         data-testid={`img-cover-${storybook.id}`}
