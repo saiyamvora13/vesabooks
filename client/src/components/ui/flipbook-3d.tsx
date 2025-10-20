@@ -42,31 +42,38 @@ const PageFace = ({
   </div>
 );
 
-const Cover = ({ title, author, coverImageUrl }: { title: string; author: string; coverImageUrl?: string }) => (
-  <div className="w-full h-full bg-slate-700 dark:bg-slate-800 rounded-r-lg shadow-2xl flex flex-col text-center relative overflow-hidden">
-    {coverImageUrl && (
-      <img 
-        src={coverImageUrl} 
-        alt="Story cover" 
-        className="absolute inset-0 w-full h-full object-cover" 
-        loading="lazy"
-      />
-    )}
-    {/* Top gradient overlay for title */}
-    <div className="absolute top-0 left-0 right-0 h-[25%] bg-gradient-to-b from-black/70 to-transparent"></div>
-    {/* Bottom gradient overlay for author */}
-    <div className="absolute bottom-0 left-0 right-0 h-[25%] bg-gradient-to-t from-black/70 to-transparent"></div>
-    {/* Title at top */}
-    <div className="absolute top-0 left-0 right-0 p-4 flex flex-col items-center justify-center h-[25%]">
-      <h1 className="text-3xl md:text-4xl font-bold font-serif text-white drop-shadow-[0_2px_3px_rgba(0,0,0,0.8)]">{title}</h1>
+const Cover = ({ title, author, coverImageUrl }: { title: string; author: string; coverImageUrl?: string }) => {
+  const [imageError, setImageError] = useState(false);
+  const showOverlays = !coverImageUrl || imageError;
+
+  return (
+    <div className="w-full h-full bg-slate-700 dark:bg-slate-800 rounded-r-lg shadow-2xl flex flex-col text-center relative overflow-hidden">
+      {coverImageUrl && !imageError && (
+        <img 
+          src={coverImageUrl} 
+          alt="Story cover" 
+          className="absolute inset-0 w-full h-full object-cover" 
+          loading="lazy"
+          onError={() => setImageError(true)}
+        />
+      )}
+      {showOverlays && (
+        <>
+          {/* Fallback: Show title/author overlays if no cover image or image failed to load */}
+          <div className="absolute top-0 left-0 right-0 h-[25%] bg-gradient-to-b from-black/70 to-transparent"></div>
+          <div className="absolute bottom-0 left-0 right-0 h-[25%] bg-gradient-to-t from-black/70 to-transparent"></div>
+          <div className="absolute top-0 left-0 right-0 p-4 flex flex-col items-center justify-center h-[25%]">
+            <h1 className="text-3xl md:text-4xl font-bold font-serif text-white drop-shadow-[0_2px_3px_rgba(0,0,0,0.8)]">{title}</h1>
+          </div>
+          <div className="absolute bottom-0 left-0 right-0 p-4 flex items-center justify-center h-[15%]">
+            <p className="text-md md:text-lg text-white drop-shadow-[0_2px_3px_rgba(0,0,0,0.8)]">By {author}</p>
+          </div>
+        </>
+      )}
+      <div className="absolute left-[-24px] top-0 bottom-0 w-6 bg-gradient-to-r from-slate-800 to-slate-600 shadow-md"></div>
     </div>
-    {/* Author at bottom */}
-    <div className="absolute bottom-0 left-0 right-0 p-4 flex items-center justify-center h-[15%]">
-      <p className="text-md md:text-lg text-white drop-shadow-[0_2px_3px_rgba(0,0,0,0.8)]">By {author}</p>
-    </div>
-    <div className="absolute left-[-24px] top-0 bottom-0 w-6 bg-gradient-to-r from-slate-800 to-slate-600 shadow-md"></div>
-  </div>
-);
+  );
+};
 
 const ImagePage = ({ 
   page, 
