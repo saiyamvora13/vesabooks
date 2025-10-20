@@ -40,6 +40,7 @@ export const storybooks = pgTable("storybooks", {
   userId: varchar("user_id").references(() => users.id, { onDelete: 'cascade' }),
   title: text("title").notNull(),
   author: text("author"),
+  age: text("age"),
   prompt: text("prompt").notNull(),
   pages: json("pages").$type<Array<{
     pageNumber: number;
