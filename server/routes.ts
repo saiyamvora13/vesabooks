@@ -1584,7 +1584,7 @@ Sitemap: ${baseUrl}/sitemap.xml`;
     },
     async (req: any, res) => {
       try {
-        const { prompt, author, illustrationStyle } = req.body;
+        const { prompt, author, age, illustrationStyle } = req.body;
         const files = req.files as Express.Multer.File[] | undefined;
         
         // Determine user ID (authenticated or null for anonymous)
@@ -1638,8 +1638,8 @@ Sitemap: ${baseUrl}/sitemap.xml`;
           await storage.incrementIpStoryCount(ipAddress);
         }
 
-        // Start generation in background with userId (null for anonymous), author, pagesPerBook, and illustrationStyle
-        generateStorybookAsync(sessionId, userId, prompt, authorName, imagePaths, validatedPagesPerBook, finalIllustrationStyle)
+        // Start generation in background with userId (null for anonymous), author, age, pagesPerBook, and illustrationStyle
+        generateStorybookAsync(sessionId, userId, prompt, authorName, age, imagePaths, validatedPagesPerBook, finalIllustrationStyle)
           .catch((error: unknown) => {
             console.error("Story generation failed:", error);
             const errorMessage = error instanceof Error ? error.message : 'Unknown error';
@@ -3118,6 +3118,7 @@ async function generateStorybookAsync(
   userId: string,
   prompt: string,
   author: string,
+  age: string | undefined,
   imagePaths: string[],
   pagesPerBook: number = 3,
   illustrationStyle: string = "vibrant and colorful children's book illustration"
@@ -3137,7 +3138,7 @@ async function generateStorybookAsync(
       message: `Generating ${pagesPerBook}-page story outline...`,
     });
 
-    const generatedStory = await generateStoryFromPrompt(prompt, imagePaths, pagesPerBook, illustrationStyle);
+    const generatedStory = await generateStoryFromPrompt(prompt, imagePaths, pagesPerBook, illustrationStyle, age);
 
     // Step 3: Generate illustrations
     await storage.setGenerationProgress(sessionId, {
@@ -3277,11 +3278,12 @@ async function generateStorybookAsync(
       message: 'Finalizing your storybook...',
     });
 
-    // Save to storage with userId, including cover image URL, back cover URL, author, and story metadata
+    // Save to storage with userId, including cover image URL, back cover URL, author, age, and story metadata
     const storybook = await storage.createStorybook({
       userId,
       title: generatedStory.title,
       author,
+      age,
       prompt,
       pages,
       inspirationImages: inspirationImageUrls,
