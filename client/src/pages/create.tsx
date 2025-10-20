@@ -48,7 +48,9 @@ export default function Create() {
   const createStorySchema = useMemo(() => z.object({
     prompt: z.string().min(10, t('common.validation.promptMinLength')),
     author: z.string().optional(),
+    age: z.string().optional(),
     illustrationStyle: z.string().default("vibrant and colorful children's book illustration"),
+    customIllustrationStyle: z.string().optional(),
     images: z.array(z.instanceof(File)).min(0).max(5, t('common.validation.maxImagesExceeded')),
   }), [i18n.language]);
 
@@ -61,7 +63,9 @@ export default function Create() {
     defaultValues: {
       prompt: "",
       author: "",
+      age: "",
       illustrationStyle: "vibrant and colorful children's book illustration",
+      customIllustrationStyle: "",
       images: [],
     },
   });
@@ -81,7 +85,14 @@ export default function Create() {
       if (data.author) {
         formData.append("author", data.author);
       }
-      formData.append("illustrationStyle", data.illustrationStyle);
+      if (data.age) {
+        formData.append("age", data.age);
+      }
+      // Use custom illustration style if provided, otherwise use selected style
+      const finalIllustrationStyle = data.illustrationStyle === "custom" && data.customIllustrationStyle
+        ? data.customIllustrationStyle
+        : data.illustrationStyle;
+      formData.append("illustrationStyle", finalIllustrationStyle);
       data.images.forEach(image => {
         formData.append("images", image);
       });
@@ -457,29 +468,32 @@ export default function Create() {
                     )}
                   />
 
-                  {/* Author Field */}
+                  {/* Age Field */}
                   <FormField
                     control={form.control}
-                    name="author"
+                    name="age"
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel className="text-base sm:text-sm font-semibold flex items-center">
-                          <i className="fas fa-user-pen text-primary mr-2"></i>
-                          Author
+                          <i className="fas fa-child text-primary mr-2"></i>
+                          Reader Age
                           <span className="ml-auto text-muted-foreground font-normal text-xs sm:text-xs">Optional</span>
                         </FormLabel>
                         <FormControl>
-                          <Input
+                          <select
                             {...field}
-                            placeholder="Leave blank to use your name"
-                            className="rounded-2xl"
-                            autoComplete="name"
-                            data-testid="input-author"
-                          />
+                            className="flex h-12 w-full items-center justify-between rounded-2xl border border-input bg-background px-4 py-3 text-base ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 md:h-10 md:px-3 md:py-2 md:text-sm"
+                            data-testid="select-age"
+                          >
+                            <option value="">Any age</option>
+                            <option value="3-5">3-5 years</option>
+                            <option value="6-8">6-8 years</option>
+                            <option value="9-12">9-12 years</option>
+                          </select>
                         </FormControl>
                         <div className="text-sm text-muted-foreground">
                           <i className="fas fa-info-circle mr-1"></i>
-                          If left blank, your full name will be used as the author
+                          The story will be tailored to this age group
                         </div>
                         <FormMessage />
                       </FormItem>
@@ -509,12 +523,64 @@ export default function Create() {
                       <option value="realistic illustration with photo-realistic, detailed artwork">Realistic Illustration</option>
                       <option value="minimalist flat design with simple shapes and limited colors">Minimalist Flat Design</option>
                       <option value="oil painting style with rich textures and classic artistic feel">Oil Painting Style</option>
+                      <option value="custom">Custom (describe your own style)</option>
                     </select>
+                    
+                    {/* Custom Illustration Style Input */}
+                    {form.watch("illustrationStyle") === "custom" && (
+                      <FormField
+                        control={form.control}
+                        name="customIllustrationStyle"
+                        render={({ field }) => (
+                          <FormItem className="mt-3">
+                            <FormControl>
+                              <Input
+                                {...field}
+                                placeholder="e.g., watercolor with gold accents, anime-inspired fantasy art..."
+                                className="rounded-2xl"
+                                data-testid="input-custom-illustration-style"
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    )}
+                    
                     <div className="text-sm text-muted-foreground">
                       <i className="fas fa-info-circle mr-1"></i>
                       Choose the art style for your storybook illustrations
                     </div>
                   </div>
+
+                  {/* Author Field */}
+                  <FormField
+                    control={form.control}
+                    name="author"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-base sm:text-sm font-semibold flex items-center">
+                          <i className="fas fa-user-pen text-primary mr-2"></i>
+                          Author
+                          <span className="ml-auto text-muted-foreground font-normal text-xs sm:text-xs">Optional</span>
+                        </FormLabel>
+                        <FormControl>
+                          <Input
+                            {...field}
+                            placeholder="Leave blank to use your name"
+                            className="rounded-2xl"
+                            autoComplete="name"
+                            data-testid="input-author"
+                          />
+                        </FormControl>
+                        <div className="text-sm text-muted-foreground">
+                          <i className="fas fa-info-circle mr-1"></i>
+                          If left blank, your full name will be used as the author
+                        </div>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
 
                   {/* Image Upload */}
                   <FormField
