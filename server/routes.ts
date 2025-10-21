@@ -3131,8 +3131,26 @@ Sitemap: ${baseUrl}/sitemap.xml`;
         ],
       };
 
-      const quote = await prodigiService.getQuote(quoteRequest);
-      res.json(quote);
+      const prodigiQuote = await prodigiService.getQuote(quoteRequest);
+      
+      // Get margin percentage from settings
+      const marginSetting = await storage.getSetting('print_margin_percentage');
+      const marginPercentage = marginSetting ? parseFloat(marginSetting.value) : 20;
+      
+      // Apply margin to Prodigi's total cost
+      const prodigiTotal = parseFloat(prodigiQuote.quotes[0].costSummary.total.amount);
+      const finalPrice = prodigiTotal * (1 + marginPercentage / 100);
+      
+      // Return customer-facing quote with margin applied
+      res.json({
+        bookSize,
+        shippingMethod: shippingMethod || 'Standard',
+        price: {
+          amount: finalPrice.toFixed(2),
+          currency: prodigiQuote.quotes[0].costSummary.total.currency,
+        },
+        estimatedDelivery: null, // Can be enhanced based on shipping method
+      });
     } catch (error) {
       console.error("Get quote error:", error);
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
