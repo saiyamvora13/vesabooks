@@ -3219,9 +3219,9 @@ Sitemap: ${baseUrl}/sitemap.xml`;
       const pdfBuffer = await generatePrintReadyPDF(
         storybook, 
         matchingPurchase.bookSize || 'a5-portrait',
-        matchingPurchase.spineText,
-        matchingPurchase.spineTextColor,
-        matchingPurchase.spineBackgroundColor
+        matchingPurchase.spineText ?? undefined,
+        matchingPurchase.spineTextColor ?? undefined,
+        matchingPurchase.spineBackgroundColor ?? undefined
       );
 
       // Save PDF to temporary file
