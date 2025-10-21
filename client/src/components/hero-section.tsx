@@ -121,6 +121,15 @@ export default function HeroSection() {
 
           {/* Stacked Book Carousel */}
           <div className="relative mt-6 sm:mt-8 lg:mt-0">
+            <div className="text-center mb-4">
+              <div className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-500/20 to-pink-500/20 rounded-full backdrop-blur-sm border border-purple-500/30">
+                <span className="animate-pulse text-purple-400">✨</span>
+                <span className="text-sm font-semibold bg-gradient-to-r from-purple-400 to-pink-400 bg-clip-text text-transparent">
+                  AI-Generated Storybooks
+                </span>
+                <span className="animate-pulse text-pink-400">✨</span>
+              </div>
+            </div>
             <StackedBookCarousel />
           </div>
         </div>
