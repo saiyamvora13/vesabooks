@@ -43,6 +43,8 @@ const stripePromise = stripePublicKey ? loadStripe(stripePublicKey) : null;
 // Form schema for book options
 const bookOptionsSchema = z.object({
   bookSize: z.string().default('a5-portrait'),
+  shippingMethod: z.enum(['Budget', 'Standard', 'Express', 'Overnight']).default('Standard'),
+  destinationCountryCode: z.string().default('US'),
 });
 
 type BookOptionsFormValues = z.infer<typeof bookOptionsSchema>;
@@ -197,12 +199,41 @@ function CheckoutDialog({ open, onOpenChange, storybook, type, price }: Checkout
   
   // Book options state
   const [bookSize, setBookSize] = useState<string>(defaultBookSize);
+  const [shippingMethod, setShippingMethod] = useState<'Budget' | 'Standard' | 'Express' | 'Overnight'>('Standard');
+  const [destinationCountryCode, setDestinationCountryCode] = useState<string>('US');
+  const [quotedPrice, setQuotedPrice] = useState<number | null>(null);
   
   const form = useForm<BookOptionsFormValues>({
     resolver: zodResolver(bookOptionsSchema),
     defaultValues: {
       bookSize: defaultBookSize,
+      shippingMethod: 'Standard',
+      destinationCountryCode: 'US',
     },
+  });
+
+  // Watch form values to fetch quotes
+  const watchedBookSize = form.watch('bookSize');
+  const watchedShippingMethod = form.watch('shippingMethod');
+  const watchedDestinationCountryCode = form.watch('destinationCountryCode');
+
+  // Fetch quote for print orders
+  const { data: quoteData, isLoading: isLoadingQuote } = useQuery({
+    queryKey: ['/api/prodigi/quote', watchedBookSize, watchedShippingMethod, watchedDestinationCountryCode],
+    queryFn: async () => {
+      const response = await apiRequest('POST', '/api/prodigi/quote', {
+        bookSize: watchedBookSize,
+        shippingMethod: watchedShippingMethod,
+        destinationCountryCode: watchedDestinationCountryCode,
+      });
+      if (!response.ok) {
+        throw new Error('Failed to fetch quote');
+      }
+      return response.json();
+    },
+    enabled: open && type === 'print',
+    refetchOnWindowFocus: false,
+    staleTime: 5 * 60 * 1000, // 5 minutes
   });
 
   // Reset state when dialog opens
@@ -216,8 +247,15 @@ function CheckoutDialog({ open, onOpenChange, storybook, type, price }: Checkout
       }
       setClientSecret("");
       setError("");
-      form.reset({ bookSize: defaultBookSize });
+      setQuotedPrice(null);
+      form.reset({ 
+        bookSize: defaultBookSize, 
+        shippingMethod: 'Standard',
+        destinationCountryCode: 'US',
+      });
       setBookSize(defaultBookSize);
+      setShippingMethod('Standard');
+      setDestinationCountryCode('US');
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, type]);
@@ -230,14 +268,26 @@ function CheckoutDialog({ open, onOpenChange, storybook, type, price }: Checkout
     }
 
     if (open && step === 2 && !clientSecret) {
+      // For print orders, ensure quote is loaded before creating payment intent
+      if (type === 'print' && !quotedPrice) {
+        console.warn('Attempted to create payment intent without quoted price');
+        setError("Price quote is not available. Please go back and try again.");
+        return;
+      }
+
       setIsCreatingPaymentIntent(true);
 
       const createPaymentIntent = async () => {
         try {
+          // For print purchases, use quoted price; for digital, use prop price
+          const finalPrice = type === 'print' ? Math.round(quotedPrice! * 100) : price;
+          
           // Build item with customization data for print purchases
-          const item: any = { storybookId: storybook.id, type, price };
+          const item: any = { storybookId: storybook.id, type, price: finalPrice };
           if (type === 'print') {
             item.bookSize = bookSize;
+            item.shippingMethod = shippingMethod;
+            item.destinationCountryCode = destinationCountryCode;
           }
           
           const response = await apiRequest('POST', '/api/create-payment-intent', { 
@@ -271,10 +321,27 @@ function CheckoutDialog({ open, onOpenChange, storybook, type, price }: Checkout
       createPaymentIntent();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, step, storybook.id, type, price, clientSecret, bookSize]);
+  }, [open, step, storybook.id, type, quotedPrice, clientSecret, bookSize, shippingMethod, destinationCountryCode]);
 
   const handleBookOptionsSubmit = (values: BookOptionsFormValues) => {
+    // Validate quote is available before proceeding
+    if (!quoteData?.price?.amount) {
+      toast({
+        title: "Quote Not Available",
+        description: "Please wait for the price to load before continuing.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    // Set all values atomically
+    const priceInDollars = parseFloat(quoteData.price.amount);
     setBookSize(values.bookSize);
+    setShippingMethod(values.shippingMethod);
+    setDestinationCountryCode(values.destinationCountryCode);
+    setQuotedPrice(priceInDollars);
+    
+    // Only advance after quote is confirmed
     setStep(2);
   };
 
@@ -353,12 +420,87 @@ function CheckoutDialog({ open, onOpenChange, storybook, type, price }: Checkout
                   )}
                 />
 
+                <FormField
+                  control={form.control}
+                  name="destinationCountryCode"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Ship to Country</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger data-testid="select-destination-country">
+                            <SelectValue placeholder="Select country" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="US" data-testid="option-country-us">United States</SelectItem>
+                          <SelectItem value="CA" data-testid="option-country-ca">Canada</SelectItem>
+                          <SelectItem value="GB" data-testid="option-country-gb">United Kingdom</SelectItem>
+                          <SelectItem value="AU" data-testid="option-country-au">Australia</SelectItem>
+                          <SelectItem value="DE" data-testid="option-country-de">Germany</SelectItem>
+                          <SelectItem value="FR" data-testid="option-country-fr">France</SelectItem>
+                          <SelectItem value="ES" data-testid="option-country-es">Spain</SelectItem>
+                          <SelectItem value="IT" data-testid="option-country-it">Italy</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="shippingMethod"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Shipping Speed</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger data-testid="select-shipping-method">
+                            <SelectValue placeholder="Select shipping method" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="Budget" data-testid="option-shipping-budget">Budget (7-14 days)</SelectItem>
+                          <SelectItem value="Standard" data-testid="option-shipping-standard">Standard (5-7 days)</SelectItem>
+                          <SelectItem value="Express" data-testid="option-shipping-express">Express (2-3 days)</SelectItem>
+                          <SelectItem value="Overnight" data-testid="option-shipping-overnight">Overnight</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                {/* Display quoted price */}
+                {isLoadingQuote ? (
+                  <div className="flex items-center justify-center p-4 bg-muted/50 rounded-lg">
+                    <Loader2 className="h-5 w-5 animate-spin mr-2" />
+                    <span className="text-sm text-muted-foreground">Calculating price...</span>
+                  </div>
+                ) : quoteData?.price ? (
+                  <div className="flex items-center justify-between p-4 bg-gradient-to-r from-purple-50 to-pink-50 dark:from-purple-950/20 dark:to-pink-950/20 rounded-lg border border-purple-200 dark:border-purple-800">
+                    <span className="font-medium">Total Price</span>
+                    <span className="text-2xl font-bold gradient-text" data-testid="text-quoted-price">
+                      ${quoteData.price.amount}
+                    </span>
+                  </div>
+                ) : null}
+
                 <Button
                   type="submit"
+                  disabled={isLoadingQuote || !quoteData?.price}
                   className="w-full gradient-bg hover:opacity-90 !text-[hsl(258,90%,20%)]"
                   data-testid="button-continue-to-payment"
                 >
-                  Continue to Payment
+                  {isLoadingQuote ? (
+                    <>
+                      <Loader2 className="h-5 w-5 mr-2 animate-spin" />
+                      Loading...
+                    </>
+                  ) : (
+                    'Continue to Payment'
+                  )}
                 </Button>
               </form>
             </Form>
@@ -393,10 +535,24 @@ function CheckoutDialog({ open, onOpenChange, storybook, type, price }: Checkout
                   <Badge variant={type === 'digital' ? 'default' : 'secondary'} className="mt-2">
                     {type === 'digital' ? 'E-book' : 'Print Edition'}
                   </Badge>
-                  {type === 'print' && bookSize && (
-                    <p className="text-xs text-muted-foreground mt-2">
-                      Size: {getAllBookSizes().find(s => s.id === bookSize)?.name}
-                    </p>
+                  {type === 'print' && (
+                    <div className="mt-2 space-y-1">
+                      {bookSize && (
+                        <p className="text-xs text-muted-foreground">
+                          Size: {getAllBookSizes().find(s => s.id === bookSize)?.name}
+                        </p>
+                      )}
+                      {shippingMethod && (
+                        <p className="text-xs text-muted-foreground">
+                          Shipping: {shippingMethod}
+                        </p>
+                      )}
+                      {destinationCountryCode && (
+                        <p className="text-xs text-muted-foreground">
+                          Destination: {destinationCountryCode}
+                        </p>
+                      )}
+                    </div>
                   )}
                 </div>
 
@@ -405,7 +561,7 @@ function CheckoutDialog({ open, onOpenChange, storybook, type, price }: Checkout
                     <CheckoutPaymentForm 
                       storybookId={storybook.id}
                       title={storybook.title}
-                      price={price}
+                      price={type === 'print' && quotedPrice ? Math.round(quotedPrice * 100) : price}
                       type={type}
                       onSuccess={handleSuccess}
                       bookSize={type === 'print' ? bookSize : undefined}

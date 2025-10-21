@@ -18,6 +18,7 @@ const settingsSchema = z.object({
   pages_per_book: z.string().min(1, "Required").refine(val => !isNaN(Number(val)) && Number(val) > 0, "Must be a positive number"),
   digital_price: z.string().min(1, "Required").refine(val => !isNaN(Number(val)) && Number(val) >= 0, "Must be a valid price"),
   print_price: z.string().min(1, "Required").refine(val => !isNaN(Number(val)) && Number(val) >= 0, "Must be a valid price"),
+  print_margin_percentage: z.string().min(1, "Required").refine(val => !isNaN(Number(val)) && Number(val) >= 0 && Number(val) <= 100, "Must be between 0 and 100"),
 });
 
 type SettingsForm = z.infer<typeof settingsSchema>;
@@ -40,6 +41,7 @@ export default function AdminSettings() {
       pages_per_book: settingsMap.pages_per_book || "",
       digital_price: settingsMap.digital_price || "",
       print_price: settingsMap.print_price || "",
+      print_margin_percentage: settingsMap.print_margin_percentage || "20",
     },
   });
 
@@ -69,6 +71,7 @@ export default function AdminSettings() {
       { key: "pages_per_book", value: data.pages_per_book },
       { key: "digital_price", value: data.digital_price },
       { key: "print_price", value: data.print_price },
+      { key: "print_margin_percentage", value: data.print_margin_percentage },
     ];
 
     for (const update of updates) {
@@ -178,6 +181,30 @@ export default function AdminSettings() {
                           </FormControl>
                           <FormDescription className="text-xs sm:text-sm text-slate-500">
                             Price for print version of the book
+                          </FormDescription>
+                          <FormMessage className="text-xs sm:text-sm text-red-400" />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="print_margin_percentage"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-sm sm:text-base text-slate-300">Print Margin (%)</FormLabel>
+                          <FormControl>
+                            <Input
+                              {...field}
+                              type="number"
+                              step="1"
+                              placeholder="20"
+                              className="bg-slate-950 border-slate-700 text-slate-100 placeholder:text-slate-500 h-11 sm:h-10"
+                              data-testid="input-print-margin"
+                            />
+                          </FormControl>
+                          <FormDescription className="text-xs sm:text-sm text-slate-500">
+                            Profit margin percentage added to Prodigi's print pricing (e.g., 20 = 20% markup)
                           </FormDescription>
                           <FormMessage className="text-xs sm:text-sm text-red-400" />
                         </FormItem>
