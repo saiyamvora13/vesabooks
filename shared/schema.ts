@@ -380,3 +380,31 @@ export const insertDownloadVerificationSchema = createInsertSchema(downloadVerif
 
 export type DownloadVerification = typeof downloadVerifications.$inferSelect;
 export type InsertDownloadVerification = z.infer<typeof insertDownloadVerificationSchema>;
+
+// Print Orders - track Prodigi print order fulfillment
+export const printOrders = pgTable("print_orders", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  purchaseId: varchar("purchase_id").notNull().references(() => purchases.id, { onDelete: 'cascade' }),
+  prodigiOrderId: varchar("prodigi_order_id"),
+  status: varchar("status").notNull().default('pending'),
+  trackingNumber: varchar("tracking_number"),
+  carrier: varchar("carrier"),
+  estimatedDelivery: timestamp("estimated_delivery"),
+  webhookData: jsonb("webhook_data"),
+  errorMessage: text("error_message"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("idx_print_orders_purchase").on(table.purchaseId),
+  index("idx_print_orders_prodigi").on(table.prodigiOrderId),
+  index("idx_print_orders_status").on(table.status),
+]);
+
+export const insertPrintOrderSchema = createInsertSchema(printOrders).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type PrintOrder = typeof printOrders.$inferSelect;
+export type InsertPrintOrder = z.infer<typeof insertPrintOrderSchema>;
