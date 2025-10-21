@@ -3321,6 +3321,33 @@ Sitemap: ${baseUrl}/sitemap.xml`;
     }
   });
 
+  // Get print order by purchase ID (requires authentication)
+  app.get("/api/print-orders/purchase/:purchaseId", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.id || req.user.claims?.sub;
+      const { purchaseId } = req.params;
+
+      // Verify ownership
+      const purchase = await storage.getUserPurchases(userId);
+      const matchingPurchase = purchase.find(p => p.id === purchaseId);
+
+      if (!matchingPurchase) {
+        return res.status(403).json({ message: "Unauthorized" });
+      }
+
+      const printOrder = await storage.getPrintOrderByPurchaseId(purchaseId);
+      if (!printOrder) {
+        return res.status(404).json({ message: "Print order not found" });
+      }
+
+      res.json({ printOrder });
+    } catch (error) {
+      console.error("Get print order by purchase error:", error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      res.status(500).json({ message: `Failed to get print order: ${errorMessage}` });
+    }
+  });
+
   // Webhook for Prodigi order updates (CloudEvents v1.0 format)
   app.post("/api/webhook/prodigi", async (req: any, res) => {
     try {

@@ -49,6 +49,21 @@ const bookOptionsSchema = z.object({
 
 type BookOptionsFormValues = z.infer<typeof bookOptionsSchema>;
 
+// Form schema for shipping address
+const shippingAddressSchema = z.object({
+  name: z.string().min(1, "Name is required"),
+  email: z.string().email("Valid email is required"),
+  phoneNumber: z.string().min(1, "Phone number is required"),
+  line1: z.string().min(1, "Address line 1 is required"),
+  line2: z.string().optional(),
+  postalOrZipCode: z.string().min(1, "Postal/ZIP code is required"),
+  townOrCity: z.string().min(1, "City is required"),
+  stateOrCounty: z.string().optional(),
+  countryCode: z.string().min(2, "Country is required"),
+});
+
+type ShippingAddressFormValues = z.infer<typeof shippingAddressSchema>;
+
 interface Storybook {
   id: string;
   title: string;
@@ -57,6 +72,7 @@ interface Storybook {
   createdAt: string;
   shareUrl: string | null;
   orientation?: 'portrait' | 'landscape' | 'square';
+  coverImageUrl?: string;
 }
 
 interface CheckoutPaymentFormProps {
@@ -64,7 +80,7 @@ interface CheckoutPaymentFormProps {
   title: string;
   price: number;
   type: 'digital' | 'print';
-  onSuccess: () => void;
+  onSuccess: (purchaseId?: string) => void;
   bookSize?: string;
 }
 
@@ -117,12 +133,15 @@ function CheckoutPaymentForm({ storybookId, title, price, type, onSuccess, bookS
             throw new Error('Failed to create purchases');
           }
 
+          const result = await response.json();
+          const purchaseId = result.purchases?.[0]?.id;
+
           toast({
             title: "Payment Successful",
             description: `You've successfully purchased ${title}!`,
           });
 
-          onSuccess();
+          onSuccess(purchaseId);
         } catch (purchaseError) {
           setIsProcessing(false);
           toast({
@@ -188,10 +207,11 @@ interface CheckoutDialogProps {
 function CheckoutDialog({ open, onOpenChange, storybook, type, price }: CheckoutDialogProps) {
   const { t } = useTranslation();
   const { toast } = useToast();
-  const [step, setStep] = useState<1 | 2>(1);
+  const [step, setStep] = useState<1 | 2 | 3>(1);
   const [clientSecret, setClientSecret] = useState<string>("");
   const [isCreatingPaymentIntent, setIsCreatingPaymentIntent] = useState(false);
   const [error, setError] = useState<string>("");
+  const [purchaseId, setPurchaseId] = useState<string | null>(null);
   
   // Get orientation-appropriate book sizes
   const availableBookSizes = getBookSizesByOrientation(storybook.orientation as 'portrait' | 'landscape' | 'square' || 'portrait');
@@ -203,7 +223,7 @@ function CheckoutDialog({ open, onOpenChange, storybook, type, price }: Checkout
   const [destinationCountryCode, setDestinationCountryCode] = useState<string>('US');
   const [quotedPrice, setQuotedPrice] = useState<number | null>(null);
   
-  const form = useForm<BookOptionsFormValues>({
+  const bookOptionsForm = useForm<BookOptionsFormValues>({
     resolver: zodResolver(bookOptionsSchema),
     defaultValues: {
       bookSize: defaultBookSize,
@@ -211,11 +231,26 @@ function CheckoutDialog({ open, onOpenChange, storybook, type, price }: Checkout
       destinationCountryCode: 'US',
     },
   });
+  
+  const shippingForm = useForm<ShippingAddressFormValues>({
+    resolver: zodResolver(shippingAddressSchema),
+    defaultValues: {
+      name: '',
+      email: '',
+      phoneNumber: '',
+      line1: '',
+      line2: '',
+      postalOrZipCode: '',
+      townOrCity: '',
+      stateOrCounty: '',
+      countryCode: destinationCountryCode,
+    },
+  });
 
   // Watch form values to fetch quotes
-  const watchedBookSize = form.watch('bookSize');
-  const watchedShippingMethod = form.watch('shippingMethod');
-  const watchedDestinationCountryCode = form.watch('destinationCountryCode');
+  const watchedBookSize = bookOptionsForm.watch('bookSize');
+  const watchedShippingMethod = bookOptionsForm.watch('shippingMethod');
+  const watchedDestinationCountryCode = bookOptionsForm.watch('destinationCountryCode');
 
   // Fetch quote for print orders
   const { data: quoteData, isLoading: isLoadingQuote } = useQuery({
@@ -248,10 +283,22 @@ function CheckoutDialog({ open, onOpenChange, storybook, type, price }: Checkout
       setClientSecret("");
       setError("");
       setQuotedPrice(null);
-      form.reset({ 
+      setPurchaseId(null);
+      bookOptionsForm.reset({ 
         bookSize: defaultBookSize, 
         shippingMethod: 'Standard',
         destinationCountryCode: 'US',
+      });
+      shippingForm.reset({
+        name: '',
+        email: '',
+        phoneNumber: '',
+        line1: '',
+        line2: '',
+        postalOrZipCode: '',
+        townOrCity: '',
+        stateOrCounty: '',
+        countryCode: destinationCountryCode,
       });
       setBookSize(defaultBookSize);
       setShippingMethod('Standard');
@@ -345,9 +392,57 @@ function CheckoutDialog({ open, onOpenChange, storybook, type, price }: Checkout
     setStep(2);
   };
 
-  const handleSuccess = () => {
+  const handleSuccess = (purchId?: string) => {
     queryClient.invalidateQueries({ queryKey: ['/api/purchases/check'] });
-    onOpenChange(false);
+    
+    // For print purchases, move to shipping address step
+    if (type === 'print' && purchId) {
+      setPurchaseId(purchId);
+      setStep(3);
+    } else {
+      // For digital purchases, close dialog
+      onOpenChange(false);
+    }
+  };
+  
+  // Mutation for submitting print order
+  const submitPrintOrderMutation = useMutation({
+    mutationFn: async (shippingDetails: ShippingAddressFormValues) => {
+      if (!purchaseId) {
+        throw new Error('Purchase ID is required');
+      }
+      
+      const response = await apiRequest('POST', '/api/prodigi/submit-order', {
+        purchaseId,
+        recipientDetails: shippingDetails,
+        shippingMethod,
+      });
+      
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to submit print order');
+      }
+      
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Print Order Submitted",
+        description: "Your book is being sent to production. You'll receive tracking information via email.",
+      });
+      onOpenChange(false);
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Order Submission Failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+  
+  const handleShippingSubmit = (values: ShippingAddressFormValues) => {
+    submitPrintOrderMutation.mutate(values);
   };
 
   const handleClose = (isOpen: boolean) => {
@@ -376,10 +471,15 @@ function CheckoutDialog({ open, onOpenChange, storybook, type, price }: Checkout
                 <BookOpen className="h-5 w-5" />
                 Book Options
               </>
-            ) : (
+            ) : step === 2 ? (
               <>
                 <CreditCard className="h-5 w-5" />
                 Complete Purchase
+              </>
+            ) : (
+              <>
+                <BookOpen className="h-5 w-5" />
+                Shipping Address
               </>
             )}
           </DialogTitle>
@@ -393,10 +493,10 @@ function CheckoutDialog({ open, onOpenChange, storybook, type, price }: Checkout
               <Badge variant="secondary" className="mt-2">Print Edition</Badge>
             </div>
 
-            <Form {...form}>
-              <form onSubmit={form.handleSubmit(handleBookOptionsSubmit)} className="space-y-4">
+            <Form {...bookOptionsForm}>
+              <form onSubmit={bookOptionsForm.handleSubmit(handleBookOptionsSubmit)} className="space-y-4">
                 <FormField
-                  control={form.control}
+                  control={bookOptionsForm.control}
                   name="bookSize"
                   render={({ field }) => (
                     <FormItem>
@@ -421,7 +521,7 @@ function CheckoutDialog({ open, onOpenChange, storybook, type, price }: Checkout
                 />
 
                 <FormField
-                  control={form.control}
+                  control={bookOptionsForm.control}
                   name="destinationCountryCode"
                   render={({ field }) => (
                     <FormItem>
@@ -449,7 +549,7 @@ function CheckoutDialog({ open, onOpenChange, storybook, type, price }: Checkout
                 />
 
                 <FormField
-                  control={form.control}
+                  control={bookOptionsForm.control}
                   name="shippingMethod"
                   render={({ field }) => (
                     <FormItem>
@@ -575,6 +675,181 @@ function CheckoutDialog({ open, onOpenChange, storybook, type, price }: Checkout
               </div>
             )}
           </>
+        )}
+
+        {/* Shipping Address Form - Step 3 (only for print after payment) */}
+        {step === 3 && type === 'print' && (
+          <div className="space-y-4">
+            <div className="bg-muted/50 p-4 rounded-lg">
+              <p className="font-medium text-sm">{storybook.title}</p>
+              <Badge variant="secondary" className="mt-2">Print Edition</Badge>
+              <p className="text-xs text-muted-foreground mt-2">Payment completed! Now we need your shipping address.</p>
+            </div>
+
+            <Form {...shippingForm}>
+              <form onSubmit={shippingForm.handleSubmit(handleShippingSubmit)} className="space-y-4">
+                <FormField
+                  control={shippingForm.control}
+                  name="name"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Full Name</FormLabel>
+                      <FormControl>
+                        <Input {...field} placeholder="John Doe" data-testid="input-recipient-name" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={shippingForm.control}
+                  name="email"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Email</FormLabel>
+                      <FormControl>
+                        <Input {...field} type="email" placeholder="john@example.com" data-testid="input-recipient-email" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={shippingForm.control}
+                  name="phoneNumber"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Phone Number</FormLabel>
+                      <FormControl>
+                        <Input {...field} placeholder="+1234567890" data-testid="input-recipient-phone" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={shippingForm.control}
+                  name="line1"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Address Line 1</FormLabel>
+                      <FormControl>
+                        <Input {...field} placeholder="123 Main St" data-testid="input-address-line1" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={shippingForm.control}
+                  name="line2"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Address Line 2 (Optional)</FormLabel>
+                      <FormControl>
+                        <Input {...field} placeholder="Apt 4B" data-testid="input-address-line2" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <div className="grid grid-cols-2 gap-4">
+                  <FormField
+                    control={shippingForm.control}
+                    name="townOrCity"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>City</FormLabel>
+                        <FormControl>
+                          <Input {...field} placeholder="New York" data-testid="input-city" />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={shippingForm.control}
+                    name="stateOrCounty"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>State/County</FormLabel>
+                        <FormControl>
+                          <Input {...field} placeholder="NY" data-testid="input-state" />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <FormField
+                    control={shippingForm.control}
+                    name="postalOrZipCode"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>ZIP/Postal Code</FormLabel>
+                        <FormControl>
+                          <Input {...field} placeholder="10001" data-testid="input-postal-code" />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={shippingForm.control}
+                    name="countryCode"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Country</FormLabel>
+                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                          <FormControl>
+                            <SelectTrigger data-testid="select-country">
+                              <SelectValue placeholder="Select country" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="US">United States</SelectItem>
+                            <SelectItem value="CA">Canada</SelectItem>
+                            <SelectItem value="GB">United Kingdom</SelectItem>
+                            <SelectItem value="AU">Australia</SelectItem>
+                            <SelectItem value="DE">Germany</SelectItem>
+                            <SelectItem value="FR">France</SelectItem>
+                            <SelectItem value="ES">Spain</SelectItem>
+                            <SelectItem value="IT">Italy</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                <Button
+                  type="submit"
+                  className="w-full gradient-bg hover:opacity-90 !text-[hsl(258,90%,20%)]"
+                  disabled={submitPrintOrderMutation.isPending}
+                  data-testid="button-submit-shipping"
+                >
+                  {submitPrintOrderMutation.isPending ? (
+                    <>
+                      <Loader2 className="h-5 w-5 mr-2 animate-spin" />
+                      Submitting Order...
+                    </>
+                  ) : (
+                    'Submit Print Order'
+                  )}
+                </Button>
+              </form>
+            </Form>
+          </div>
         )}
       </DialogContent>
     </Dialog>
