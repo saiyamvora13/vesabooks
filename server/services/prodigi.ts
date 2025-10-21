@@ -32,6 +32,7 @@ interface CreateOrderRequest {
   shippingMethod: 'Budget' | 'Standard' | 'Express' | 'Overnight';
   recipient: ProdigiRecipient;
   items: ProdigiItem[];
+  callbackUrl?: string;
   metadata?: Record<string, any>;
 }
 

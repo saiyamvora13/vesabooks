@@ -3272,6 +3272,11 @@ Sitemap: ${baseUrl}/sitemap.xml`;
             },
           };
 
+          // Generate callback URL for order status updates
+          const callbackUrl = process.env.REPLIT_DOMAINS 
+            ? `https://${process.env.REPLIT_DOMAINS.split(',')[0]}/api/webhook/prodigi`
+            : 'http://localhost:5000/api/webhook/prodigi';
+
           const prodigiOrder = await prodigiService.createOrder({
             merchantReference: `ORDER-${printPurchase.id}`,
             shippingMethod: 'Standard',
@@ -3285,6 +3290,7 @@ Sitemap: ${baseUrl}/sitemap.xml`;
                 url: pdfUrl,
               }],
             }],
+            callbackUrl,
             metadata: {
               purchaseId: printPurchase.id,
               storybookId: printPurchase.storybookId,
@@ -3541,6 +3547,99 @@ Sitemap: ${baseUrl}/sitemap.xml`;
       console.error("Webhook error:", error);
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
       res.status(400).json({ message: `Webhook Error: ${errorMessage}` });
+    }
+  });
+
+  // Prodigi webhook handler (no authentication - validated by X-API-Key header)
+  app.post("/api/webhook/prodigi", async (req: any, res) => {
+    try {
+      // Validate request is from Prodigi by checking X-API-Key header
+      const apiKey = req.headers['x-api-key'];
+      const expectedApiKey = process.env.PRODIGI_SANDBOX_API_KEY;
+
+      if (!apiKey || apiKey !== expectedApiKey) {
+        console.warn('[Prodigi Webhook] Unauthorized webhook attempt - invalid API key');
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+
+      const callback = req.body;
+      
+      // Log webhook event for debugging
+      console.log('[Prodigi Webhook] Received callback:', JSON.stringify(callback, null, 2));
+
+      // Extract order information
+      const { id: prodigiOrderId, status, shipments = [], charges = [] } = callback;
+
+      if (!prodigiOrderId) {
+        console.error('[Prodigi Webhook] Missing order ID in callback');
+        return res.status(400).json({ message: "Missing order ID" });
+      }
+
+      // Find print order by Prodigi order ID
+      const printOrder = await storage.getPrintOrderByProdigiId(prodigiOrderId);
+
+      if (!printOrder) {
+        console.warn(`[Prodigi Webhook] Print order not found for Prodigi order ID: ${prodigiOrderId}`);
+        // Still return 200 to acknowledge receipt
+        return res.status(200).json({ received: true, message: "Order not found in database" });
+      }
+
+      // Prepare updates object
+      const updates: any = {
+        webhookData: callback,
+      };
+
+      // Update status from callback
+      if (status?.stage) {
+        updates.status = status.stage;
+      }
+
+      // Update shipment status details (convert object to string for storage)
+      if (status?.details) {
+        updates.shipmentStatus = JSON.stringify(status.details);
+      }
+
+      // Update tracking information from first shipment (if available)
+      if (shipments.length > 0) {
+        const firstShipment = shipments[0];
+
+        if (firstShipment.tracking?.number) {
+          updates.trackingNumber = firstShipment.tracking.number;
+        }
+
+        if (firstShipment.tracking?.url) {
+          updates.trackingUrl = firstShipment.tracking.url;
+        }
+
+        if (firstShipment.carrier?.name) {
+          updates.carrier = firstShipment.carrier.name;
+        }
+
+        if (firstShipment.carrier?.service) {
+          updates.carrierService = firstShipment.carrier.service;
+        }
+
+        if (firstShipment.dispatchDate) {
+          updates.dispatchDate = new Date(firstShipment.dispatchDate);
+        }
+
+        if (firstShipment.estimatedDeliveryDate) {
+          updates.estimatedDelivery = new Date(firstShipment.estimatedDeliveryDate);
+        }
+      }
+
+      // Update print order in database
+      await storage.updatePrintOrderStatus(printOrder.id, updates);
+
+      console.log(`[Prodigi Webhook] Updated print order ${printOrder.id} for Prodigi order ${prodigiOrderId}`);
+      console.log(`[Prodigi Webhook] Status: ${updates.status}, Tracking: ${updates.trackingNumber || 'N/A'}`);
+
+      // Return 200 OK to acknowledge receipt
+      res.status(200).json({ received: true });
+    } catch (error) {
+      console.error("[Prodigi Webhook] Error processing webhook:", error);
+      // Return 200 anyway to prevent Prodigi from retrying
+      res.status(200).json({ received: true, error: "Internal processing error" });
     }
   });
 

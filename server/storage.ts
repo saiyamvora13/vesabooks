@@ -134,6 +134,7 @@ export interface IStorage {
   getPrintOrderByPurchaseId(purchaseId: string): Promise<PrintOrder | null>;
   getPrintOrderByProdigiId(prodigiOrderId: string): Promise<PrintOrder | null>;
   updatePrintOrder(id: string, data: Partial<PrintOrder>): Promise<PrintOrder>;
+  updatePrintOrderStatus(printOrderId: string, updates: Partial<PrintOrder>): Promise<PrintOrder>;
   getAllPrintOrders(limit?: number): Promise<PrintOrder[]>;
 }
 
@@ -1197,6 +1198,15 @@ export class DatabaseStorage implements IStorage {
       .update(printOrders)
       .set({ ...data, updatedAt: new Date() })
       .where(eq(printOrders.id, id))
+      .returning();
+    return updatedPrintOrder;
+  }
+
+  async updatePrintOrderStatus(printOrderId: string, updates: Partial<PrintOrder>): Promise<PrintOrder> {
+    const [updatedPrintOrder] = await db
+      .update(printOrders)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(eq(printOrders.id, printOrderId))
       .returning();
     return updatedPrintOrder;
   }
