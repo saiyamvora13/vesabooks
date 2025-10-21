@@ -524,7 +524,7 @@ function CheckoutDialog({ open, onOpenChange, storybook, type, price }: Checkout
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          {getBookSizesByOrientation(storybook.orientation as 'portrait' | 'landscape' | 'square' || 'portrait').map((size) => (
+                          {getBookSizesByOrientation((storybook.orientation || 'portrait') as 'portrait' | 'landscape' | 'square').map((size) => (
                             <SelectItem key={size.id} value={size.id} data-testid={`option-book-size-${size.id}`}>
                               {size.name} ({size.widthInches}" × {size.heightInches}")
                             </SelectItem>
