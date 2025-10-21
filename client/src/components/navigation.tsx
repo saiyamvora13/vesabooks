@@ -13,7 +13,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { LogOut, Menu, X, ShoppingCart, ShoppingBag } from "lucide-react";
+import { LogOut, Menu, X, ShoppingCart, ShoppingBag, Package } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
 import { useTranslation } from "react-i18next";
@@ -97,6 +97,11 @@ export default function Navigation() {
                 <Link href="/purchases">
                   <span className={`text-foreground/70 hover:text-foreground transition-colors cursor-pointer font-medium ${location === '/purchases' ? 'text-primary' : ''}`} data-testid="link-purchases">
                     {t('navigation.myPurchases')}
+                  </span>
+                </Link>
+                <Link href="/orders">
+                  <span className={`text-foreground/70 hover:text-foreground transition-colors cursor-pointer font-medium ${location === '/orders' ? 'text-primary' : ''}`} data-testid="link-orders">
+                    My Orders
                   </span>
                 </Link>
               </>
@@ -254,6 +259,14 @@ export default function Navigation() {
                   }`} data-testid="link-purchases">
                     <ShoppingBag className="h-5 w-5 mr-3" />
                     {t('navigation.myPurchases')}
+                  </div>
+                </Link>
+                <Link href="/orders" onClick={() => setMobileMenuOpen(false)}>
+                  <div className={`text-base px-4 py-3.5 rounded-xl flex items-center transition-colors active:scale-[0.98] ${
+                    location === '/orders' ? 'bg-primary/10 text-primary font-semibold' : 'text-foreground/70 font-medium hover:bg-accent/5'
+                  }`} data-testid="link-orders-mobile">
+                    <Package className="h-5 w-5 mr-3" />
+                    My Orders
                   </div>
                 </Link>
               </>
