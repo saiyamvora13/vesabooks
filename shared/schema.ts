@@ -1,5 +1,5 @@
 import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, json, timestamp, index, jsonb, numeric, unique, boolean } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, json, timestamp, index, jsonb, numeric, unique, boolean, integer } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -123,6 +123,30 @@ export const insertPurchaseSchema = createInsertSchema(purchases).omit({
 
 export type InsertPurchase = z.infer<typeof insertPurchaseSchema>;
 export type Purchase = typeof purchases.$inferSelect;
+
+// Shopping Cart Items table
+export const cartItems = pgTable("cart_items", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
+  storybookId: varchar("storybook_id").notNull().references(() => storybooks.id, { onDelete: 'cascade' }),
+  productType: text("product_type").notNull(), // 'digital' | 'print'
+  bookSize: text("book_size"), // Only for print items (a5-portrait, a4-landscape, etc.)
+  quantity: integer("quantity").notNull().default(1),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("idx_cart_items_user").on(table.userId),
+  index("idx_cart_items_storybook").on(table.storybookId),
+  // Prevent duplicate items: same user + storybook + product type + book size
+  unique().on(table.userId, table.storybookId, table.productType, table.bookSize),
+]);
+
+export const insertCartItemSchema = createInsertSchema(cartItems).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertCartItem = z.infer<typeof insertCartItemSchema>;
+export type CartItem = typeof cartItems.$inferSelect;
 
 export const passwordResetTokens = pgTable("password_reset_tokens", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
