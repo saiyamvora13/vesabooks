@@ -56,6 +56,7 @@ export const storybooks = pgTable("storybooks", {
   defaultClothing: text("default_clothing"),
   storyArc: text("story_arc"),
   artStyle: text("art_style"),
+  orientation: text("orientation").default('portrait'),
   isPublic: boolean("is_public").notNull().default(false),
   shareCount: numeric("share_count").notNull().default('0'),
   viewCount: numeric("view_count").notNull().default('0'),

@@ -31,7 +31,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { getAllBookSizes } from "@shared/bookSizes";
+import { getAllBookSizes, getBookSizesByOrientation } from "@shared/bookSizes";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -54,6 +54,7 @@ interface Storybook {
   pages: Array<{ pageNumber: number; text: string; imageUrl: string }>;
   createdAt: string;
   shareUrl: string | null;
+  orientation?: 'portrait' | 'landscape' | 'square';
 }
 
 interface CheckoutPaymentFormProps {
@@ -190,13 +191,17 @@ function CheckoutDialog({ open, onOpenChange, storybook, type, price }: Checkout
   const [isCreatingPaymentIntent, setIsCreatingPaymentIntent] = useState(false);
   const [error, setError] = useState<string>("");
   
+  // Get orientation-appropriate book sizes
+  const availableBookSizes = getBookSizesByOrientation(storybook.orientation as 'portrait' | 'landscape' | 'square' || 'portrait');
+  const defaultBookSize = availableBookSizes.length > 0 ? availableBookSizes[0].id : 'a5-portrait';
+  
   // Book options state
-  const [bookSize, setBookSize] = useState<string>('a5-portrait');
+  const [bookSize, setBookSize] = useState<string>(defaultBookSize);
   
   const form = useForm<BookOptionsFormValues>({
     resolver: zodResolver(bookOptionsSchema),
     defaultValues: {
-      bookSize: 'a5-portrait',
+      bookSize: defaultBookSize,
     },
   });
 
@@ -211,8 +216,8 @@ function CheckoutDialog({ open, onOpenChange, storybook, type, price }: Checkout
       }
       setClientSecret("");
       setError("");
-      form.reset();
-      setBookSize('a5-portrait');
+      form.reset({ bookSize: defaultBookSize });
+      setBookSize(defaultBookSize);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, type]);
@@ -336,7 +341,7 @@ function CheckoutDialog({ open, onOpenChange, storybook, type, price }: Checkout
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          {getAllBookSizes().map((size) => (
+                          {getBookSizesByOrientation(storybook.orientation as 'portrait' | 'landscape' | 'square' || 'portrait').map((size) => (
                             <SelectItem key={size.id} value={size.id} data-testid={`option-book-size-${size.id}`}>
                               {size.name} ({size.widthInches}" × {size.heightInches}")
                             </SelectItem>
@@ -429,12 +434,13 @@ interface DownloadCustomizationDialogProps {
 function DownloadCustomizationDialog({ open, onOpenChange, storybook }: DownloadCustomizationDialogProps) {
   const { t } = useTranslation();
   const { toast } = useToast();
-  const bookSizes = getAllBookSizes();
+  const bookSizes = getBookSizesByOrientation(storybook.orientation as 'portrait' | 'landscape' | 'square' || 'portrait');
+  const defaultBookSize = bookSizes.length > 0 ? bookSizes[0].id : 'a5-portrait';
   
   const form = useForm<BookOptionsFormValues>({
     resolver: zodResolver(bookOptionsSchema),
     defaultValues: {
-      bookSize: 'a5-portrait',
+      bookSize: defaultBookSize,
     },
   });
 
@@ -442,10 +448,10 @@ function DownloadCustomizationDialog({ open, onOpenChange, storybook }: Download
   useEffect(() => {
     if (open) {
       form.reset({
-        bookSize: 'a5-portrait',
+        bookSize: defaultBookSize,
       });
     }
-  }, [open, form]);
+  }, [open, form, defaultBookSize]);
 
   const handleDownload = (values: BookOptionsFormValues) => {
     const params = new URLSearchParams();
@@ -883,9 +889,16 @@ export default function Library() {
                 </Link>
                 
                 <CardHeader className="p-3 sm:p-6">
-                  <CardTitle className="line-clamp-2 text-base sm:text-lg" data-testid={`text-title-${storybook.id}`}>
-                    {storybook.title}
-                  </CardTitle>
+                  <div className="flex items-start justify-between gap-2">
+                    <CardTitle className="line-clamp-2 text-base sm:text-lg flex-1" data-testid={`text-title-${storybook.id}`}>
+                      {storybook.title}
+                    </CardTitle>
+                    {storybook.orientation && (
+                      <Badge variant="outline" className="text-xs shrink-0" data-testid={`badge-orientation-${storybook.id}`}>
+                        {storybook.orientation === 'portrait' ? '📱 Portrait' : storybook.orientation === 'landscape' ? '🖼️ Landscape' : '⬛ Square'}
+                      </Badge>
+                    )}
+                  </div>
                   <CardDescription className="line-clamp-2 text-sm" data-testid={`text-prompt-${storybook.id}`}>
                     {storybook.prompt}
                   </CardDescription>

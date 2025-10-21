@@ -18,6 +18,7 @@ import * as analytics from "./services/analytics";
 import { verifyRecaptcha } from "./middleware/recaptcha";
 import { createIpRateLimitMiddleware } from "./middleware/ipRateLimit";
 import { buildFinalImagePrompt } from "./utils/imagePromptBuilder";
+import sharp from "sharp";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', {
   apiVersion: "2025-09-30.clover",
@@ -3186,6 +3187,23 @@ async function generateStorybookAsync(
     // Upload cover image to Object Storage
     const coverImageUrl = await objectStorage.uploadFile(coverImagePath, coverImageFileName);
     
+    // Detect orientation from cover image dimensions
+    const metadata = await sharp(coverImagePath).metadata();
+    const width = metadata.width || 1;
+    const height = metadata.height || 1;
+    const aspectRatio = width / height;
+    
+    let orientation: 'portrait' | 'landscape' | 'square';
+    if (Math.abs(aspectRatio - 1) < 0.1) {
+      orientation = 'square'; // Within 10% of 1:1
+    } else if (aspectRatio > 1) {
+      orientation = 'landscape';
+    } else {
+      orientation = 'portrait';
+    }
+    
+    console.log(`📐 Detected book orientation: ${orientation} (${width}x${height}, AR: ${aspectRatio.toFixed(2)})`);
+    
     // KEEP cover image locally to use as reference for character consistency in all page illustrations
     // It will be cleaned up after all pages are generated
 
@@ -3295,6 +3313,7 @@ async function generateStorybookAsync(
       defaultClothing: generatedStory.defaultClothing,
       storyArc: generatedStory.storyArc,
       artStyle: illustrationStyle,
+      orientation,
     });
 
     // Track story completion (non-blocking)

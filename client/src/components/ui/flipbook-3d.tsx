@@ -19,6 +19,7 @@ interface FlipbookViewerProps {
   onRegeneratePage?: (pageNumber: number) => void;
   regeneratingPageNumber?: number | null;
   onPageChange?: (pageNumber: number) => void;
+  orientation?: 'portrait' | 'landscape' | 'square';
 }
 
 const PageFace = ({ 
@@ -245,7 +246,7 @@ const EndPage = ({ totalPages, backCoverImageUrl }: { totalPages: number; backCo
   );
 };
 
-export function FlipbookViewer({ pages, title, author = "AI Author", coverImageUrl, backCoverImageUrl, isOwner = false, onRegeneratePage, regeneratingPageNumber, onPageChange }: FlipbookViewerProps) {
+export function FlipbookViewer({ pages, title, author = "AI Author", coverImageUrl, backCoverImageUrl, isOwner = false, onRegeneratePage, regeneratingPageNumber, onPageChange, orientation = 'portrait' }: FlipbookViewerProps) {
   const numPages = pages.length;
   const numSheets = numPages + 1;
   const [currentPage, setCurrentPage] = useState(0);
@@ -603,10 +604,24 @@ export function FlipbookViewer({ pages, title, author = "AI Author", coverImageU
     );
   }
 
+  // Dynamic container dimensions based on orientation
+  const getContainerClasses = () => {
+    if (orientation === 'landscape') {
+      // Landscape: wider, shorter book
+      return "w-[90vw] h-[50vh] md:w-[900px] md:h-[450px] lg:w-[1100px] lg:h-[520px] relative";
+    } else if (orientation === 'square') {
+      // Square: equal width and height
+      return "w-[90vw] h-[90vw] md:w-[600px] md:h-[600px] lg:w-[700px] lg:h-[700px] relative max-w-[90vh] max-h-[90vw]";
+    } else {
+      // Portrait: taller, narrower book (default)
+      return "w-[90vw] h-[65vh] md:w-[700px] md:h-[550px] lg:w-[900px] lg:h-[650px] relative";
+    }
+  };
+
   return (
     <div className="w-full h-full flex flex-col items-center justify-center gap-4">
       <div
-        className="w-[90vw] h-[60vh] md:w-[800px] md:h-[500px] lg:w-[1000px] lg:h-[600px] relative"
+        className={getContainerClasses()}
         style={{ perspective: '3000px' }}
       >
         <div

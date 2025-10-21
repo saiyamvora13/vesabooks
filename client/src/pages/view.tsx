@@ -511,6 +511,7 @@ export default function View() {
               onRegeneratePage={handleRegeneratePage}
               regeneratingPageNumber={regeneratePageMutation.isPending ? pageToRegenerate : null}
               onPageChange={handlePageChange}
+              orientation={storybook.orientation as 'portrait' | 'landscape' | 'square' || 'portrait'}
             />
           </div>
 

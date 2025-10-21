@@ -118,6 +118,11 @@ export function getAllBookSizes(): BookSize[] {
   return Object.values(BOOK_SIZES);
 }
 
+// Helper function to get book sizes filtered by orientation
+export function getBookSizesByOrientation(orientation: BookOrientation): BookSize[] {
+  return Object.values(BOOK_SIZES).filter(size => size.orientation === orientation);
+}
+
 // Validate page count
 export function validatePageCount(pageCount: number): { valid: boolean; message?: string } {
   if (pageCount < MIN_PAGES) {
