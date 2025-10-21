@@ -32,6 +32,14 @@ Key features include:
 - **E-Commerce System**: Integrated online store with Stripe payments, shopping cart, dual pricing (digital/print), and server-side price validation.
 - **EPUB E-book Download**: Allows downloading storybooks as EPUBs with AI-generated covers (no text overlay since title/author are already in the AI-generated image), embedded illustrations, and mobile-responsive layouts.
 - **Print-Ready PDF Download**: Generates professional PDFs for print orders, adhering to commercial printing specifications.
+- **Prodigi Print Fulfillment**: Integrated with Prodigi Print API for physical hardcover book production and global shipping:
+  - **Print Order Management**: Database table (`printOrders`) tracks Prodigi order IDs, fulfillment status, shipping details, and tracking information
+  - **API Integration**: Full REST API integration with quote generation, order submission, status tracking, and webhook support for order updates
+  - **Book Sizes**: Supports 6 hardcover sizes - A5 Portrait/Landscape, A4 Portrait/Landscape, Square 8.3"/11.6"
+  - **Security**: Zod validation for all Prodigi endpoints, webhook authentication using API key verification
+  - **PDF Upload**: Automatically generates and uploads print-ready PDFs to Replit Object Storage for Prodigi access
+  - **Shipping Methods**: Budget, Standard, Express, and Overnight options with real-time quote calculation
+  - **Sandbox Testing**: Uses Prodigi sandbox environment for testing without actual print production
 - **Error Handling & Retry Logic**: Automatic retry mechanisms for generation processes and a manual "Try Again" option.
 - **Persistent Image Storage**: Images are stored in Replit Object Storage with automatic optimization (JPEG compression, resized to 1200px max width) and organized in date-based folders.
 - **Sample Story Prompts**: Pre-populated, admin-manageable prompts with character placeholders for user inspiration.
