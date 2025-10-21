@@ -1,4 +1,4 @@
-import { type Storybook, type InsertStorybook, type StoryGenerationProgress, storybooks, users, type User, type UpsertUser, type Purchase, type InsertPurchase, purchases, passwordResetTokens, type PasswordResetToken, type AdminUser, type InsertAdminUser, adminUsers, type SiteSetting, siteSettings, type HeroStorybookSlot, type InsertHeroStorybookSlot, heroStorybookSlots, type FeaturedStorybook, type InsertFeaturedStorybook, featuredStorybooks, type AdminAuditLog, type InsertAdminAuditLog, adminAuditLogs, type SamplePrompt, type InsertSamplePrompt, samplePrompts, type AnalyticsEvent, type InsertAnalyticsEvent, analyticsEvents, type StoryRating, type InsertStoryRating, storyRatings, type AudioSettings, audioSettings, type IpRateLimit, type InsertIpRateLimit, ipRateLimits, type DownloadVerification, type InsertDownloadVerification, downloadVerifications, type SavedStorybook, type InsertSavedStorybook, savedStorybooks } from "@shared/schema";
+import { type Storybook, type InsertStorybook, type StoryGenerationProgress, storybooks, users, type User, type UpsertUser, type Purchase, type InsertPurchase, purchases, passwordResetTokens, type PasswordResetToken, type AdminUser, type InsertAdminUser, adminUsers, type SiteSetting, siteSettings, type HeroStorybookSlot, type InsertHeroStorybookSlot, heroStorybookSlots, type FeaturedStorybook, type InsertFeaturedStorybook, featuredStorybooks, type AdminAuditLog, type InsertAdminAuditLog, adminAuditLogs, type SamplePrompt, type InsertSamplePrompt, samplePrompts, type AnalyticsEvent, type InsertAnalyticsEvent, analyticsEvents, type StoryRating, type InsertStoryRating, storyRatings, type AudioSettings, audioSettings, type IpRateLimit, type InsertIpRateLimit, ipRateLimits, type DownloadVerification, type InsertDownloadVerification, downloadVerifications, type SavedStorybook, type InsertSavedStorybook, savedStorybooks, type PrintOrder, type InsertPrintOrder, printOrders } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, count, countDistinct, isNull, and, lt, gt, sql } from "drizzle-orm";
 import { normalizeEmail } from "./auth";
@@ -118,6 +118,14 @@ export interface IStorage {
   unsaveStorybook(userId: string, storybookId: string): Promise<void>;
   getSavedStorybooks(userId: string): Promise<Storybook[]>;
   isSaved(userId: string, storybookId: string): Promise<boolean>;
+  
+  // Print Order operations
+  createPrintOrder(printOrder: InsertPrintOrder): Promise<PrintOrder>;
+  getPrintOrder(id: string): Promise<PrintOrder | null>;
+  getPrintOrderByPurchaseId(purchaseId: string): Promise<PrintOrder | null>;
+  getPrintOrderByProdigiId(prodigiOrderId: string): Promise<PrintOrder | null>;
+  updatePrintOrder(id: string, data: Partial<PrintOrder>): Promise<PrintOrder>;
+  getAllPrintOrders(limit?: number): Promise<PrintOrder[]>;
 }
 
 // Database storage for persistent data
@@ -1032,6 +1040,57 @@ export class DatabaseStorage implements IStorage {
       .limit(1);
     
     return saved !== undefined;
+  }
+
+  // Print Order operations
+  async createPrintOrder(printOrder: InsertPrintOrder): Promise<PrintOrder> {
+    const [newPrintOrder] = await db
+      .insert(printOrders)
+      .values(printOrder)
+      .returning();
+    return newPrintOrder;
+  }
+
+  async getPrintOrder(id: string): Promise<PrintOrder | null> {
+    const [printOrder] = await db
+      .select()
+      .from(printOrders)
+      .where(eq(printOrders.id, id));
+    return printOrder || null;
+  }
+
+  async getPrintOrderByPurchaseId(purchaseId: string): Promise<PrintOrder | null> {
+    const [printOrder] = await db
+      .select()
+      .from(printOrders)
+      .where(eq(printOrders.purchaseId, purchaseId));
+    return printOrder || null;
+  }
+
+  async getPrintOrderByProdigiId(prodigiOrderId: string): Promise<PrintOrder | null> {
+    const [printOrder] = await db
+      .select()
+      .from(printOrders)
+      .where(eq(printOrders.prodigiOrderId, prodigiOrderId));
+    return printOrder || null;
+  }
+
+  async updatePrintOrder(id: string, data: Partial<PrintOrder>): Promise<PrintOrder> {
+    const [updatedPrintOrder] = await db
+      .update(printOrders)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(printOrders.id, id))
+      .returning();
+    return updatedPrintOrder;
+  }
+
+  async getAllPrintOrders(limit: number = 100): Promise<PrintOrder[]> {
+    const orders = await db
+      .select()
+      .from(printOrders)
+      .orderBy(desc(printOrders.createdAt))
+      .limit(limit);
+    return orders;
   }
 }
 

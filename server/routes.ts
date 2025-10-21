@@ -3070,6 +3070,284 @@ Sitemap: ${baseUrl}/sitemap.xml`;
     }
   });
 
+  // Prodigi Print API Routes
+
+  // Validation schemas for Prodigi endpoints
+  const quoteRequestSchema = z.object({
+    bookSize: z.string().regex(/^(a5-portrait|a5-landscape|a4-portrait|a4-landscape|square-8|square-11)$/),
+    destinationCountryCode: z.string().length(2).regex(/^[A-Z]{2}$/),
+    shippingMethod: z.enum(['Budget', 'Standard', 'Express', 'Overnight']).optional(),
+  });
+
+  const recipientAddressSchema = z.object({
+    line1: z.string().min(1).max(200),
+    line2: z.string().max(200).optional(),
+    postalOrZipCode: z.string().min(1).max(20),
+    countryCode: z.string().length(2).regex(/^[A-Z]{2}$/),
+    townOrCity: z.string().min(1).max(100),
+    stateOrCounty: z.string().max(100).optional(),
+  });
+
+  const recipientDetailsSchema = z.object({
+    name: z.string().min(1).max(200),
+    email: z.string().email().optional(),
+    phoneNumber: z.string().max(20).optional(),
+    address: recipientAddressSchema,
+  });
+
+  const submitOrderRequestSchema = z.object({
+    purchaseId: z.string().uuid(),
+    recipientDetails: recipientDetailsSchema,
+    shippingMethod: z.enum(['Budget', 'Standard', 'Express', 'Overnight']).optional(),
+  });
+
+  // Get quote for print order (requires authentication)
+  app.post("/api/prodigi/quote", isAuthenticated, async (req: any, res) => {
+    try {
+      // Validate request body
+      const validationResult = quoteRequestSchema.safeParse(req.body);
+      if (!validationResult.success) {
+        return res.status(400).json({ 
+          message: "Invalid request data", 
+          errors: validationResult.error.errors 
+        });
+      }
+
+      const { bookSize, destinationCountryCode, shippingMethod } = validationResult.data;
+
+      const { prodigiService } = await import("./services/prodigi");
+      
+      // Get SKU based on book size (assuming 24 pages for photobooks)
+      const sku = prodigiService.getProductSKU(bookSize, 24);
+
+      const quoteRequest = {
+        shippingMethod: shippingMethod || 'Standard',
+        destinationCountryCode,
+        items: [
+          {
+            sku,
+            copies: 1,
+          },
+        ],
+      };
+
+      const quote = await prodigiService.getQuote(quoteRequest);
+      res.json(quote);
+    } catch (error) {
+      console.error("Get quote error:", error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      res.status(500).json({ message: `Failed to get quote: ${errorMessage}` });
+    }
+  });
+
+  // Submit print order to Prodigi (requires authentication and completed purchase)
+  app.post("/api/prodigi/submit-order", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.id || req.user.claims?.sub;
+      
+      // Validate request body
+      const validationResult = submitOrderRequestSchema.safeParse(req.body);
+      if (!validationResult.success) {
+        return res.status(400).json({ 
+          message: "Invalid request data", 
+          errors: validationResult.error.errors 
+        });
+      }
+
+      const { purchaseId, recipientDetails, shippingMethod } = validationResult.data;
+
+      // Verify purchase exists and belongs to user
+      const purchase = await storage.getUserPurchases(userId);
+      const matchingPurchase = purchase.find(p => p.id === purchaseId);
+
+      if (!matchingPurchase) {
+        return res.status(404).json({ message: "Purchase not found" });
+      }
+
+      if (matchingPurchase.type !== 'print') {
+        return res.status(400).json({ message: "Purchase is not a print order" });
+      }
+
+      if (matchingPurchase.status !== 'completed') {
+        return res.status(400).json({ message: "Purchase payment not completed" });
+      }
+
+      // Check if print order already exists
+      const existingPrintOrder = await storage.getPrintOrderByPurchaseId(purchaseId);
+      if (existingPrintOrder) {
+        return res.status(400).json({ message: "Print order already submitted", printOrder: existingPrintOrder });
+      }
+
+      // Get storybook details
+      const storybook = await storage.getStorybook(matchingPurchase.storybookId);
+      if (!storybook) {
+        return res.status(404).json({ message: "Storybook not found" });
+      }
+
+      const { prodigiService } = await import("./services/prodigi");
+      const { generatePrintReadyPDF } = await import("./services/printPdf");
+      const { ObjectStorageService } = await import("./objectStorage");
+      const { writeFileSync, unlinkSync } = await import("fs");
+      const { join } = await import("path");
+      const { tmpdir } = await import("os");
+
+      // Generate print-ready PDF
+      const pdfBuffer = await generatePrintReadyPDF(
+        storybook, 
+        matchingPurchase.bookSize || 'a5-portrait',
+        matchingPurchase.spineText,
+        matchingPurchase.spineTextColor,
+        matchingPurchase.spineBackgroundColor
+      );
+
+      // Save PDF to temporary file
+      const tempPdfPath = join(tmpdir(), `${storybook.id}-print.pdf`);
+      writeFileSync(tempPdfPath, pdfBuffer);
+
+      // Upload to object storage and get public URL
+      const objectStorage = new ObjectStorageService();
+      const storagePath = `print-pdfs/${storybook.id}.pdf`;
+      const pdfUrl = await objectStorage.uploadFile(tempPdfPath, storagePath, false);
+      
+      // Clean up temp file
+      unlinkSync(tempPdfPath);
+
+      // Get SKU and create order
+      const sku = prodigiService.getProductSKU(matchingPurchase.bookSize || 'a5-portrait', storybook.pages.length);
+
+      const orderRequest = {
+        merchantReference: `SB-${storybook.id}-${purchaseId}`,
+        shippingMethod: shippingMethod || 'Standard',
+        recipient: recipientDetails,
+        items: [
+          {
+            sku,
+            copies: 1,
+            sizing: 'fillPrintArea',
+            assets: [
+              {
+                printArea: 'default',
+                url: pdfUrl,
+              },
+            ],
+          },
+        ],
+        metadata: {
+          storybookId: storybook.id,
+          purchaseId,
+          userId,
+        },
+      };
+
+      const prodigiOrder = await prodigiService.createOrder(orderRequest);
+
+      // Create print order record
+      const printOrder = await storage.createPrintOrder({
+        purchaseId,
+        prodigiOrderId: prodigiOrder.id,
+        status: prodigiOrder.status.stage,
+        webhookData: prodigiOrder,
+      });
+
+      res.json({ printOrder, prodigiOrder });
+    } catch (error) {
+      console.error("Submit order error:", error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      res.status(500).json({ message: `Failed to submit order: ${errorMessage}` });
+    }
+  });
+
+  // Get print order status (requires authentication)
+  app.get("/api/prodigi/order/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.id || req.user.claims?.sub;
+      const { id } = req.params;
+
+      const printOrder = await storage.getPrintOrder(id);
+      if (!printOrder) {
+        return res.status(404).json({ message: "Print order not found" });
+      }
+
+      // Verify ownership through purchase
+      const purchase = await storage.getUserPurchases(userId);
+      const matchingPurchase = purchase.find(p => p.id === printOrder.purchaseId);
+
+      if (!matchingPurchase) {
+        return res.status(403).json({ message: "Unauthorized" });
+      }
+
+      // Get latest status from Prodigi
+      if (printOrder.prodigiOrderId) {
+        const { prodigiService } = await import("./services/prodigi");
+        const prodigiOrder = await prodigiService.getOrder(printOrder.prodigiOrderId);
+
+        // Update local record
+        await storage.updatePrintOrder(printOrder.id, {
+          status: prodigiOrder.status.stage,
+          webhookData: prodigiOrder,
+          trackingNumber: prodigiOrder.shipments?.[0]?.tracking?.number,
+          carrier: prodigiOrder.shipments?.[0]?.carrier?.name,
+          estimatedDelivery: prodigiOrder.shipments?.[0]?.estimatedDeliveryDate 
+            ? new Date(prodigiOrder.shipments[0].estimatedDeliveryDate) 
+            : undefined,
+        });
+
+        res.json({ printOrder, prodigiOrder });
+      } else {
+        res.json({ printOrder });
+      }
+    } catch (error) {
+      console.error("Get order status error:", error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      res.status(500).json({ message: `Failed to get order status: ${errorMessage}` });
+    }
+  });
+
+  // Webhook for Prodigi order updates
+  app.post("/api/webhook/prodigi", async (req: any, res) => {
+    try {
+      // Verify webhook authenticity using shared secret or API key
+      // Prodigi sends the X-API-Key header in webhook requests
+      const apiKey = req.headers['x-api-key'];
+      const expectedApiKey = process.env.PRODIGI_SANDBOX_API_KEY;
+
+      if (!apiKey || apiKey !== expectedApiKey) {
+        console.warn('Prodigi webhook authentication failed - invalid or missing API key');
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+
+      const { orderId, status, shipments } = req.body;
+
+      if (!orderId) {
+        return res.status(400).json({ message: "orderId is required" });
+      }
+
+      const printOrder = await storage.getPrintOrderByProdigiId(orderId);
+      if (!printOrder) {
+        console.warn(`Received webhook for unknown Prodigi order: ${orderId}`);
+        return res.json({ received: true });
+      }
+
+      // Update print order with webhook data
+      await storage.updatePrintOrder(printOrder.id, {
+        status: status?.stage || printOrder.status,
+        webhookData: req.body,
+        trackingNumber: shipments?.[0]?.tracking?.number,
+        carrier: shipments?.[0]?.carrier?.name,
+        estimatedDelivery: shipments?.[0]?.estimatedDeliveryDate 
+          ? new Date(shipments[0].estimatedDeliveryDate) 
+          : undefined,
+      });
+
+      console.log(`Updated print order ${printOrder.id} from Prodigi webhook`);
+      res.json({ received: true });
+    } catch (error) {
+      console.error("Prodigi webhook error:", error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      res.status(400).json({ message: `Webhook Error: ${errorMessage}` });
+    }
+  });
+
   // Audio Settings Routes
 
   // Get audio settings for a specific storybook (requires authentication and ownership)
