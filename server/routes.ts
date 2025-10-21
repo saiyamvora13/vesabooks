@@ -2845,7 +2845,58 @@ Sitemap: ${baseUrl}/sitemap.xml`;
     try {
       const userId = req.user.id || req.user.claims?.sub;
       const cartItems = await storage.getCartItems(userId);
-      res.json({ items: cartItems });
+      
+      // Fetch pricing from admin settings with fallback defaults
+      const digitalPriceSetting = await storage.getSetting('digital_price');
+      const printPriceSetting = await storage.getSetting('print_price');
+      const digitalPrice = digitalPriceSetting ? parseInt(digitalPriceSetting.value) : 399;
+      const printPrice = printPriceSetting ? parseInt(printPriceSetting.value) : 2499;
+      
+      // Enrich cart items with storybook data and pricing
+      const enrichedItems = await Promise.all(
+        cartItems.map(async (item) => {
+          try {
+            // Fetch storybook data
+            const storybook = await storage.getStorybook(item.storybookId);
+            
+            // Calculate price with potential discount
+            let price = item.productType === 'digital' ? digitalPrice : printPrice;
+            let discount = 0;
+            let originalPrice = price;
+            
+            // Apply digital-to-print discount
+            if (item.productType === 'print') {
+              const existingDigitalPurchase = await storage.getStorybookPurchase(userId, item.storybookId, 'digital');
+              const existingPrintPurchase = await storage.getStorybookPurchase(userId, item.storybookId, 'print');
+              if (existingDigitalPurchase && !existingPrintPurchase) {
+                discount = digitalPrice;
+                price = Math.max(0, printPrice - digitalPrice);
+              }
+            }
+            
+            return {
+              ...item,
+              storybook,
+              price,
+              originalPrice,
+              discount,
+            };
+          } catch (error) {
+            console.error(`Failed to enrich cart item ${item.id}:`, error);
+            // Return item with null storybook if fetch fails
+            const price = item.productType === 'digital' ? digitalPrice : printPrice;
+            return {
+              ...item,
+              storybook: null,
+              price,
+              originalPrice: price,
+              discount: 0,
+            };
+          }
+        })
+      );
+      
+      res.json({ items: enrichedItems });
     } catch (error) {
       console.error("Get cart items error:", error);
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';

@@ -13,8 +13,15 @@ import type { Storybook, CartItem } from "@shared/schema";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { SEO } from "@/components/SEO";
 
-interface CartItemWithStorybook extends CartItem {
-  storybook?: Storybook;
+interface EnrichedCartItem extends CartItem {
+  storybook?: Storybook | null;
+  price: number;
+  originalPrice: number;
+  discount: number;
+}
+
+function formatPrice(cents: number): string {
+  return (cents / 100).toFixed(2);
 }
 
 function CartItemCard({ 
@@ -22,27 +29,22 @@ function CartItemCard({
   onRemove, 
   onUpdateQuantity 
 }: { 
-  item: CartItemWithStorybook; 
+  item: EnrichedCartItem; 
   onRemove: () => void;
   onUpdateQuantity: (quantity: number) => void;
 }) {
   const { t } = useTranslation();
-  const { data: storybook, isLoading } = useQuery<Storybook>({
-    queryKey: ['/api/storybooks', item.storybookId],
-  });
-
-  const coverImageUrl = storybook?.coverImageUrl || storybook?.pages?.[0]?.imageUrl;
+  const coverImageUrl = item.storybook?.coverImageUrl || item.storybook?.pages?.[0]?.imageUrl;
+  const itemTotal = item.price * item.quantity;
 
   return (
     <Card data-testid={`card-item-${item.storybookId}-${item.productType}`}>
       <CardHeader className="pb-3 p-4 sm:p-6">
         <div className="flex flex-col sm:flex-row items-start gap-4">
-          {isLoading ? (
-            <Skeleton className="w-full sm:w-20 h-40 sm:h-28 rounded-lg flex-shrink-0" data-testid={`skeleton-image-${item.storybookId}`} />
-          ) : coverImageUrl ? (
+          {coverImageUrl ? (
             <img
               src={coverImageUrl}
-              alt={`${storybook?.title} cover`}
+              alt={`${item.storybook?.title || 'Storybook'} cover`}
               className="w-full sm:w-20 h-40 sm:h-28 object-cover rounded-lg flex-shrink-0"
               data-testid={`img-cover-${item.storybookId}-${item.productType}`}
               loading="lazy"
@@ -55,7 +57,7 @@ function CartItemCard({
           
           <div className="flex-1 min-w-0">
             <CardTitle className="text-lg mb-2" data-testid={`text-title-${item.storybookId}-${item.productType}`}>
-              {storybook?.title || 'Loading...'}
+              {item.storybook?.title || 'Untitled Story'}
             </CardTitle>
             <div className="space-y-2">
               <div className="flex items-center gap-2 flex-wrap">
@@ -79,6 +81,32 @@ function CartItemCard({
                   </Badge>
                 </div>
               )}
+              
+              {/* Price Display */}
+              <div className="mt-2">
+                {item.discount > 0 ? (
+                  <div className="space-y-1">
+                    <div className="flex items-center gap-2">
+                      <span className="text-lg font-bold text-foreground" data-testid={`text-price-${item.storybookId}-${item.productType}`}>
+                        ${formatPrice(item.price)}
+                      </span>
+                      <span className="text-sm line-through text-muted-foreground">
+                        ${formatPrice(item.originalPrice)}
+                      </span>
+                      <Badge variant="destructive" className="text-xs">
+                        Save ${formatPrice(item.discount)}
+                      </Badge>
+                    </div>
+                    <p className="text-xs text-green-600 dark:text-green-400">
+                      Digital edition discount applied
+                    </p>
+                  </div>
+                ) : (
+                  <span className="text-lg font-bold text-foreground" data-testid={`text-price-${item.storybookId}-${item.productType}`}>
+                    ${formatPrice(item.price)}
+                  </span>
+                )}
+              </div>
             </div>
           </div>
           
@@ -109,15 +137,23 @@ function CartItemCard({
               </Button>
             </div>
             
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-10 w-10"
-              onClick={onRemove}
-              data-testid={`button-remove-${item.storybookId}-${item.productType}`}
-            >
-              <X className="h-5 w-5" />
-            </Button>
+            <div className="flex flex-col items-end gap-2">
+              <div className="text-right">
+                <div className="text-xs text-muted-foreground">Item Total</div>
+                <div className="text-lg font-bold" data-testid={`text-item-total-${item.storybookId}-${item.productType}`}>
+                  ${formatPrice(itemTotal)}
+                </div>
+              </div>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-10 w-10"
+                onClick={onRemove}
+                data-testid={`button-remove-${item.storybookId}-${item.productType}`}
+              >
+                <X className="h-5 w-5" />
+              </Button>
+            </div>
           </div>
         </div>
       </CardHeader>
@@ -131,11 +167,18 @@ export default function Cart() {
   const { toast } = useToast();
   const { isAuthenticated } = useAuth();
 
-  // Fetch cart items from database
-  const { data: cartItems = [], isLoading, refetch } = useQuery<CartItem[]>({
+  // Fetch cart items from database (now includes storybook data and pricing)
+  const { data: cartResponse, isLoading, refetch } = useQuery<{ items: EnrichedCartItem[] }>({
     queryKey: ['/api/cart'],
     enabled: isAuthenticated,
   });
+
+  const cartItems = cartResponse?.items || [];
+
+  // Calculate totals
+  const subtotal = cartItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+  const totalDiscount = cartItems.reduce((sum, item) => sum + (item.discount * item.quantity), 0);
+  const totalBeforeDiscount = cartItems.reduce((sum, item) => sum + (item.originalPrice * item.quantity), 0);
 
   // Remove item mutation
   const removeItemMutation = useMutation({
@@ -229,7 +272,7 @@ export default function Cart() {
           <p className="text-muted-foreground mb-8">
             You need to be logged in to use the shopping cart
           </p>
-          <Button onClick={() => window.location.href = '/api/login'} className="gradient-bg hover:opacity-90 !text-[hsl(258,90%,20%)]">
+          <Button onClick={() => window.location.href = '/api/login'} className="gradient-bg hover:opacity-90 !text-[hsl(258,90%,20%)]" data-testid="button-sign-in">
             Sign In
           </Button>
         </div>
@@ -302,11 +345,35 @@ export default function Cart() {
 
             <Card className="bg-muted/50">
               <CardContent className="pt-6">
-                <div className="flex items-center justify-between mb-6">
-                  <span className="text-lg font-semibold">Total Items</span>
-                  <span className="text-3xl font-bold text-[hsl(258,90%,20%)] dark:text-[hsl(258,70%,70%)]" data-testid="text-total">
-                    {cartItems.reduce((sum, item) => sum + item.quantity, 0)}
-                  </span>
+                <div className="space-y-3 mb-6">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground">Items</span>
+                    <span data-testid="text-item-count">
+                      {cartItems.reduce((sum, item) => sum + item.quantity, 0)}
+                    </span>
+                  </div>
+                  
+                  {totalDiscount > 0 && (
+                    <>
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-muted-foreground">Subtotal (before discount)</span>
+                        <span>${formatPrice(totalBeforeDiscount)}</span>
+                      </div>
+                      <div className="flex items-center justify-between text-sm text-green-600 dark:text-green-400">
+                        <span>Discount</span>
+                        <span data-testid="text-discount">-${formatPrice(totalDiscount)}</span>
+                      </div>
+                    </>
+                  )}
+                  
+                  <div className="pt-3 border-t border-border">
+                    <div className="flex items-center justify-between">
+                      <span className="text-lg font-semibold">Total</span>
+                      <span className="text-3xl font-bold text-[hsl(258,90%,20%)] dark:text-[hsl(258,70%,70%)]" data-testid="text-total">
+                        ${formatPrice(subtotal)}
+                      </span>
+                    </div>
+                  </div>
                 </div>
                 
                 <div className="flex flex-col gap-3">

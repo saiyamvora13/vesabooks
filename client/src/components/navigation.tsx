@@ -31,18 +31,20 @@ export default function Navigation() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+      queryClient.removeQueries({ queryKey: ['/api/cart'] });
       setLocation("/");
       setMobileMenuOpen(false);
     },
   });
 
   // Fetch cart count from database
-  const { data: cartItems } = useQuery<CartItem[]>({
+  const { data: cartResponse } = useQuery<{ items: CartItem[] }>({
     queryKey: ['/api/cart'],
     enabled: isAuthenticated,
   });
 
-  const cartCount = cartItems?.reduce((sum, item) => sum + item.quantity, 0) ?? 0;
+  const cartItems = cartResponse?.items || [];
+  const cartCount = cartItems.reduce((sum, item) => sum + item.quantity, 0);
 
   return (
     <>
