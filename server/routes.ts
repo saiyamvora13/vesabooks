@@ -3115,31 +3115,37 @@ Sitemap: ${baseUrl}/sitemap.xml`;
 
       const { bookSize, destinationCountryCode, shippingMethod } = validationResult.data;
 
-      const { prodigiService } = await import("./services/prodigi");
-      
-      // Get SKU based on book size (assuming 24 pages for photobooks)
-      const sku = prodigiService.getProductSKU(bookSize, 24);
-
-      const quoteRequest = {
-        shippingMethod: shippingMethod || 'Standard',
-        destinationCountryCode,
-        items: [
-          {
-            sku,
-            copies: 1,
-          },
-        ],
+      // TEMPORARY: Use fallback pricing until Prodigi SKUs are configured
+      // Base prices (in USD) for different book sizes
+      const basePrices: Record<string, number> = {
+        'a5-portrait': 15.00,
+        'a5-landscape': 15.00,
+        'a4-portrait': 20.00,
+        'a4-landscape': 20.00,
+        'square-8': 18.00,
+        'square-11': 25.00,
       };
 
-      const prodigiQuote = await prodigiService.getQuote(quoteRequest);
-      
+      // Shipping costs by method
+      const shippingCosts: Record<string, number> = {
+        'Budget': 4.99,
+        'Standard': 7.99,
+        'Express': 12.99,
+        'Overnight': 19.99,
+      };
+
+      const basePrice = basePrices[bookSize] || 15.00;
+      const shippingCost = shippingCosts[shippingMethod || 'Standard'] || 7.99;
+      const subtotal = basePrice + shippingCost;
+
       // Get margin percentage from settings
       const marginSetting = await storage.getSetting('print_margin_percentage');
       const marginPercentage = marginSetting ? parseFloat(marginSetting.value) : 20;
       
-      // Apply margin to Prodigi's total cost
-      const prodigiTotal = parseFloat(prodigiQuote.quotes[0].costSummary.total.amount);
-      const finalPrice = prodigiTotal * (1 + marginPercentage / 100);
+      // Apply margin
+      const finalPrice = subtotal * (1 + marginPercentage / 100);
+      
+      console.log(`[Quote] Fallback pricing - Book: ${bookSize}, Shipping: ${shippingMethod}, Base: $${subtotal}, Final: $${finalPrice.toFixed(2)}`);
       
       // Return customer-facing quote with margin applied
       res.json({
@@ -3147,9 +3153,9 @@ Sitemap: ${baseUrl}/sitemap.xml`;
         shippingMethod: shippingMethod || 'Standard',
         price: {
           amount: finalPrice.toFixed(2),
-          currency: prodigiQuote.quotes[0].costSummary.total.currency,
+          currency: 'USD',
         },
-        estimatedDelivery: null, // Can be enhanced based on shipping method
+        estimatedDelivery: null,
       });
     } catch (error) {
       console.error("Get quote error:", error);
