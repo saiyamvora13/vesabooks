@@ -1,7 +1,7 @@
 import Navigation from "@/components/navigation";
 import HeroSection from "@/components/hero-section";
 import FeaturesSection from "@/components/features-section";
-import ExamplesSection from "@/components/examples-section";
+import GalleryCarousel from "@/components/gallery-carousel";
 import { SEO } from "@/components/SEO";
 
 export default function Home() {
@@ -15,7 +15,7 @@ export default function Home() {
       <Navigation />
       <HeroSection />
       <FeaturesSection />
-      <ExamplesSection />
+      <GalleryCarousel />
     </div>
   );
 }
