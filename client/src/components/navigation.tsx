@@ -1,6 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Link, useLocation } from "wouter";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -14,17 +14,16 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { LogOut, Menu, X, ShoppingCart, ShoppingBag } from "lucide-react";
-import { getCartCount } from "@/lib/cartUtils";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
 import { useTranslation } from "react-i18next";
+import type { CartItem } from "@shared/schema";
 
 export default function Navigation() {
   const { t } = useTranslation();
   const [location, setLocation] = useLocation();
   const { user, isAuthenticated, isLoading } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [cartCount, setCartCount] = useState(0);
 
   const logoutMutation = useMutation({
     mutationFn: async () => {
@@ -37,21 +36,13 @@ export default function Navigation() {
     },
   });
 
-  useEffect(() => {
-    const updateCartCount = () => {
-      setCartCount(getCartCount());
-    };
+  // Fetch cart count from database
+  const { data: cartItems = [] } = useQuery<CartItem[]>({
+    queryKey: ['/api/cart'],
+    enabled: isAuthenticated,
+  });
 
-    updateCartCount();
-
-    window.addEventListener('storage', updateCartCount);
-    window.addEventListener('cartUpdated', updateCartCount);
-
-    return () => {
-      window.removeEventListener('storage', updateCartCount);
-      window.removeEventListener('cartUpdated', updateCartCount);
-    };
-  }, []);
+  const cartCount = cartItems.reduce((sum, item) => sum + item.quantity, 0);
 
   return (
     <>
