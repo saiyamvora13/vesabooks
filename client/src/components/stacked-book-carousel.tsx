@@ -133,17 +133,21 @@ export default function StackedBookCarousel() {
             >
               <div className="book-3d">
                 <div className="book-spine"></div>
+                <div className="book-back"></div>
                 
                 <div className="book-cover">
                   {book.coverImageUrl ? (
-                    <img
-                      src={book.coverImageUrl}
-                      alt={`Cover of ${book.title}`}
-                      className="w-full h-full object-cover"
-                      loading="lazy"
-                    />
+                    <>
+                      <img
+                        src={book.coverImageUrl}
+                        alt={`Cover of ${book.title}`}
+                        className="book-cover-image"
+                        loading="lazy"
+                      />
+                      <div className="cover-image-wrapper"></div>
+                    </>
                   ) : (
-                    <div className="w-full h-full bg-gradient-to-br from-primary/20 to-secondary/20 flex items-center justify-center">
+                    <div className="w-full h-full bg-gradient-to-br from-primary/20 to-secondary/20 flex items-center justify-center rounded-r-xl">
                       <span className="text-4xl font-bold text-primary/40">
                         {book.title.charAt(0)}
                       </span>
@@ -152,6 +156,8 @@ export default function StackedBookCarousel() {
                 </div>
 
                 <div className="book-pages"></div>
+                <div className="book-top"></div>
+                <div className="book-bottom"></div>
               </div>
             </Link>
           );
