@@ -159,6 +159,9 @@ export async function generatePrintReadyPDF(
     const imgAspectRatio = image.width / image.height;
     const targetAspectRatio = targetWidth / targetHeight;
     
+    console.log(`[PDF DEBUG] Image: ${image.width}x${image.height} (AR: ${imgAspectRatio.toFixed(2)})`);
+    console.log(`[PDF DEBUG] Target: ${targetWidth}x${targetHeight} (AR: ${targetAspectRatio.toFixed(2)})`);
+    
     let drawWidth = targetWidth;
     let drawHeight = targetHeight;
     let x = targetX;
@@ -170,11 +173,13 @@ export async function generatePrintReadyPDF(
       drawWidth = targetWidth;
       drawHeight = drawWidth / imgAspectRatio;
       y = targetY + (targetHeight - drawHeight) / 2;
+      console.log(`[PDF DEBUG] Wide image mode: width=${drawWidth}, height=${drawHeight}, x=${x}, y=${y}`);
     } else {
       // Image is taller - fit to height, add left/right margins
       drawHeight = targetHeight;
       drawWidth = drawHeight * imgAspectRatio;
       x = targetX + (targetWidth - drawWidth) / 2;
+      console.log(`[PDF DEBUG] Tall image mode: width=${drawWidth}, height=${drawHeight}, x=${x}, y=${y}`);
     }
     
     page.drawImage(image, { x, y, width: drawWidth, height: drawHeight });
