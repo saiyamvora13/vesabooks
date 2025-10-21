@@ -18,9 +18,16 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { type Storybook } from "@shared/schema";
-import { ShoppingCart, Star, Share2 } from "lucide-react";
+import { ShoppingCart, Star, Share2, Info } from "lucide-react";
 import { addToCart } from "@/lib/cartUtils";
 import { useAuth } from "@/hooks/useAuth";
 import { RatingDialog } from "@/components/rating-dialog";
@@ -41,6 +48,7 @@ export default function View() {
   const [ratingDialogOpen, setRatingDialogOpen] = useState(false);
   const [shareDialogOpen, setShareDialogOpen] = useState(false);
   const [regenerateDialogOpen, setRegenerateDialogOpen] = useState(false);
+  const [infoDialogOpen, setInfoDialogOpen] = useState(false);
   const [pageToRegenerate, setPageToRegenerate] = useState<number | null>(null);
   const [currentPageNumber, setCurrentPageNumber] = useState(0);
   const [audioInitialized, setAudioInitialized] = useState(false);
@@ -432,6 +440,16 @@ export default function View() {
               <Button 
                 variant="outline" 
                 className="rounded-xl flex-1 md:flex-initial min-h-[48px] md:min-h-0" 
+                onClick={() => setInfoDialogOpen(true)}
+                data-testid="button-info"
+              >
+                <Info className="h-4 md:h-4 w-4 md:w-4 mr-2" />
+                <span className="text-sm md:text-base">Details</span>
+              </Button>
+
+              <Button 
+                variant="outline" 
+                className="rounded-xl flex-1 md:flex-initial min-h-[48px] md:min-h-0" 
                 onClick={() => setShareDialogOpen(true)}
                 data-testid="button-share"
               >
@@ -587,6 +605,116 @@ export default function View() {
           onVerified={handleEmailVerified}
         />
       )}
+
+      {/* Book Details Dialog */}
+      <Dialog open={infoDialogOpen} onOpenChange={setInfoDialogOpen}>
+        <DialogContent className="max-w-[95vw] md:max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-xl md:text-2xl font-bold pr-8">
+              Book Details
+            </DialogTitle>
+            <DialogDescription className="sr-only">
+              View detailed information about this storybook including prompt, age group, and illustration style
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-6 py-4">
+            {/* Title and Author */}
+            <div className="space-y-3">
+              <div>
+                <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-1">Title</h3>
+                <p className="text-lg font-medium" data-testid="info-title">{storybook.title}</p>
+              </div>
+              {storybook.author && (
+                <div>
+                  <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-1">Author</h3>
+                  <p className="text-base" data-testid="info-author">{storybook.author}</p>
+                </div>
+              )}
+            </div>
+
+            {/* Story Prompt */}
+            <div>
+              <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-2">Story Prompt</h3>
+              <div className="bg-muted/50 rounded-lg p-4 border">
+                <p className="text-base leading-relaxed italic" data-testid="info-prompt">
+                  "{storybook.prompt}"
+                </p>
+              </div>
+            </div>
+
+            {/* Specifications Grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {storybook.age && (
+                <div className="bg-background border rounded-lg p-4">
+                  <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-2">Age Group</h3>
+                  <div className="flex items-center gap-2">
+                    <div className="bg-primary/10 text-primary px-3 py-1 rounded-full text-sm font-medium" data-testid="info-age">
+                      {storybook.age} years
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {storybook.artStyle && (
+                <div className="bg-background border rounded-lg p-4">
+                  <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-2">Illustration Style</h3>
+                  <p className="text-base capitalize" data-testid="info-style">{storybook.artStyle}</p>
+                </div>
+              )}
+
+              {storybook.orientation && (
+                <div className="bg-background border rounded-lg p-4">
+                  <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-2">Book Orientation</h3>
+                  <div className="flex items-center gap-2">
+                    <div className="bg-secondary/80 px-3 py-1 rounded-full text-sm font-medium capitalize" data-testid="info-orientation">
+                      {storybook.orientation}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {storybook.createdAt && (
+                <div className="bg-background border rounded-lg p-4">
+                  <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-2">Created On</h3>
+                  <p className="text-base" data-testid="info-created">
+                    {new Date(storybook.createdAt).toLocaleDateString('en-US', { 
+                      year: 'numeric', 
+                      month: 'long', 
+                      day: 'numeric' 
+                    })}
+                  </p>
+                </div>
+              )}
+            </div>
+
+            {/* Additional Info */}
+            {(storybook.inspirationImages && storybook.inspirationImages.length > 0) && (
+              <div className="bg-background border rounded-lg p-4">
+                <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-2">
+                  Character References
+                </h3>
+                <p className="text-sm text-muted-foreground" data-testid="info-references">
+                  {storybook.inspirationImages.length} reference image{storybook.inspirationImages.length !== 1 ? 's' : ''} used for character consistency
+                </p>
+              </div>
+            )}
+
+            {storybook.pages && (
+              <div className="bg-background border rounded-lg p-4">
+                <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-2">
+                  Story Length
+                </h3>
+                <p className="text-base" data-testid="info-pages">
+                  {storybook.pages.length} page{storybook.pages.length !== 1 ? 's' : ''} 
+                  <span className="text-sm text-muted-foreground ml-2">
+                    ({storybook.pages.length * 2} spreads with text and illustrations)
+                  </span>
+                </p>
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
