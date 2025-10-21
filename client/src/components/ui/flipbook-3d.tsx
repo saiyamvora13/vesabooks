@@ -25,18 +25,29 @@ interface FlipbookViewerProps {
 const PageFace = ({ 
   className = '', 
   isBack = false, 
-  children 
+  children,
+  style = {}
 }: {
   className?: string;
   isBack?: boolean;
   children: React.ReactNode;
+  style?: React.CSSProperties;
 }) => (
   <div
     className={`absolute top-0 left-0 w-full h-full overflow-hidden ${className}`}
     style={{
       backfaceVisibility: 'hidden',
       transform: isBack ? 'rotateY(180deg)' : 'rotateY(0deg)',
-      background: 'linear-gradient(135deg, #f9f7f3 0%, #faf8f5 50%, #f7f5f1 100%)',
+      background: `linear-gradient(135deg, #fdfcf9 0%, #faf8f5 50%, #f7f5f1 100%)`,
+      backgroundImage: `
+        linear-gradient(135deg, #fdfcf9 0%, #faf8f5 50%, #f7f5f1 100%),
+        repeating-linear-gradient(90deg, transparent, transparent 2px, rgba(0,0,0,0.01) 2px, rgba(0,0,0,0.01) 4px),
+        repeating-linear-gradient(180deg, transparent, transparent 2px, rgba(0,0,0,0.01) 2px, rgba(0,0,0,0.01) 4px)
+      `,
+      boxShadow: isBack 
+        ? 'inset 6px 0 12px -3px rgba(0,0,0,0.1), inset -1px 0 2px rgba(0,0,0,0.05)' 
+        : 'inset -6px 0 12px -3px rgba(0,0,0,0.1), inset 1px 0 2px rgba(0,0,0,0.05)',
+      ...style
     }}
   >
     {children}
@@ -48,15 +59,25 @@ const Cover = ({ title, author, coverImageUrl }: { title: string; author: string
   const showOverlays = !coverImageUrl || imageError;
 
   return (
-    <div className="w-full h-full bg-slate-700 dark:bg-slate-800 rounded-r-lg shadow-2xl flex flex-col text-center relative overflow-hidden">
+    <div className="w-full h-full bg-gradient-to-br from-slate-700 via-slate-750 to-slate-800 dark:from-slate-800 dark:via-slate-850 dark:to-slate-900 rounded-r-lg shadow-2xl flex flex-col text-center relative overflow-hidden"
+      style={{
+        boxShadow: '0 10px 30px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.1)',
+        border: '1px solid rgba(0,0,0,0.2)'
+      }}
+    >
       {coverImageUrl && !imageError && (
-        <img 
-          src={coverImageUrl} 
-          alt="Story cover" 
-          className="absolute inset-0 w-full h-full object-cover" 
-          loading="lazy"
-          onError={() => setImageError(true)}
-        />
+        <>
+          <img 
+            src={coverImageUrl} 
+            alt="Story cover" 
+            className="absolute inset-0 w-full h-full object-cover" 
+            loading="lazy"
+            onError={() => setImageError(true)}
+          />
+          {/* Glossy overlay for realistic book cover */}
+          <div className="absolute inset-0 bg-gradient-to-br from-white/10 via-transparent to-black/20 pointer-events-none" />
+          <div className="absolute inset-0 bg-gradient-to-tl from-transparent via-white/5 to-transparent pointer-events-none" />
+        </>
       )}
       {showOverlays && (
         <>
@@ -64,14 +85,39 @@ const Cover = ({ title, author, coverImageUrl }: { title: string; author: string
           <div className="absolute top-0 left-0 right-0 h-[25%] bg-gradient-to-b from-black/70 to-transparent"></div>
           <div className="absolute bottom-0 left-0 right-0 h-[25%] bg-gradient-to-t from-black/70 to-transparent"></div>
           <div className="absolute top-0 left-0 right-0 p-4 flex flex-col items-center justify-center h-[25%]">
-            <h1 className="text-3xl md:text-4xl font-bold font-serif text-white drop-shadow-[0_2px_3px_rgba(0,0,0,0.8)]">{title}</h1>
+            <h1 className="text-3xl md:text-4xl font-bold font-serif text-white"
+              style={{
+                textShadow: '0 2px 4px rgba(0,0,0,0.8), 0 0 20px rgba(255,255,255,0.1)',
+                filter: 'drop-shadow(0 1px 2px rgba(0,0,0,0.5))'
+              }}
+            >{title}</h1>
           </div>
           <div className="absolute bottom-0 left-0 right-0 p-4 flex items-center justify-center h-[15%]">
-            <p className="text-md md:text-lg text-white drop-shadow-[0_2px_3px_rgba(0,0,0,0.8)]">By {author}</p>
+            <p className="text-md md:text-lg text-white"
+              style={{
+                textShadow: '0 1px 3px rgba(0,0,0,0.8)'
+              }}
+            >By {author}</p>
           </div>
         </>
       )}
-      <div className="absolute left-[-24px] top-0 bottom-0 w-6 bg-gradient-to-r from-slate-800 to-slate-600 shadow-md"></div>
+      {/* Book spine with stitching effect */}
+      <div className="absolute left-[-24px] top-0 bottom-0 w-6"
+        style={{
+          background: 'linear-gradient(90deg, #2e3440 0%, #3b4252 40%, #434c5e 60%, #3b4252 100%)',
+          boxShadow: 'inset -2px 0 4px rgba(0,0,0,0.3), inset 2px 0 2px rgba(255,255,255,0.05)',
+        }}
+      >
+        {/* Stitching detail */}
+        <div className="absolute inset-x-0 top-4 bottom-4 flex flex-col justify-between">
+          {[...Array(8)].map((_, i) => (
+            <div key={i} className="w-full h-[1px] bg-black/20" />
+          ))}
+        </div>
+      </div>
+      {/* Wear marks at corners for realism */}
+      <div className="absolute top-0 right-0 w-8 h-8 bg-gradient-to-br from-transparent to-black/10 opacity-30" />
+      <div className="absolute bottom-0 right-0 w-8 h-8 bg-gradient-to-tr from-transparent to-black/10 opacity-30" />
     </div>
   );
 };
@@ -622,7 +668,10 @@ export function FlipbookViewer({ pages, title, author = "AI Author", coverImageU
     <div className="w-full h-full flex flex-col items-center justify-center gap-4">
       <div
         className={getContainerClasses()}
-        style={{ perspective: '3000px' }}
+        style={{ 
+          perspective: '3000px',
+          filter: 'drop-shadow(0 15px 40px rgba(0,0,0,0.15))'
+        }}
       >
         <div
           className="w-full h-full relative transition-transform duration-1000 ease-in-out"
@@ -631,6 +680,46 @@ export function FlipbookViewer({ pages, title, author = "AI Author", coverImageU
             transform: `translateX(${isBookOpen ? '0' : '-25%'}) scale(${isBookOpen ? 1 : 0.95})`,
           }}
         >
+          {/* Book spine visible throughout */}
+          <div className="absolute left-1/2 top-0 bottom-0 w-8 -translate-x-1/2 z-[9999]"
+            style={{
+              background: 'linear-gradient(90deg, #2e3440 0%, #3b4252 25%, #4c566a 50%, #3b4252 75%, #2e3440 100%)',
+              boxShadow: 'inset 0 0 8px rgba(0,0,0,0.4), 0 0 12px rgba(0,0,0,0.2)',
+              borderRadius: '2px',
+            }}
+          >
+            {/* Central stitching line */}
+            <div className="absolute left-1/2 top-0 bottom-0 w-[1px] -translate-x-1/2 bg-black/30" />
+          </div>
+
+          {/* Page stack effect - left side (flipped pages) */}
+          <div className="absolute left-0 top-0 bottom-0 w-1/2">
+            <div className="absolute right-0 top-0 bottom-0 w-3"
+              style={{
+                background: 'repeating-linear-gradient(90deg, #f8f6f2 0px, #f5f3ef 1px, #e8e6e2 2px)',
+                boxShadow: 'inset -2px 0 4px rgba(0,0,0,0.1)',
+                borderRadius: '0 2px 2px 0',
+                transform: `scaleX(${Math.max(0.5, currentPage / numSheets)})`,
+                transformOrigin: 'right center',
+                transition: 'transform 0.7s ease-in-out',
+              }}
+            />
+          </div>
+
+          {/* Page stack effect - right side (unflipped pages) */}
+          <div className="absolute right-0 top-0 bottom-0 w-1/2">
+            <div className="absolute left-0 top-0 bottom-0 w-3"
+              style={{
+                background: 'repeating-linear-gradient(90deg, #e8e6e2 0px, #f5f3ef 1px, #f8f6f2 2px)',
+                boxShadow: 'inset 2px 0 4px rgba(0,0,0,0.1)',
+                borderRadius: '2px 0 0 2px',
+                transform: `scaleX(${Math.max(0.5, 1 - currentPage / numSheets)})`,
+                transformOrigin: 'left center',
+                transition: 'transform 0.7s ease-in-out',
+              }}
+            />
+          </div>
+
           <div className="absolute top-0 left-0 w-full h-full" style={{ transformStyle: 'preserve-3d' }}>
             {bookSheets.map((sheet, index) => {
               const isFlipped = currentPage > index;
@@ -643,15 +732,29 @@ export function FlipbookViewer({ pages, title, author = "AI Author", coverImageU
                   style={{
                     transformStyle: 'preserve-3d',
                     transformOrigin: 'left center',
-                    transform: isFlipped ? 'rotateY(-180deg)' : 'rotateY(0deg)',
-                    transition: 'transform 0.7s ease-in-out',
+                    transform: isFlipped 
+                      ? `rotateY(${-180 + (index === currentPage - 1 ? 2 : 0)}deg)` // Slight curl on current page
+                      : `rotateY(${index === currentPage ? -2 : 0}deg)`, // Slight lift on next page
+                    transition: 'transform 0.7s cubic-bezier(0.4, 0.0, 0.2, 1)',
                     zIndex: zIndex,
                   }}
                 >
-                  <PageFace className="rounded-r-lg shadow-[-8px_0_15px_-10px_rgba(0,0,0,0.2)]">
+                  <PageFace className="rounded-r-lg"
+                    style={{
+                      boxShadow: isFlipped 
+                        ? 'none' 
+                        : '-4px 0 8px -2px rgba(0,0,0,0.15), -12px 0 20px -8px rgba(0,0,0,0.1)',
+                    }}
+                  >
                     {sheet.front}
                   </PageFace>
-                  <PageFace isBack className="rounded-l-lg shadow-[inset_8px_0_15px_-10px_rgba(0,0,0,0.3)]">
+                  <PageFace isBack className="rounded-l-lg"
+                    style={{
+                      boxShadow: isFlipped 
+                        ? '4px 0 8px -2px rgba(0,0,0,0.15), 12px 0 20px -8px rgba(0,0,0,0.1)' 
+                        : 'none',
+                    }}
+                  >
                     {sheet.back}
                   </PageFace>
                 </div>
