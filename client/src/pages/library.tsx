@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
-import { BookOpen, Calendar, Plus, Trash2, ShoppingCart, Check, X, Download, Loader2, CreditCard } from "lucide-react";
+import { BookOpen, Calendar, Plus, Trash2, ShoppingCart, Check, X, Download, Loader2, CreditCard, Bookmark, BookmarkX } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import {
   AlertDialog,
@@ -729,10 +729,22 @@ export default function Library() {
   const { toast } = useToast();
   const [deletingBookId, setDeletingBookId] = useState<string | null>(null);
 
-  const { data: storybooks, isLoading, error } = useQuery<Storybook[]>({
+  const { data: ownedStorybooks, isLoading: ownedLoading, error: ownedError } = useQuery<Storybook[]>({
     queryKey: ["/api/storybooks"],
     enabled: isAuthenticated,
   });
+
+  const { data: savedStorybooks, isLoading: savedLoading } = useQuery<Storybook[]>({
+    queryKey: ["/api/storybooks/saved"],
+    enabled: isAuthenticated,
+  });
+
+  // Combine owned and saved storybooks for count
+  const storybooks = ownedStorybooks || [];
+  const saved = savedStorybooks || [];
+  const totalCount = storybooks.length + saved.length;
+  const isLoading = ownedLoading || savedLoading;
+  const error = ownedError;
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
@@ -750,6 +762,27 @@ export default function Library() {
       toast({
         title: t('storybook.library.delete.toast.error.title'),
         description: error.message || t('storybook.library.delete.toast.error.description'),
+        variant: "destructive",
+      });
+    },
+  });
+
+  const unsaveMutation = useMutation({
+    mutationFn: async (id: string) => {
+      await apiRequest("DELETE", `/api/storybooks/${id}/save`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/storybooks/saved"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/gallery"] });
+      toast({
+        title: "Removed from Library",
+        description: "Storybook has been removed from your library",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to remove storybook",
         variant: "destructive",
       });
     },
@@ -817,7 +850,7 @@ export default function Library() {
               {t('storybook.library.title')}
             </h1>
             <p className="text-sm sm:text-base text-muted-foreground" data-testid="text-storybook-count">
-              {t('storybook.library.count', { count: storybooks?.length || 0 })}
+              {t('storybook.library.count', { count: totalCount })}
             </p>
           </div>
           
@@ -862,79 +895,177 @@ export default function Library() {
               </Card>
             ))}
           </div>
-        ) : storybooks && storybooks.length > 0 ? (
-          <div className="grid grid-cols-1 min-[480px]:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-            {storybooks.map((storybook) => (
-              <Card 
-                key={storybook.id} 
-                className="overflow-hidden hover:shadow-lg transition-all duration-300 active:scale-[0.98] cursor-pointer group touch-manipulation"
-                data-testid={`card-storybook-${storybook.id}`}
-              >
-                <Link href={`/view/${storybook.id}`}>
-                  <div className="relative aspect-[3/4] bg-gradient-to-br from-primary/20 to-secondary/20 overflow-hidden">
-                    {storybook.coverImageUrl ? (
-                      <img 
-                        src={storybook.coverImageUrl} 
-                        alt={`Cover image for ${storybook.title}`}
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                        data-testid={`img-cover-${storybook.id}`}
-                        loading="lazy"
-                      />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center">
-                        <BookOpen className="h-16 w-16 text-muted-foreground" />
-                      </div>
-                    )}
-                  </div>
-                </Link>
-                
-                <CardHeader className="p-3 sm:p-6">
-                  <div className="flex items-start justify-between gap-2">
-                    <CardTitle className="line-clamp-2 text-base sm:text-lg flex-1" data-testid={`text-title-${storybook.id}`}>
-                      {storybook.title}
-                    </CardTitle>
-                    {storybook.orientation && (
-                      <Badge variant="outline" className="text-xs shrink-0" data-testid={`badge-orientation-${storybook.id}`}>
-                        {storybook.orientation === 'portrait' ? '📱 Portrait' : storybook.orientation === 'landscape' ? '🖼️ Landscape' : '⬛ Square'}
-                      </Badge>
-                    )}
-                  </div>
-                  <CardDescription className="line-clamp-2 text-sm" data-testid={`text-prompt-${storybook.id}`}>
-                    {storybook.prompt}
-                  </CardDescription>
-                </CardHeader>
-                
-                <CardContent className="px-3 sm:px-6 pb-3">
-                  <div className="flex items-center gap-1 text-sm text-muted-foreground mb-3">
-                    <Calendar className="h-4 w-4" />
-                    <span data-testid={`text-date-${storybook.id}`}>
-                      {formatDistanceToNow(new Date(storybook.createdAt), { addSuffix: true })}
-                    </span>
-                  </div>
-                  <StorybookPurchaseButtons storybook={storybook} />
-                </CardContent>
-                
-                <CardFooter className="flex items-center justify-between gap-2 px-3 sm:px-6 pt-3 pb-3 sm:pb-6">
-                  <Link href={`/view/${storybook.id}`} className="flex-1">
-                    <Button variant="outline" size="default" className="w-full h-10 sm:h-9" data-testid={`button-view-${storybook.id}`}>
-                      {t('common.buttons.view')}
-                    </Button>
-                  </Link>
-                  <Button
-                    variant="destructive"
-                    size="default"
-                    className="h-10 sm:h-9 px-3"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      setDeletingBookId(storybook.id);
-                    }}
-                    data-testid={`button-delete-${storybook.id}`}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </CardFooter>
-              </Card>
-            ))}
+        ) : (storybooks && storybooks.length > 0) || (saved && saved.length > 0) ? (
+          <div className="space-y-12">
+            {/* Owned Storybooks Section */}
+            {storybooks && storybooks.length > 0 && (
+              <div>
+                <h2 className="text-2xl font-bold mb-6" data-testid="text-owned-section">
+                  My Storybooks ({storybooks.length})
+                </h2>
+                <div className="grid grid-cols-1 min-[480px]:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+                  {storybooks.map((storybook) => (
+                    <Card 
+                      key={storybook.id} 
+                      className="overflow-hidden hover:shadow-lg transition-all duration-300 active:scale-[0.98] cursor-pointer group touch-manipulation"
+                      data-testid={`card-storybook-${storybook.id}`}
+                    >
+                      <Link href={`/view/${storybook.id}`}>
+                        <div className="relative aspect-[3/4] bg-gradient-to-br from-primary/20 to-secondary/20 overflow-hidden">
+                          {storybook.coverImageUrl ? (
+                            <img 
+                              src={storybook.coverImageUrl} 
+                              alt={`Cover image for ${storybook.title}`}
+                              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                              data-testid={`img-cover-${storybook.id}`}
+                              loading="lazy"
+                            />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center">
+                              <BookOpen className="h-16 w-16 text-muted-foreground" />
+                            </div>
+                          )}
+                        </div>
+                      </Link>
+                      
+                      <CardHeader className="p-3 sm:p-6">
+                        <div className="flex items-start justify-between gap-2">
+                          <CardTitle className="line-clamp-2 text-base sm:text-lg flex-1" data-testid={`text-title-${storybook.id}`}>
+                            {storybook.title}
+                          </CardTitle>
+                          {storybook.orientation && (
+                            <Badge variant="outline" className="text-xs shrink-0" data-testid={`badge-orientation-${storybook.id}`}>
+                              {storybook.orientation === 'portrait' ? '📱 Portrait' : storybook.orientation === 'landscape' ? '🖼️ Landscape' : '⬛ Square'}
+                            </Badge>
+                          )}
+                        </div>
+                        <CardDescription className="line-clamp-2 text-sm" data-testid={`text-prompt-${storybook.id}`}>
+                          {storybook.prompt}
+                        </CardDescription>
+                      </CardHeader>
+                      
+                      <CardContent className="px-3 sm:px-6 pb-3">
+                        <div className="flex items-center gap-1 text-sm text-muted-foreground mb-3">
+                          <Calendar className="h-4 w-4" />
+                          <span data-testid={`text-date-${storybook.id}`}>
+                            {formatDistanceToNow(new Date(storybook.createdAt), { addSuffix: true })}
+                          </span>
+                        </div>
+                        <StorybookPurchaseButtons storybook={storybook} />
+                      </CardContent>
+                      
+                      <CardFooter className="flex items-center justify-between gap-2 px-3 sm:px-6 pt-3 pb-3 sm:pb-6">
+                        <Link href={`/view/${storybook.id}`} className="flex-1">
+                          <Button variant="outline" size="default" className="w-full h-10 sm:h-9" data-testid={`button-view-${storybook.id}`}>
+                            {t('common.buttons.view')}
+                          </Button>
+                        </Link>
+                        <Button
+                          variant="destructive"
+                          size="default"
+                          className="h-10 sm:h-9 px-3"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            setDeletingBookId(storybook.id);
+                          }}
+                          data-testid={`button-delete-${storybook.id}`}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </CardFooter>
+                    </Card>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Saved Storybooks Section */}
+            {saved && saved.length > 0 && (
+              <div>
+                <h2 className="text-2xl font-bold mb-6 flex items-center gap-2" data-testid="text-saved-section">
+                  <Bookmark className="h-6 w-6" />
+                  Saved from Gallery ({saved.length})
+                </h2>
+                <div className="grid grid-cols-1 min-[480px]:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+                  {saved.map((storybook) => (
+                    <Card 
+                      key={storybook.id} 
+                      className="overflow-hidden hover:shadow-lg transition-all duration-300 active:scale-[0.98] cursor-pointer group touch-manipulation border-primary/30"
+                      data-testid={`card-saved-${storybook.id}`}
+                    >
+                      <Link href={`/view/${storybook.id}`}>
+                        <div className="relative aspect-[3/4] bg-gradient-to-br from-primary/20 to-secondary/20 overflow-hidden">
+                          {storybook.coverImageUrl ? (
+                            <img 
+                              src={storybook.coverImageUrl} 
+                              alt={`Cover image for ${storybook.title}`}
+                              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                              data-testid={`img-cover-${storybook.id}`}
+                              loading="lazy"
+                            />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center">
+                              <BookOpen className="h-16 w-16 text-muted-foreground" />
+                            </div>
+                          )}
+                          {/* Bookmark indicator */}
+                          <div className="absolute top-2 right-2 bg-primary text-primary-foreground rounded-full p-2 shadow-lg">
+                            <Bookmark className="h-4 w-4 fill-current" />
+                          </div>
+                        </div>
+                      </Link>
+                      
+                      <CardHeader className="p-3 sm:p-6">
+                        <div className="flex items-start justify-between gap-2">
+                          <CardTitle className="line-clamp-2 text-base sm:text-lg flex-1" data-testid={`text-title-${storybook.id}`}>
+                            {storybook.title}
+                          </CardTitle>
+                          {storybook.orientation && (
+                            <Badge variant="outline" className="text-xs shrink-0" data-testid={`badge-orientation-${storybook.id}`}>
+                              {storybook.orientation === 'portrait' ? '📱 Portrait' : storybook.orientation === 'landscape' ? '🖼️ Landscape' : '⬛ Square'}
+                            </Badge>
+                          )}
+                        </div>
+                        <CardDescription className="line-clamp-2 text-sm" data-testid={`text-prompt-${storybook.id}`}>
+                          {storybook.prompt}
+                        </CardDescription>
+                      </CardHeader>
+                      
+                      <CardContent className="px-3 sm:px-6 pb-3">
+                        <div className="flex items-center gap-1 text-sm text-muted-foreground mb-3">
+                          <Calendar className="h-4 w-4" />
+                          <span data-testid={`text-date-${storybook.id}`}>
+                            {formatDistanceToNow(new Date(storybook.createdAt), { addSuffix: true })}
+                          </span>
+                        </div>
+                        <StorybookPurchaseButtons storybook={storybook} />
+                      </CardContent>
+                      
+                      <CardFooter className="flex items-center justify-between gap-2 px-3 sm:px-6 pt-3 pb-3 sm:pb-6">
+                        <Link href={`/view/${storybook.id}`} className="flex-1">
+                          <Button variant="outline" size="default" className="w-full h-10 sm:h-9" data-testid={`button-view-${storybook.id}`}>
+                            {t('common.buttons.view')}
+                          </Button>
+                        </Link>
+                        <Button
+                          variant="outline"
+                          size="default"
+                          className="h-10 sm:h-9 px-3"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            unsaveMutation.mutate(storybook.id);
+                          }}
+                          disabled={unsaveMutation.isPending}
+                          data-testid={`button-unsave-${storybook.id}`}
+                        >
+                          <BookmarkX className="h-4 w-4" />
+                        </Button>
+                      </CardFooter>
+                    </Card>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         ) : (
           <div className="text-center py-20">

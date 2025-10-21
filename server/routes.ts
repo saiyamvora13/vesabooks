@@ -1802,6 +1802,58 @@ Sitemap: ${baseUrl}/sitemap.xml`;
     }
   });
 
+  // Save a storybook to library (requires authentication)
+  app.post("/api/storybooks/:id/save", isAuthenticated, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const userId = req.user.id || req.user.claims?.sub;
+
+      // Verify the storybook exists and is public
+      const storybook = await storage.getStorybook(id);
+      if (!storybook) {
+        return res.status(404).json({ message: "Storybook not found" });
+      }
+
+      // Check if it's already saved (to avoid duplicate errors)
+      const alreadySaved = await storage.isSaved(userId, id);
+      if (alreadySaved) {
+        return res.json({ message: "Storybook already saved" });
+      }
+
+      await storage.saveStorybook(userId, id);
+      res.json({ message: "Storybook saved to library" });
+    } catch (error) {
+      console.error("Save storybook error:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Unsave a storybook from library (requires authentication)
+  app.delete("/api/storybooks/:id/save", isAuthenticated, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const userId = req.user.id || req.user.claims?.sub;
+
+      await storage.unsaveStorybook(userId, id);
+      res.json({ message: "Storybook removed from library" });
+    } catch (error) {
+      console.error("Unsave storybook error:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Get user's saved storybooks (requires authentication)
+  app.get("/api/storybooks/saved", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.id || req.user.claims?.sub;
+      const savedStorybooks = await storage.getSavedStorybooks(userId);
+      res.json(savedStorybooks);
+    } catch (error) {
+      console.error("Get saved storybooks error:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
   // Get storybook by share URL
   app.get("/api/shared/:shareUrl", async (req, res) => {
     try {
@@ -2277,27 +2329,34 @@ Sitemap: ${baseUrl}/sitemap.xml`;
   });
 
   // Get public gallery of storybooks (public, paginated)
-  app.get("/api/gallery", async (req, res) => {
+  app.get("/api/gallery", async (req: any, res) => {
     try {
       const page = parseInt(req.query.page as string) || 1;
       const limit = 20;
       const offset = (page - 1) * limit;
 
+      // Check if user is authenticated (optional for gallery)
+      const userId = req.user ? (req.user.id || req.user.claims?.sub) : null;
+
       const storybooks = await storage.getPublicStorybooks(limit, offset);
       const totalCount = await storage.getPublicStorybookCount();
 
-      // Enrich with user info and rating data
+      // Enrich with user info, rating data, and saved status
       const enrichedStorybooks = await Promise.all(
         storybooks.map(async (storybook) => {
           const user = storybook.userId ? await storage.getUser(storybook.userId) : null;
           const averageRating = await storage.getAverageRating(storybook.id);
           const ratings = await storage.getStorybookRatings(storybook.id);
+          
+          // Check if this storybook is saved by the current user (if authenticated)
+          const isSaved = userId ? await storage.isSaved(userId, storybook.id) : false;
 
           return {
             ...storybook,
             author: user?.firstName || 'Unknown',
             averageRating,
             ratingCount: ratings.length,
+            isSaved,
           };
         })
       );

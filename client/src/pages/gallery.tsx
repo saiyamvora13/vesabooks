@@ -1,12 +1,15 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { Helmet } from "react-helmet-async";
 import Navigation from "@/components/navigation";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Star, Eye, Share2, ChevronLeft, ChevronRight } from "lucide-react";
+import { Star, Eye, Share2, ChevronLeft, ChevronRight, Bookmark } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 
 interface GalleryStorybook {
   id: string;
@@ -17,6 +20,7 @@ interface GalleryStorybook {
   ratingCount: number;
   viewCount: string;
   shareCount: string;
+  isSaved: boolean;
 }
 
 interface GalleryResponse {
@@ -29,6 +33,8 @@ interface GalleryResponse {
 export default function Gallery() {
   const [, setLocation] = useLocation();
   const [page, setPage] = useState(1);
+  const { user } = useAuth();
+  const { toast } = useToast();
 
   const { data, isLoading } = useQuery<GalleryResponse>({
     queryKey: ['/api/gallery', page],
@@ -41,6 +47,52 @@ export default function Gallery() {
     },
   });
 
+  // Save storybook mutation
+  const saveMutation = useMutation({
+    mutationFn: async (storybookId: string) => {
+      return apiRequest('POST', `/api/storybooks/${storybookId}/save`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/gallery'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/storybooks'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/storybooks/saved'] });
+      toast({
+        title: "Saved to Library",
+        description: "Storybook has been saved to your library",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to save storybook",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Unsave storybook mutation
+  const unsaveMutation = useMutation({
+    mutationFn: async (storybookId: string) => {
+      return apiRequest('DELETE', `/api/storybooks/${storybookId}/save`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/gallery'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/storybooks'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/storybooks/saved'] });
+      toast({
+        title: "Removed from Library",
+        description: "Storybook has been removed from your library",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to remove storybook",
+        variant: "destructive",
+      });
+    },
+  });
+
   const handleViewStorybook = (id: string) => {
     setLocation(`/view/${id}`);
   };
@@ -48,6 +100,24 @@ export default function Gallery() {
   const handlePageChange = (newPage: number) => {
     setPage(newPage);
     window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleToggleSave = (e: React.MouseEvent, storybookId: string, isSaved: boolean) => {
+    e.stopPropagation(); // Prevent card click
+    
+    if (!user) {
+      toast({
+        title: "Authentication Required",
+        description: "Please log in to save storybooks to your library",
+      });
+      return;
+    }
+
+    if (isSaved) {
+      unsaveMutation.mutate(storybookId);
+    } else {
+      saveMutation.mutate(storybookId);
+    }
   };
 
   return (
@@ -109,6 +179,22 @@ export default function Gallery() {
                         <div className="w-full h-full flex items-center justify-center">
                           <span className="text-muted-foreground">No cover</span>
                         </div>
+                      )}
+                      
+                      {/* Bookmark button - only show if user is authenticated */}
+                      {user && (
+                        <Button
+                          size="icon"
+                          variant="secondary"
+                          className="absolute top-2 right-2 h-9 w-9 rounded-full shadow-lg hover:scale-110 transition-all z-10 bg-white/90 dark:bg-black/80 hover:bg-white dark:hover:bg-black"
+                          onClick={(e) => handleToggleSave(e, storybook.id, storybook.isSaved)}
+                          disabled={saveMutation.isPending || unsaveMutation.isPending}
+                          data-testid={`button-save-${storybook.id}`}
+                        >
+                          <Bookmark 
+                            className={`h-5 w-5 ${storybook.isSaved ? 'fill-primary text-primary' : 'text-muted-foreground'}`}
+                          />
+                        </Button>
                       )}
                     </div>
 
