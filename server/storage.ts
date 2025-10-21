@@ -43,6 +43,7 @@ export interface IStorage {
   addToCart(userId: string, storybookId: string, productType: 'digital' | 'print', bookSize?: string, quantity?: number): Promise<CartItem>;
   getCartItems(userId: string): Promise<CartItem[]>;
   updateCartItemQuantity(id: string, userId: string, quantity: number): Promise<CartItem | null>;
+  updateCartItem(id: string, userId: string, updates: { productType?: 'digital' | 'print'; bookSize?: string | null; quantity?: number }): Promise<CartItem | null>;
   removeFromCart(id: string, userId: string): Promise<boolean>;
   clearCart(userId: string): Promise<void>;
   getCartItem(userId: string, storybookId: string, productType: string, bookSize?: string | null): Promise<CartItem | null>;
@@ -440,6 +441,35 @@ export class DatabaseStorage implements IStorage {
     const [updated] = await db
       .update(cartItems)
       .set({ quantity })
+      .where(and(eq(cartItems.id, id), eq(cartItems.userId, userId)))
+      .returning();
+    return updated || null;
+  }
+
+  async updateCartItem(id: string, userId: string, updates: { productType?: 'digital' | 'print'; bookSize?: string | null; quantity?: number }): Promise<CartItem | null> {
+    const updateData: any = {};
+    if (updates.productType !== undefined) {
+      updateData.productType = updates.productType;
+    }
+    if (updates.bookSize !== undefined) {
+      updateData.bookSize = updates.bookSize;
+    }
+    if (updates.quantity !== undefined) {
+      updateData.quantity = updates.quantity;
+    }
+
+    if (Object.keys(updateData).length === 0) {
+      // No updates to apply
+      const [item] = await db
+        .select()
+        .from(cartItems)
+        .where(and(eq(cartItems.id, id), eq(cartItems.userId, userId)));
+      return item || null;
+    }
+
+    const [updated] = await db
+      .update(cartItems)
+      .set(updateData)
       .where(and(eq(cartItems.id, id), eq(cartItems.userId, userId)))
       .returning();
     return updated || null;

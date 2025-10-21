@@ -2904,18 +2904,35 @@ Sitemap: ${baseUrl}/sitemap.xml`;
     }
   });
 
-  // Update cart item quantity (requires authentication)
+  // Update cart item (quantity, productType, bookSize) (requires authentication)
   app.patch("/api/cart/:id", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.id || req.user.claims?.sub;
       const { id } = req.params;
-      const { quantity } = req.body;
+      const { quantity, productType, bookSize } = req.body;
 
-      if (!quantity || quantity < 1) {
-        return res.status(400).json({ message: "Quantity must be at least 1" });
+      // Build updates object
+      const updates: { quantity?: number; productType?: 'digital' | 'print'; bookSize?: string | null } = {};
+      
+      if (quantity !== undefined) {
+        if (quantity < 1) {
+          return res.status(400).json({ message: "Quantity must be at least 1" });
+        }
+        updates.quantity = quantity;
+      }
+      
+      if (productType !== undefined) {
+        if (productType !== 'digital' && productType !== 'print') {
+          return res.status(400).json({ message: "Product type must be 'digital' or 'print'" });
+        }
+        updates.productType = productType;
+      }
+      
+      if (bookSize !== undefined) {
+        updates.bookSize = bookSize || null;
       }
 
-      const updated = await storage.updateCartItemQuantity(id, userId, quantity);
+      const updated = await storage.updateCartItem(id, userId, updates);
       
       if (!updated) {
         return res.status(404).json({ message: "Cart item not found or does not belong to you" });
@@ -3012,6 +3029,155 @@ Sitemap: ${baseUrl}/sitemap.xml`;
     } catch (error) {
       console.error("Calculate cart pricing error:", error);
       res.status(500).json({ message: "Failed to calculate pricing" });
+    }
+  });
+
+  // Cart checkout - Create payment intent for entire cart (requires authentication)
+  app.post("/api/cart/checkout", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.id || req.user.claims?.sub;
+      
+      // Get all cart items
+      const cartItems = await storage.getCartItems(userId);
+      
+      if (cartItems.length === 0) {
+        return res.status(400).json({ message: "Cart is empty" });
+      }
+
+      // Fetch pricing from admin settings with fallback defaults
+      const digitalPriceSetting = await storage.getSetting('digital_price');
+      const printPriceSetting = await storage.getSetting('print_price');
+      const digitalPrice = digitalPriceSetting ? parseInt(digitalPriceSetting.value) : 399;
+      const printPrice = printPriceSetting ? parseInt(printPriceSetting.value) : 2499;
+
+      let total = 0;
+      const processedItems = [];
+
+      for (const item of cartItems) {
+        const { storybookId, productType, bookSize, quantity } = item;
+        
+        // Calculate price with potential discount
+        let price = productType === 'digital' ? digitalPrice : printPrice;
+        let discount = 0;
+
+        // Apply digital-to-print discount
+        if (productType === 'print') {
+          const existingDigitalPurchase = await storage.getStorybookPurchase(userId, storybookId, 'digital');
+          const existingPrintPurchase = await storage.getStorybookPurchase(userId, storybookId, 'print');
+          if (existingDigitalPurchase && !existingPrintPurchase) {
+            discount = digitalPrice;
+            price = Math.max(0, printPrice - digitalPrice);
+          }
+        }
+
+        // Add to total
+        total += price * quantity;
+
+        // Add processed item
+        processedItems.push({
+          storybookId,
+          type: productType,
+          bookSize: bookSize || 'a5-portrait',
+          quantity,
+          price,
+        });
+      }
+
+      // Create Stripe payment intent
+      const paymentIntent = await stripe.paymentIntents.create({
+        amount: total,
+        currency: 'usd',
+        automatic_payment_methods: {
+          enabled: true,
+        },
+        metadata: {
+          userId,
+          source: 'cart',
+          items: JSON.stringify(processedItems),
+        },
+      });
+
+      res.json({ 
+        clientSecret: paymentIntent.client_secret,
+        amount: total,
+      });
+    } catch (error) {
+      console.error("Cart checkout error:", error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      res.status(500).json({ message: `Failed to create checkout: ${errorMessage}` });
+    }
+  });
+
+  // Finalize cart purchase after payment succeeds (requires authentication)
+  app.post("/api/cart/finalize", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.id || req.user.claims?.sub;
+      const { paymentIntentId } = req.body;
+
+      if (!paymentIntentId) {
+        return res.status(400).json({ message: "Payment intent ID is required" });
+      }
+
+      // Verify payment intent belongs to this user
+      const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
+      
+      if (paymentIntent.metadata.userId !== userId) {
+        return res.status(403).json({ message: "Unauthorized" });
+      }
+
+      if (paymentIntent.status !== 'succeeded') {
+        return res.status(400).json({ message: "Payment has not succeeded" });
+      }
+
+      // Get items from payment intent metadata
+      const items = JSON.parse(paymentIntent.metadata.items || '[]');
+      
+      const createdPurchases = [];
+
+      // Create purchase records for each item
+      for (const item of items) {
+        const { storybookId, type, price, bookSize, quantity } = item;
+        
+        // Create purchases for each quantity
+        for (let i = 0; i < quantity; i++) {
+          try {
+            const purchaseData: any = {
+              userId,
+              storybookId,
+              type,
+              price: price.toString(),
+              stripePaymentIntentId: paymentIntentId,
+              status: 'completed',
+            };
+            
+            if (type === 'print') {
+              purchaseData.bookSize = bookSize || 'a5-portrait';
+            }
+            
+            const purchase = await storage.createPurchase(purchaseData);
+            createdPurchases.push(purchase);
+          } catch (error: any) {
+            // Handle duplicate purchase (unique constraint violation)
+            if (error.message?.includes('unique') || error.code === '23505') {
+              console.log(`Purchase already exists for payment intent ${paymentIntentId}, storybookId ${storybookId} - skipping`);
+            } else {
+              throw error;
+            }
+          }
+        }
+      }
+
+      // Clear the cart
+      await storage.clearCart(userId);
+
+      res.json({ 
+        purchases: createdPurchases,
+        message: "Cart purchase finalized successfully",
+      });
+    } catch (error) {
+      console.error("Cart finalize error:", error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      res.status(500).json({ message: `Failed to finalize purchase: ${errorMessage}` });
     }
   });
 

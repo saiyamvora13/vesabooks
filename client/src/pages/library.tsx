@@ -1008,12 +1008,10 @@ function DownloadCustomizationDialog({ open, onOpenChange, storybook }: Download
 function StorybookPurchaseButtons({ storybook }: { storybook: Storybook }) {
   const { t } = useTranslation();
   const { toast } = useToast();
-  const [cartUpdated, setCartUpdated] = useState(0);
-  const [checkoutDialog, setCheckoutDialog] = useState<{ open: boolean; type?: 'digital' | 'print' }>({ open: false });
   const [downloadDialog, setDownloadDialog] = useState(false);
 
   const { data: digitalPurchase } = useQuery<{ owned: boolean }>({
-    queryKey: ['/api/purchases/check', storybook.id, 'digital', cartUpdated],
+    queryKey: ['/api/purchases/check', storybook.id, 'digital'],
     queryFn: async () => {
       const response = await fetch('/api/purchases/check', {
         method: 'POST',
@@ -1027,7 +1025,7 @@ function StorybookPurchaseButtons({ storybook }: { storybook: Storybook }) {
   });
 
   const { data: printPurchase } = useQuery<{ owned: boolean }>({
-    queryKey: ['/api/purchases/check', storybook.id, 'print', cartUpdated],
+    queryKey: ['/api/purchases/check', storybook.id, 'print'],
     queryFn: async () => {
       const response = await fetch('/api/purchases/check', {
         method: 'POST',
@@ -1040,65 +1038,44 @@ function StorybookPurchaseButtons({ storybook }: { storybook: Storybook }) {
     },
   });
 
-  // Fetch pricing settings from public endpoint
-  const { data: pricingSettings } = useQuery<{ digital_price: string; print_price: string }>({
-    queryKey: ['/api/settings/pricing'],
+  // Fetch cart to check if items are in cart
+  const { data: cartResponse } = useQuery<{ items: Array<{ storybookId: string; productType: string }> }>({
+    queryKey: ['/api/cart'],
   });
 
-  // Get prices from settings with fallback defaults
-  const digitalPrice = pricingSettings?.digital_price 
-    ? parseInt(pricingSettings.digital_price) 
-    : 399;
-  const printPrice = pricingSettings?.print_price 
-    ? parseInt(pricingSettings.print_price) 
-    : 2499;
+  const cartItems = cartResponse?.items || [];
+  const inCartDigital = cartItems.some(item => item.storybookId === storybook.id && item.productType === 'digital');
+  const inCartPrint = cartItems.some(item => item.storybookId === storybook.id && item.productType === 'print');
 
-  const handleAddToCart = (type: 'digital' | 'print') => {
-    // Apply discount if user owns digital and is buying print
-    let price = type === 'digital' ? digitalPrice : printPrice;
-    if (type === 'print' && digitalPurchase?.owned) {
-      price = Math.max(0, printPrice - digitalPrice);
-    }
-    
-    addToCart({
-      storybookId: storybook.id,
-      type,
-      title: storybook.title,
-      price,
-    });
-    toast({
-      title: t('storybook.library.purchase.addedToCart.title'),
-      description: t('storybook.library.purchase.addedToCart.description', { 
-        title: storybook.title, 
-        type: type === 'digital' ? 'Digital' : 'Print' 
-      }),
-    });
-    window.dispatchEvent(new Event('cartUpdated'));
-    setCartUpdated(prev => prev + 1);
-  };
-
-  const handleRemoveFromCart = (type: 'digital' | 'print') => {
-    removeFromCart(storybook.id, type);
-    toast({
-      title: t('storybook.library.purchase.removedFromCart.title'),
-      description: t('storybook.library.purchase.removedFromCart.description', { 
-        title: storybook.title, 
-        type: type === 'digital' ? 'Digital' : 'Print' 
-      }),
-    });
-    window.dispatchEvent(new Event('cartUpdated'));
-    setCartUpdated(prev => prev + 1);
-  };
-
-  const inCartDigital = isInCart(storybook.id, 'digital');
-  const inCartPrint = isInCart(storybook.id, 'print');
-
-  // Calculate price with potential discount
-  // Only apply digital discount for first-time print purchases, not repurchases
-  let printPurchasePrice = printPrice;
-  if (digitalPurchase?.owned && !printPurchase?.owned) {
-    printPurchasePrice = Math.max(0, printPrice - digitalPrice);
-  }
+  // Add to cart mutation
+  const addToCartMutation = useMutation({
+    mutationFn: async ({ productType, bookSize }: { productType: 'digital' | 'print'; bookSize?: string }) => {
+      const response = await apiRequest('POST', '/api/cart', {
+        storybookId: storybook.id,
+        productType,
+        bookSize: bookSize || 'a5-portrait',
+        quantity: 1,
+      });
+      if (!response.ok) {
+        throw new Error('Failed to add to cart');
+      }
+      return response.json();
+    },
+    onSuccess: (data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['/api/cart'] });
+      toast({
+        title: "Added to Cart",
+        description: `${storybook.title} (${variables.productType === 'digital' ? 'Digital' : 'Print'}) has been added to your cart`,
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to add to cart",
+        variant: "destructive",
+      });
+    },
+  });
 
   return (
     <>
@@ -1107,7 +1084,7 @@ function StorybookPurchaseButtons({ storybook }: { storybook: Storybook }) {
           <>
             <Badge variant="secondary" className="w-full justify-center py-1">
               <Check className="h-3 w-3 mr-1" />
-              {t('storybook.library.purchase.digitalPurchased')}
+              Digital Owned
             </Badge>
             <Button
               size="sm"
@@ -1117,70 +1094,67 @@ function StorybookPurchaseButtons({ storybook }: { storybook: Storybook }) {
               data-testid={`button-download-print-pdf-${storybook.id}`}
             >
               <Download className="h-4 w-4 mr-1" />
-              Download Print PDF
+              Download
             </Button>
           </>
+        ) : inCartDigital ? (
+          <Button
+            size="sm"
+            variant="secondary"
+            className="w-full"
+            disabled
+            data-testid={`button-in-cart-digital-${storybook.id}`}
+          >
+            <Check className="h-4 w-4 mr-1" />
+            Digital in Cart
+          </Button>
         ) : (
           <Button
             size="sm"
             variant="default"
             className="w-full gradient-bg hover:opacity-90 !text-[hsl(258,90%,20%)]"
-            onClick={() => setCheckoutDialog({ open: true, type: 'digital' })}
-            data-testid={`button-buy-digital-${storybook.id}`}
+            onClick={() => addToCartMutation.mutate({ productType: 'digital' })}
+            disabled={addToCartMutation.isPending}
+            data-testid={`button-add-cart-digital-${storybook.id}`}
           >
-            <ShoppingCart className="h-4 w-4 mr-1" />
-            {t('storybook.library.purchase.buyEbook')}
+            {addToCartMutation.isPending ? (
+              <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+            ) : (
+              <ShoppingCart className="h-4 w-4 mr-1" />
+            )}
+            Add E-book to Cart
           </Button>
         )}
 
-        <Button
-          size="sm"
-          variant="outline"
-          className="w-full h-auto py-2"
-          onClick={() => setCheckoutDialog({ open: true, type: 'print' })}
-          data-testid={`button-buy-print-${storybook.id}`}
-        >
-          <div className="flex flex-col items-center gap-0.5">
-            <div className="flex items-center gap-1.5">
-              <ShoppingCart className="h-4 w-4" />
-              {printPurchase?.owned ? (
-                <span className="flex items-center gap-1">
-                  <span>Buy Again</span>
-                  <span className="font-semibold">${(printPrice / 100).toFixed(2)}</span>
-                </span>
-              ) : digitalPurchase?.owned ? (
-                <span className="flex items-center gap-1">
-                  <span>Buy Print</span>
-                  <span className="line-through text-muted-foreground">(${(printPrice / 100).toFixed(2)})</span>
-                  <span>-</span>
-                  <span className="font-semibold">${(printPurchasePrice / 100).toFixed(2)}</span>
-                </span>
-              ) : (
-                <span>{t('storybook.library.purchase.buyPrint')}</span>
-              )}
-            </div>
-            {printPurchase?.owned ? (
-              <span className="text-xs text-muted-foreground">Order another copy</span>
-            ) : digitalPurchase?.owned ? (
-              <span className="text-xs text-green-600 dark:text-green-400 font-medium">
-                {t('purchases.upgrade.savings', { amount: (digitalPrice / 100).toFixed(2) })}
-              </span>
+        {inCartPrint ? (
+          <Button
+            size="sm"
+            variant="secondary"
+            className="w-full"
+            disabled
+            data-testid={`button-in-cart-print-${storybook.id}`}
+          >
+            <Check className="h-4 w-4 mr-1" />
+            Print in Cart
+          </Button>
+        ) : (
+          <Button
+            size="sm"
+            variant="outline"
+            className="w-full"
+            onClick={() => addToCartMutation.mutate({ productType: 'print', bookSize: 'a5-portrait' })}
+            disabled={addToCartMutation.isPending}
+            data-testid={`button-add-cart-print-${storybook.id}`}
+          >
+            {addToCartMutation.isPending ? (
+              <Loader2 className="h-4 w-4 mr-1 animate-spin" />
             ) : (
-              <span className="text-xs text-muted-foreground">{t('storybook.library.purchase.freeEbookIncluded')}</span>
+              <ShoppingCart className="h-4 w-4 mr-1" />
             )}
-          </div>
-        </Button>
+            Add Print to Cart
+          </Button>
+        )}
       </div>
-
-      {checkoutDialog.open && checkoutDialog.type && (
-        <CheckoutDialog
-          open={checkoutDialog.open}
-          onOpenChange={(open) => setCheckoutDialog({ open, type: checkoutDialog.type })}
-          storybook={storybook}
-          type={checkoutDialog.type}
-          price={checkoutDialog.type === 'digital' ? digitalPrice : printPurchasePrice}
-        />
-      )}
       
       <DownloadCustomizationDialog
         open={downloadDialog}

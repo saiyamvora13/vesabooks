@@ -5,13 +5,23 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ShoppingCart, Trash2, X, Minus, Plus } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
+import { ShoppingCart, Trash2, X, Minus, Plus, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import type { Storybook, CartItem } from "@shared/schema";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { SEO } from "@/components/SEO";
+import { useState } from "react";
+import { loadStripe } from "@stripe/stripe-js";
+import { Elements, PaymentElement, useStripe, useElements } from "@stripe/react-stripe-js";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { BOOK_SIZES, getBookSizesByOrientation, type BookOrientation } from "@shared/bookSizes";
+
+// Initialize Stripe
+const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLIC_KEY || '');
 
 interface EnrichedCartItem extends CartItem {
   storybook?: Storybook | null;
@@ -27,132 +37,181 @@ function formatPrice(cents: number): string {
 function CartItemCard({ 
   item, 
   onRemove, 
-  onUpdateQuantity 
+  onUpdateQuantity,
+  onUpdateProductType,
+  onUpdateBookSize,
 }: { 
   item: EnrichedCartItem; 
   onRemove: () => void;
   onUpdateQuantity: (quantity: number) => void;
+  onUpdateProductType: (productType: 'digital' | 'print') => void;
+  onUpdateBookSize: (bookSize: string) => void;
 }) {
   const { t } = useTranslation();
   const coverImageUrl = item.storybook?.coverImageUrl || item.storybook?.pages?.[0]?.imageUrl;
   const itemTotal = item.price * item.quantity;
 
+  // Determine storybook orientation for book size filtering
+  const storybookOrientation: BookOrientation = item.storybook?.orientation as BookOrientation || 'portrait';
+  const availableBookSizes = getBookSizesByOrientation(storybookOrientation);
+
   return (
     <Card data-testid={`card-item-${item.storybookId}-${item.productType}`}>
       <CardHeader className="pb-3 p-4 sm:p-6">
-        <div className="flex flex-col sm:flex-row items-start gap-4">
-          {coverImageUrl ? (
-            <img
-              src={coverImageUrl}
-              alt={`${item.storybook?.title || 'Storybook'} cover`}
-              className="w-full sm:w-20 h-40 sm:h-28 object-cover rounded-lg flex-shrink-0"
-              data-testid={`img-cover-${item.storybookId}-${item.productType}`}
-              loading="lazy"
-            />
-          ) : (
-            <div className="w-full sm:w-20 h-40 sm:h-28 bg-muted rounded-lg flex-shrink-0 flex items-center justify-center">
-              <ShoppingCart className="h-8 w-8 text-muted-foreground" />
-            </div>
-          )}
-          
-          <div className="flex-1 min-w-0">
-            <CardTitle className="text-lg mb-2" data-testid={`text-title-${item.storybookId}-${item.productType}`}>
-              {item.storybook?.title || 'Untitled Story'}
-            </CardTitle>
-            <div className="space-y-2">
-              <div className="flex items-center gap-2 flex-wrap">
-                <Badge variant={item.productType === 'digital' ? 'default' : 'secondary'} data-testid={`badge-type-${item.storybookId}-${item.productType}`}>
-                  {item.productType === 'digital' ? 'E-book Edition' : 'Print Edition'}
-                </Badge>
-                {item.productType === 'print' && item.bookSize && (
-                  <Badge variant="outline" className="w-fit">
-                    {item.bookSize}
-                  </Badge>
-                )}
+        <div className="flex flex-col gap-4">
+          {/* Top row: Image, Title, Remove Button */}
+          <div className="flex flex-col sm:flex-row items-start gap-4">
+            {coverImageUrl ? (
+              <img
+                src={coverImageUrl}
+                alt={`${item.storybook?.title || 'Storybook'} cover`}
+                className="w-full sm:w-20 h-40 sm:h-28 object-cover rounded-lg flex-shrink-0"
+                data-testid={`img-cover-${item.storybookId}-${item.productType}`}
+                loading="lazy"
+              />
+            ) : (
+              <div className="w-full sm:w-20 h-40 sm:h-28 bg-muted rounded-lg flex-shrink-0 flex items-center justify-center">
+                <ShoppingCart className="h-8 w-8 text-muted-foreground" />
               </div>
-              {item.productType === 'digital' && (
-                <p className="text-sm text-muted-foreground">Downloadable EPUB format</p>
-              )}
-              {item.productType === 'print' && (
-                <div className="space-y-1">
-                  <p className="text-sm text-muted-foreground">Professionally printed hardcover</p>
-                  <Badge variant="outline" className="w-fit bg-green-50 dark:bg-green-950 text-green-700 dark:text-green-300">
-                    Includes Free E-book
-                  </Badge>
-                </div>
-              )}
-              
-              {/* Price Display */}
-              <div className="mt-2">
-                {item.discount > 0 ? (
-                  <div className="space-y-1">
-                    <div className="flex items-center gap-2">
-                      <span className="text-lg font-bold text-foreground" data-testid={`text-price-${item.storybookId}-${item.productType}`}>
-                        ${formatPrice(item.price)}
-                      </span>
-                      <span className="text-sm line-through text-muted-foreground">
-                        ${formatPrice(item.originalPrice)}
-                      </span>
-                      <Badge variant="destructive" className="text-xs">
-                        Save ${formatPrice(item.discount)}
-                      </Badge>
-                    </div>
-                    <p className="text-xs text-green-600 dark:text-green-400">
-                      Digital edition discount applied
-                    </p>
-                  </div>
-                ) : (
-                  <span className="text-lg font-bold text-foreground" data-testid={`text-price-${item.storybookId}-${item.productType}`}>
-                    ${formatPrice(item.price)}
-                  </span>
-                )}
+            )}
+            
+            <div className="flex-1 min-w-0">
+              <div className="flex items-start justify-between gap-4">
+                <CardTitle className="text-lg" data-testid={`text-title-${item.storybookId}-${item.productType}`}>
+                  {item.storybook?.title || 'Untitled Story'}
+                </CardTitle>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 flex-shrink-0"
+                  onClick={onRemove}
+                  data-testid={`button-remove-${item.storybookId}-${item.productType}`}
+                >
+                  <X className="h-5 w-5" />
+                </Button>
               </div>
             </div>
           </div>
-          
-          <div className="flex flex-row sm:flex-col items-center sm:items-end justify-between sm:justify-start w-full sm:w-auto gap-4 mt-3 sm:mt-0 flex-shrink-0">
-            {/* Quantity Controls */}
-            <div className="flex items-center gap-2 border rounded-lg p-1">
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8"
-                onClick={() => onUpdateQuantity(Math.max(1, item.quantity - 1))}
-                disabled={item.quantity <= 1}
-                data-testid={`button-decrease-${item.storybookId}-${item.productType}`}
+
+          {/* Configuration row */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {/* Product Type Selector */}
+            <div className="space-y-2">
+              <Label htmlFor={`product-type-${item.id}`} className="text-sm font-medium">
+                Product Type
+              </Label>
+              <Select
+                value={item.productType}
+                onValueChange={(value: 'digital' | 'print') => onUpdateProductType(value)}
               >
-                <Minus className="h-4 w-4" />
-              </Button>
-              <span className="w-8 text-center font-medium" data-testid={`text-quantity-${item.storybookId}-${item.productType}`}>
-                {item.quantity}
-              </span>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-8 w-8"
-                onClick={() => onUpdateQuantity(item.quantity + 1)}
-                data-testid={`button-increase-${item.storybookId}-${item.productType}`}
-              >
-                <Plus className="h-4 w-4" />
-              </Button>
+                <SelectTrigger 
+                  id={`product-type-${item.id}`}
+                  data-testid={`select-product-type-${item.storybookId}-${item.productType}`}
+                >
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="digital">Digital (E-book)</SelectItem>
+                  <SelectItem value="print">Print (Hardcover)</SelectItem>
+                </SelectContent>
+              </Select>
+              {item.productType === 'print' && (
+                <p className="text-xs text-green-600 dark:text-green-400">Includes Free E-book</p>
+              )}
             </div>
-            
-            <div className="flex flex-col items-end gap-2">
-              <div className="text-right">
-                <div className="text-xs text-muted-foreground">Item Total</div>
-                <div className="text-lg font-bold" data-testid={`text-item-total-${item.storybookId}-${item.productType}`}>
-                  ${formatPrice(itemTotal)}
+
+            {/* Book Size Selector (only for print) */}
+            {item.productType === 'print' && (
+              <div className="space-y-2">
+                <Label htmlFor={`book-size-${item.id}`} className="text-sm font-medium">
+                  Book Size
+                </Label>
+                <Select
+                  value={item.bookSize || 'a5-portrait'}
+                  onValueChange={onUpdateBookSize}
+                >
+                  <SelectTrigger 
+                    id={`book-size-${item.id}`}
+                    data-testid={`select-book-size-${item.storybookId}-${item.productType}`}
+                  >
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {availableBookSizes.map((size) => (
+                      <SelectItem key={size.id} value={size.id}>
+                        {size.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+
+            {/* Quantity Control (only for digital) */}
+            {item.productType === 'digital' ? (
+              <div className="space-y-2">
+                <Label htmlFor={`quantity-${item.id}`} className="text-sm font-medium">
+                  Quantity
+                </Label>
+                <div className="flex items-center gap-2 border rounded-lg p-1 w-fit">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8"
+                    onClick={() => onUpdateQuantity(Math.max(1, item.quantity - 1))}
+                    disabled={item.quantity <= 1}
+                    data-testid={`button-decrease-${item.storybookId}-${item.productType}`}
+                  >
+                    <Minus className="h-4 w-4" />
+                  </Button>
+                  <span className="w-8 text-center font-medium" data-testid={`text-quantity-${item.storybookId}-${item.productType}`}>
+                    {item.quantity}
+                  </span>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8"
+                    onClick={() => onUpdateQuantity(item.quantity + 1)}
+                    data-testid={`button-increase-${item.storybookId}-${item.productType}`}
+                  >
+                    <Plus className="h-4 w-4" />
+                  </Button>
                 </div>
               </div>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-10 w-10"
-                onClick={onRemove}
-                data-testid={`button-remove-${item.storybookId}-${item.productType}`}
-              >
-                <X className="h-5 w-5" />
-              </Button>
+            ) : null}
+          </div>
+
+          {/* Price Display */}
+          <div className="flex items-end justify-between pt-2 border-t">
+            <div>
+              {item.discount > 0 ? (
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <span className="text-lg font-bold text-foreground" data-testid={`text-price-${item.storybookId}-${item.productType}`}>
+                      ${formatPrice(item.price)}
+                    </span>
+                    <span className="text-sm line-through text-muted-foreground">
+                      ${formatPrice(item.originalPrice)}
+                    </span>
+                    <Badge variant="destructive" className="text-xs">
+                      Save ${formatPrice(item.discount)}
+                    </Badge>
+                  </div>
+                  <p className="text-xs text-green-600 dark:text-green-400">
+                    Digital edition discount applied
+                  </p>
+                </div>
+              ) : (
+                <span className="text-lg font-bold text-foreground" data-testid={`text-price-${item.storybookId}-${item.productType}`}>
+                  ${formatPrice(item.price)}
+                </span>
+              )}
+            </div>
+            <div className="text-right">
+              <div className="text-xs text-muted-foreground">Item Total</div>
+              <div className="text-xl font-bold" data-testid={`text-item-total-${item.storybookId}-${item.productType}`}>
+                ${formatPrice(itemTotal)}
+              </div>
             </div>
           </div>
         </div>
@@ -161,11 +220,111 @@ function CartItemCard({
   );
 }
 
+function CheckoutDialog({ 
+  open, 
+  onOpenChange, 
+  clientSecret, 
+  amount,
+  onSuccess,
+}: { 
+  open: boolean; 
+  onOpenChange: (open: boolean) => void; 
+  clientSecret: string;
+  amount: number;
+  onSuccess: (paymentIntentId: string) => void;
+}) {
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Complete Your Purchase</DialogTitle>
+        </DialogHeader>
+        <Elements stripe={stripePromise} options={{ clientSecret }}>
+          <CheckoutForm amount={amount} onSuccess={onSuccess} />
+        </Elements>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function CheckoutForm({ amount, onSuccess }: { amount: number; onSuccess: (paymentIntentId: string) => void }) {
+  const stripe = useStripe();
+  const elements = useElements();
+  const { toast } = useToast();
+  const [isProcessing, setIsProcessing] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!stripe || !elements) {
+      return;
+    }
+
+    setIsProcessing(true);
+
+    try {
+      const { error, paymentIntent } = await stripe.confirmPayment({
+        elements,
+        confirmParams: {
+          return_url: `${window.location.origin}/cart`,
+        },
+        redirect: 'if_required',
+      });
+
+      if (error) {
+        toast({
+          title: "Payment failed",
+          description: error.message,
+          variant: "destructive",
+        });
+      } else if (paymentIntent && paymentIntent.status === 'succeeded') {
+        onSuccess(paymentIntent.id);
+      }
+    } catch (error: any) {
+      toast({
+        title: "Payment failed",
+        description: error.message || "An error occurred during payment",
+        variant: "destructive",
+      });
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <PaymentElement />
+      <div className="flex flex-col gap-2">
+        <div className="flex items-center justify-between text-sm">
+          <span className="text-muted-foreground">Total Amount</span>
+          <span className="text-2xl font-bold">${formatPrice(amount)}</span>
+        </div>
+        <Button 
+          type="submit" 
+          disabled={!stripe || isProcessing}
+          className="w-full gradient-bg !text-[hsl(258,90%,20%)]"
+          data-testid="button-confirm-payment"
+        >
+          {isProcessing ? (
+            <>
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              Processing...
+            </>
+          ) : (
+            `Pay $${formatPrice(amount)}`
+          )}
+        </Button>
+      </div>
+    </form>
+  );
+}
+
 export default function Cart() {
   const { t } = useTranslation();
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const { isAuthenticated } = useAuth();
+  const [checkoutDialog, setCheckoutDialog] = useState<{ open: boolean; clientSecret?: string; amount?: number }>({ open: false });
 
   // Fetch cart items from database (now includes storybook data and pricing)
   const { data: cartResponse, isLoading, refetch } = useQuery<{ items: EnrichedCartItem[] }>({
@@ -174,11 +333,26 @@ export default function Cart() {
   });
 
   const cartItems = cartResponse?.items || [];
+  const hasPrintItems = cartItems.some(item => item.productType === 'print');
+
+  // Shipping configuration state
+  const [shippingMethod, setShippingMethod] = useState('standard');
+  const [shippingCountry, setShippingCountry] = useState('United States');
 
   // Calculate totals
   const subtotal = cartItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
   const totalDiscount = cartItems.reduce((sum, item) => sum + (item.discount * item.quantity), 0);
   const totalBeforeDiscount = cartItems.reduce((sum, item) => sum + (item.originalPrice * item.quantity), 0);
+  
+  // Shipping cost (placeholder - would be calculated by Prodigi API in production)
+  const shippingCost = hasPrintItems ? (
+    shippingMethod === 'overnight' ? 2999 : 
+    shippingMethod === 'express' ? 1999 : 
+    shippingMethod === 'standard' ? 999 : 
+    599 // budget
+  ) : 0;
+  
+  const total = subtotal + shippingCost;
 
   // Remove item mutation
   const removeItemMutation = useMutation({
@@ -205,12 +379,12 @@ export default function Cart() {
     },
   });
 
-  // Update quantity mutation
-  const updateQuantityMutation = useMutation({
-    mutationFn: async ({ itemId, quantity }: { itemId: string; quantity: number }) => {
-      const response = await apiRequest('PATCH', `/api/cart/${itemId}`, { quantity });
+  // Update item mutation (for quantity, product type, book size)
+  const updateItemMutation = useMutation({
+    mutationFn: async ({ itemId, updates }: { itemId: string; updates: Partial<{ quantity: number; productType: string; bookSize: string }> }) => {
+      const response = await apiRequest('PATCH', `/api/cart/${itemId}`, updates);
       if (!response.ok) {
-        throw new Error('Failed to update quantity');
+        throw new Error('Failed to update item');
       }
       return response.json();
     },
@@ -220,7 +394,62 @@ export default function Cart() {
     onError: () => {
       toast({
         title: "Error",
-        description: "Failed to update quantity",
+        description: "Failed to update item",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Checkout mutation
+  const checkoutMutation = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest('POST', '/api/cart/checkout');
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to create checkout');
+      }
+      return response.json();
+    },
+    onSuccess: (data) => {
+      setCheckoutDialog({ 
+        open: true, 
+        clientSecret: data.clientSecret,
+        amount: data.amount,
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Checkout failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Finalize purchase mutation
+  const finalizeMutation = useMutation({
+    mutationFn: async (paymentIntentId: string) => {
+      const response = await apiRequest('POST', '/api/cart/finalize', { paymentIntentId });
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to finalize purchase');
+      }
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/cart'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/purchases'] });
+      setCheckoutDialog({ open: false });
+      toast({
+        title: "Purchase successful!",
+        description: "Your order has been completed. Check your library for your purchases.",
+      });
+      setLocation('/library');
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Failed to complete purchase",
+        description: error.message,
         variant: "destructive",
       });
     },
@@ -231,7 +460,15 @@ export default function Cart() {
   };
 
   const handleUpdateQuantity = (itemId: string, quantity: number) => {
-    updateQuantityMutation.mutate({ itemId, quantity });
+    updateItemMutation.mutate({ itemId, updates: { quantity } });
+  };
+
+  const handleUpdateProductType = (itemId: string, productType: 'digital' | 'print') => {
+    updateItemMutation.mutate({ itemId, updates: { productType } });
+  };
+
+  const handleUpdateBookSize = (itemId: string, bookSize: string) => {
+    updateItemMutation.mutate({ itemId, updates: { bookSize } });
   };
 
   const handleCheckout = () => {
@@ -254,7 +491,11 @@ export default function Cart() {
       return;
     }
 
-    setLocation('/checkout');
+    checkoutMutation.mutate();
+  };
+
+  const handlePaymentSuccess = (paymentIntentId: string) => {
+    finalizeMutation.mutate(paymentIntentId);
   };
 
   if (!isAuthenticated) {
@@ -339,9 +580,57 @@ export default function Cart() {
                   item={item}
                   onRemove={() => handleRemoveItem(item.id)}
                   onUpdateQuantity={(quantity) => handleUpdateQuantity(item.id, quantity)}
+                  onUpdateProductType={(productType) => handleUpdateProductType(item.id, productType)}
+                  onUpdateBookSize={(bookSize) => handleUpdateBookSize(item.id, bookSize)}
                 />
               ))}
             </div>
+
+            {/* Shipping Configuration (only show if there are print items) */}
+            {hasPrintItems && (
+              <Card>
+                <CardHeader className="pb-4">
+                  <CardTitle className="text-lg">Shipping Configuration</CardTitle>
+                  <p className="text-sm text-muted-foreground">Configure shipping for your print items</p>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="shipping-method">Shipping Method</Label>
+                      <Select value={shippingMethod} onValueChange={setShippingMethod}>
+                        <SelectTrigger id="shipping-method" data-testid="select-shipping-method">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="budget">Budget Shipping ($5.99)</SelectItem>
+                          <SelectItem value="standard">Standard Shipping ($9.99)</SelectItem>
+                          <SelectItem value="express">Express Shipping ($19.99)</SelectItem>
+                          <SelectItem value="overnight">Overnight Shipping ($29.99)</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="shipping-country">Destination Country</Label>
+                      <Select value={shippingCountry} onValueChange={setShippingCountry}>
+                        <SelectTrigger id="shipping-country" data-testid="select-shipping-country">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="United States">United States</SelectItem>
+                          <SelectItem value="Canada">Canada</SelectItem>
+                          <SelectItem value="United Kingdom">United Kingdom</SelectItem>
+                          <SelectItem value="Australia">Australia</SelectItem>
+                          <SelectItem value="Germany">Germany</SelectItem>
+                          <SelectItem value="France">France</SelectItem>
+                          <SelectItem value="Spain">Spain</SelectItem>
+                          <SelectItem value="Italy">Italy</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
 
             <Card className="bg-muted/50">
               <CardContent className="pt-6">
@@ -353,24 +642,30 @@ export default function Cart() {
                     </span>
                   </div>
                   
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground">Subtotal</span>
+                    <span data-testid="text-subtotal">${formatPrice(subtotal)}</span>
+                  </div>
+                  
                   {totalDiscount > 0 && (
-                    <>
-                      <div className="flex items-center justify-between text-sm">
-                        <span className="text-muted-foreground">Subtotal (before discount)</span>
-                        <span>${formatPrice(totalBeforeDiscount)}</span>
-                      </div>
-                      <div className="flex items-center justify-between text-sm text-green-600 dark:text-green-400">
-                        <span>Discount</span>
-                        <span data-testid="text-discount">-${formatPrice(totalDiscount)}</span>
-                      </div>
-                    </>
+                    <div className="flex items-center justify-between text-sm text-green-600 dark:text-green-400">
+                      <span>Discount</span>
+                      <span data-testid="text-discount">-${formatPrice(totalDiscount)}</span>
+                    </div>
+                  )}
+                  
+                  {hasPrintItems && (
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-muted-foreground">Shipping</span>
+                      <span data-testid="text-shipping">${formatPrice(shippingCost)}</span>
+                    </div>
                   )}
                   
                   <div className="pt-3 border-t border-border">
                     <div className="flex items-center justify-between">
                       <span className="text-lg font-semibold">Total</span>
                       <span className="text-3xl font-bold text-[hsl(258,90%,20%)] dark:text-[hsl(258,70%,70%)]" data-testid="text-total">
-                        ${formatPrice(subtotal)}
+                        ${formatPrice(total)}
                       </span>
                     </div>
                   </div>
@@ -382,10 +677,19 @@ export default function Cart() {
                     size="lg"
                     className="w-full gradient-bg !text-[hsl(258,90%,20%)] shadow-lg text-lg transition-all duration-200 hover:scale-105 hover:shadow-2xl hover:brightness-110 hover:ring-2 hover:ring-[hsl(258,90%,40%)] hover:ring-offset-2"
                     data-testid="button-checkout"
-                    disabled={removeItemMutation.isPending || updateQuantityMutation.isPending}
+                    disabled={removeItemMutation.isPending || updateItemMutation.isPending || checkoutMutation.isPending}
                   >
-                    <ShoppingCart className="h-5 w-5 mr-2" />
-                    Proceed to Checkout
+                    {checkoutMutation.isPending ? (
+                      <>
+                        <Loader2 className="h-5 w-5 mr-2 animate-spin" />
+                        Processing...
+                      </>
+                    ) : (
+                      <>
+                        <ShoppingCart className="h-5 w-5 mr-2" />
+                        Proceed to Checkout
+                      </>
+                    )}
                   </Button>
                 </div>
               </CardContent>
@@ -393,6 +697,16 @@ export default function Cart() {
           </div>
         )}
       </div>
+
+      {checkoutDialog.open && checkoutDialog.clientSecret && checkoutDialog.amount && (
+        <CheckoutDialog
+          open={checkoutDialog.open}
+          onOpenChange={(open) => setCheckoutDialog({ open })}
+          clientSecret={checkoutDialog.clientSecret}
+          amount={checkoutDialog.amount}
+          onSuccess={handlePaymentSuccess}
+        />
+      )}
     </div>
   );
 }
