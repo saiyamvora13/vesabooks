@@ -37,12 +37,12 @@ export default function Navigation() {
   });
 
   // Fetch cart count from database
-  const { data: cartItems = [] } = useQuery<CartItem[]>({
+  const { data: cartItems } = useQuery<CartItem[]>({
     queryKey: ['/api/cart'],
     enabled: isAuthenticated,
   });
 
-  const cartCount = cartItems.reduce((sum, item) => sum + item.quantity, 0);
+  const cartCount = cartItems?.reduce((sum, item) => sum + item.quantity, 0) ?? 0;
 
   return (
     <>
