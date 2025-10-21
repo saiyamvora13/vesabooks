@@ -19,7 +19,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useState, useEffect } from "react";
@@ -253,22 +253,29 @@ function CheckoutDialog({ open, onOpenChange, storybook, type, price }: Checkout
   const watchedDestinationCountryCode = bookOptionsForm.watch('destinationCountryCode');
 
   // Fetch quote for print orders
-  const { data: quoteData, isLoading: isLoadingQuote } = useQuery({
+  const { data: quoteData, isLoading: isLoadingQuote, error: quoteError } = useQuery({
     queryKey: ['/api/prodigi/quote', watchedBookSize, watchedShippingMethod, watchedDestinationCountryCode],
     queryFn: async () => {
-      const response = await apiRequest('POST', '/api/prodigi/quote', {
-        bookSize: watchedBookSize,
-        shippingMethod: watchedShippingMethod,
-        destinationCountryCode: watchedDestinationCountryCode,
-      });
-      if (!response.ok) {
-        throw new Error('Failed to fetch quote');
+      try {
+        const response = await apiRequest('POST', '/api/prodigi/quote', {
+          bookSize: watchedBookSize,
+          shippingMethod: watchedShippingMethod,
+          destinationCountryCode: watchedDestinationCountryCode,
+        });
+        if (!response.ok) {
+          throw new Error('Failed to fetch quote');
+        }
+        return response.json();
+      } catch (error) {
+        console.error('[Quote Error]', error);
+        throw error instanceof Error ? error : new Error('Quote fetch failed');
       }
-      return response.json();
     },
-    enabled: open && type === 'print',
+    enabled: open && type === 'print' && !!watchedBookSize && !!watchedShippingMethod && !!watchedDestinationCountryCode,
     refetchOnWindowFocus: false,
     staleTime: 5 * 60 * 1000, // 5 minutes
+    retry: 2,
+    retryDelay: 1000,
   });
 
   // Reset state when dialog opens
@@ -483,6 +490,15 @@ function CheckoutDialog({ open, onOpenChange, storybook, type, price }: Checkout
               </>
             )}
           </DialogTitle>
+          <DialogDescription>
+            {step === 1 ? (
+              'Select your book size, shipping speed, and destination to get a price quote'
+            ) : step === 2 ? (
+              'Complete your payment to purchase the storybook'
+            ) : (
+              'Enter shipping details for your print order'
+            )}
+          </DialogDescription>
         </DialogHeader>
 
         {/* Book Options Form - Step 1 (only for print) */}
@@ -906,6 +922,9 @@ function DownloadCustomizationDialog({ open, onOpenChange, storybook }: Download
             <Download className="h-5 w-5" />
             Print PDF Options
           </DialogTitle>
+          <DialogDescription>
+            Select your preferred book size for the print-ready PDF download
+          </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4">

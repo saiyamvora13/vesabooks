@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
@@ -133,6 +133,9 @@ export function ShareDialog({ storybook, isOpen, onClose, isOwner }: ShareDialog
             <Share2 className="h-5 w-5" />
             Share Storybook
           </DialogTitle>
+          <DialogDescription>
+            Share your storybook with friends and family
+          </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4">
