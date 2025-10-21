@@ -204,6 +204,13 @@ const TextPage = ({
       background: 'linear-gradient(135deg, #f9f7f3 0%, #faf8f5 50%, #f7f5f1 100%)',
     }}
   >
+    {/* Page edge yellowing effect */}
+    <div className="absolute inset-0 pointer-events-none"
+      style={{
+        background: 'radial-gradient(ellipse at center, transparent 70%, rgba(245, 235, 200, 0.15) 100%)',
+      }}
+    />
+    
     <div className={`overflow-y-auto ${isMobile ? 'flex-1 mt-8 mb-16' : 'max-w-2xl mx-auto'} scrollbar-thin scrollbar-thumb-slate-300`}>
       <p 
         className={`text-slate-800 dark:text-slate-200 ${
@@ -245,9 +252,14 @@ const TextPage = ({
     {!isMobile && (
       <div className="absolute bottom-6 right-6 w-16 h-16 bg-gradient-to-tl from-amber-100/30 to-transparent rounded-full pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity" />
     )}
-    <span className={`absolute bottom-4 ${isMobile ? 'left-6' : 'right-8'} text-sm font-serif text-slate-600`}>
-      {pageNum}
-    </span>
+    {/* Page number in decorative circle */}
+    <div className={`absolute bottom-4 ${isMobile ? 'left-6' : 'right-8'}`}>
+      <div className="relative">
+        <span className="text-sm font-serif text-slate-600 bg-gradient-to-br from-white/80 to-slate-50/60 px-2 py-1 rounded-full shadow-sm">
+          {pageNum}
+        </span>
+      </div>
+    </div>
   </div>
 );
 
@@ -691,6 +703,36 @@ export function FlipbookViewer({ pages, title, author = "AI Author", coverImageU
             {/* Central stitching line */}
             <div className="absolute left-1/2 top-0 bottom-0 w-[1px] -translate-x-1/2 bg-black/30" />
           </div>
+
+          {/* Bookmark ribbon */}
+          {currentPage > 0 && currentPage < numSheets && (
+            <div 
+              className="absolute top-0 w-2 h-40 z-[10000] transition-all duration-700"
+              style={{
+                left: `calc(50% + ${currentPage * 2}px)`,
+                transform: 'translateX(-50%)',
+              }}
+            >
+              <div className="relative w-full h-full">
+                <div 
+                  className="absolute inset-0"
+                  style={{
+                    background: 'linear-gradient(90deg, #8B0000 0%, #DC143C 50%, #8B0000 100%)',
+                    boxShadow: '0 2px 4px rgba(0,0,0,0.3), inset 0 0 2px rgba(255,255,255,0.2)',
+                  }}
+                />
+                {/* Ribbon end notch */}
+                <div 
+                  className="absolute bottom-0 w-full"
+                  style={{
+                    height: '8px',
+                    clipPath: 'polygon(0 0, 50% 100%, 100% 0)',
+                    background: 'linear-gradient(90deg, #8B0000 0%, #DC143C 50%, #8B0000 100%)',
+                  }}
+                />
+              </div>
+            </div>
+          )}
 
           {/* Page stack effect - left side (flipped pages) */}
           <div className="absolute left-0 top-0 bottom-0 w-1/2">
