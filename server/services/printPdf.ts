@@ -154,7 +154,7 @@ export async function generatePrintReadyPDF(
     }
   }
   
-  // Helper function to draw image covering specified dimensions
+  // Helper function to draw image contained within specified dimensions
   function drawScaledImage(page: any, image: any, targetX: number, targetY: number, targetWidth: number, targetHeight: number) {
     const imgAspectRatio = image.width / image.height;
     const targetAspectRatio = targetWidth / targetHeight;
@@ -164,17 +164,17 @@ export async function generatePrintReadyPDF(
     let x = targetX;
     let y = targetY;
     
-    // Scale to cover area completely (no white space)
+    // Scale to contain image completely within target area (may have white space)
     if (imgAspectRatio > targetAspectRatio) {
-      // Image is wider - fit to height
-      drawHeight = targetHeight;
-      drawWidth = drawHeight * imgAspectRatio;
-      x = targetX - (drawWidth - targetWidth) / 2;
-    } else {
-      // Image is taller - fit to width
+      // Image is wider - fit to width, add top/bottom margins
       drawWidth = targetWidth;
       drawHeight = drawWidth / imgAspectRatio;
-      y = targetY - (drawHeight - targetHeight) / 2;
+      y = targetY + (targetHeight - drawHeight) / 2;
+    } else {
+      // Image is taller - fit to height, add left/right margins
+      drawHeight = targetHeight;
+      drawWidth = drawHeight * imgAspectRatio;
+      x = targetX + (targetWidth - drawWidth) / 2;
     }
     
     page.drawImage(image, { x, y, width: drawWidth, height: drawHeight });
