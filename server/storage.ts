@@ -136,6 +136,7 @@ export interface IStorage {
   updatePrintOrder(id: string, data: Partial<PrintOrder>): Promise<PrintOrder>;
   updatePrintOrderStatus(printOrderId: string, updates: Partial<PrintOrder>): Promise<PrintOrder>;
   getAllPrintOrders(limit?: number): Promise<PrintOrder[]>;
+  getUserPrintOrders(userId: string): Promise<Array<PrintOrder & { purchase: Purchase; storybook: Storybook }>>;
 }
 
 // Database storage for persistent data
@@ -1218,6 +1219,22 @@ export class DatabaseStorage implements IStorage {
       .orderBy(desc(printOrders.createdAt))
       .limit(limit);
     return orders;
+  }
+
+  async getUserPrintOrders(userId: string): Promise<Array<PrintOrder & { purchase: Purchase; storybook: Storybook }>> {
+    const orders = await db
+      .select()
+      .from(printOrders)
+      .innerJoin(purchases, eq(printOrders.purchaseId, purchases.id))
+      .innerJoin(storybooks, eq(purchases.storybookId, storybooks.id))
+      .where(eq(purchases.userId, userId))
+      .orderBy(desc(printOrders.createdAt));
+
+    return orders.map(row => ({
+      ...row.print_orders,
+      purchase: row.purchases,
+      storybook: row.storybooks,
+    }));
   }
 }
 

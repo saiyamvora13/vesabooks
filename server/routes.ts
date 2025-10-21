@@ -3912,6 +3912,48 @@ Sitemap: ${baseUrl}/sitemap.xml`;
     }
   });
 
+  // Get user's print orders (requires authentication)
+  app.get("/api/print-orders/user", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.id || req.user.claims?.sub;
+      
+      const orders = await storage.getUserPrintOrders(userId);
+      
+      // Format response according to specification
+      const formattedOrders = orders.map(order => ({
+        id: order.id,
+        purchaseId: order.purchaseId,
+        prodigiOrderId: order.prodigiOrderId,
+        status: order.status,
+        trackingNumber: order.trackingNumber,
+        trackingUrl: order.trackingUrl,
+        carrier: order.carrier,
+        carrierService: order.carrierService,
+        shipmentStatus: order.shipmentStatus,
+        dispatchDate: order.dispatchDate,
+        estimatedDelivery: order.estimatedDelivery,
+        createdAt: order.createdAt,
+        updatedAt: order.updatedAt,
+        purchase: {
+          id: order.purchase.id,
+          type: order.purchase.type,
+          totalAmount: order.purchase.price,
+          stripePaymentIntentId: order.purchase.stripePaymentIntentId,
+        },
+        storybook: {
+          id: order.storybook.id,
+          title: order.storybook.title,
+          coverImageUrl: order.storybook.coverImageUrl,
+        },
+      }));
+
+      res.json({ orders: formattedOrders });
+    } catch (error) {
+      console.error("Get user print orders error:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
   // Get print order by purchase ID (requires authentication)
   app.get("/api/print-orders/purchase/:purchaseId", isAuthenticated, async (req: any, res) => {
     try {
