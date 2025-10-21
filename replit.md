@@ -35,10 +35,16 @@ Key features include:
 - **Prodigi Print Fulfillment**: Integrated with Prodigi Print API for physical hardcover book production and global shipping:
   - **Print Order Management**: Database table (`printOrders`) tracks Prodigi order IDs, fulfillment status, shipping details, and tracking information
   - **API Integration**: Full REST API integration with quote generation, order submission, status tracking, and webhook support for order updates
+  - **Margin-Based Pricing**: Admin-adjustable markup percentage (default 20%) stored in `site_settings` table. Server-side quote endpoint applies margin to Prodigi's base cost, ensuring customers only see final customer-facing price. Prevents exposure of wholesale pricing.
+  - **3-Step Print Checkout Flow**: 
+    - **Step 1 - Book Options**: User selects book size (orientation-appropriate), shipping method (Budget/Standard/Express/Overnight), and destination country (8 supported countries). Real-time quote fetches and displays final price with margin applied.
+    - **Step 2 - Payment**: Stripe payment processing with payment intent creation using quoted price. Race condition protection ensures payment amount matches quote.
+    - **Step 3 - Shipping Address**: After successful payment, collects recipient details (name, email, phone, full address). Submits print order to Prodigi with PDF generation, Object Storage upload, and `print_orders` record creation.
   - **Book Sizes**: Supports 6 hardcover sizes - A5 Portrait/Landscape, A4 Portrait/Landscape, Square 8.3"/11.6"
-  - **Security**: Zod validation for all Prodigi endpoints, webhook authentication using API key verification
+  - **Security**: Zod validation for all Prodigi endpoints, webhook authentication using API key verification, ownership verification for order tracking
   - **PDF Upload**: Automatically generates and uploads print-ready PDFs to Replit Object Storage for Prodigi access
   - **Shipping Methods**: Budget, Standard, Express, and Overnight options with real-time quote calculation
+  - **Order Tracking API**: Endpoint `/api/print-orders/purchase/:purchaseId` retrieves print order details by purchase ID with ownership verification
   - **Sandbox Testing**: Uses Prodigi sandbox environment for testing without actual print production
 - **Error Handling & Retry Logic**: Automatic retry mechanisms for generation processes and a manual "Try Again" option.
 - **Persistent Image Storage**: Images are stored in Replit Object Storage with automatic optimization (JPEG compression, resized to 1200px max width) and organized in date-based folders.
