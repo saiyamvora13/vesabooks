@@ -138,6 +138,17 @@ export async function generateStoryFromPrompt(
 
 Create a cohesive story following ${narrativeStructure}
 
+IMPORTANT INSTRUCTIONS FOR IMAGE DESCRIPTIONS:
+- For the COVER: describe a compelling scene showing the main character (title and author text will be added automatically)
+- For INTERIOR PAGES: create DIVERSE, VARIED scenes with different:
+  * Camera angles (close-up, wide shot, over-the-shoulder, bird's eye view)
+  * Character poses and expressions
+  * Settings and backgrounds
+  * Lighting and time of day
+  * Actions and compositions
+- NEVER include title text or author name in interior page descriptions
+- Each page should look visually distinct while maintaining character consistency
+
 Return JSON following the schema with exactly ${pagesPerBook} pages.`;
 
     const imageParts = [];
@@ -192,7 +203,7 @@ Return JSON following the schema with exactly ${pagesPerBook} pages.`;
         },
         coverImagePrompt: {
           type: Type.STRING,
-          description: "Description of the cover scene (character description will be added automatically). IMPORTANT: The cover illustration MUST include the story title displayed prominently at the top and the author name at the bottom, as decorative text that's part of the image composition.",
+          description: "Description of the cover scene showing the main character in a key moment (character description will be added automatically). IMPORTANT: This is ONLY for the COVER image. The title and author name will be added to this prompt automatically - do not include them in your description.",
         },
         pages: {
           type: Type.ARRAY,
@@ -227,7 +238,7 @@ Return JSON following the schema with exactly ${pagesPerBook} pages.`;
               },
               imagePrompt: {
                 type: Type.STRING,
-                description: "Scene description for illustration.",
+                description: "Scene description for illustration. IMPORTANT: This is for an INTERIOR PAGE, NOT the cover. Do NOT include any title text, author name, or book title in this description. Only describe the visual scene and action.",
               },
             },
             required: ["pageNumber", "text", "main_action", "setting", "key_objects", "emotional_tone", "imagePrompt"],
@@ -270,6 +281,96 @@ Return JSON following the schema with exactly ${pagesPerBook} pages.`;
       for (const page of parsedJson.pages) {
         if (page.text) {
           page.mood = await detectPageMood(page.text);
+          
+          // CRITICAL: Sanitize page imagePrompts to remove any title/author text mentions
+          // This prevents the AI from adding title/author overlays to interior pages
+          if (page.imagePrompt) {
+            const originalPrompt = page.imagePrompt;
+            
+            // Helper function to canonicalize punctuation for consistent matching
+            const canonicalizePunctuation = (str: string) => {
+              return str
+                .replace(/[\u2018\u2019]/g, "'")   // Curly apostrophes (U+2018, U+2019) → ASCII apostrophe
+                .replace(/[\u201C\u201D]/g, '"')    // Curly quotes (U+201C, U+201D) → ASCII quotes
+                .replace(/[\u2010-\u2015]/g, '-')   // Various dashes → ASCII hyphen
+                .replace(/\u2026/g, '...')          // Ellipsis (U+2026) → three dots
+                .replace(/\s+/g, ' ')               // Normalize whitespace
+                .trim();
+            };
+            
+            // Step 1: Canonicalize punctuation in BOTH prompt AND title/author for consistent matching
+            page.imagePrompt = canonicalizePunctuation(page.imagePrompt);
+            const canonicalTitle = canonicalizePunctuation(parsedJson.title);
+            const canonicalAuthor = canonicalizePunctuation(parsedJson.author);
+            
+            // Step 2: Create whitespace-tolerant regex patterns for title and author
+            // This handles variations like "Sara  Beheray" or "Sara\nBeheray"
+            const escapeRegex = (str: string) => str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            const titleEscaped = escapeRegex(canonicalTitle).replace(/\s+/g, '\\s+');
+            const authorEscaped = escapeRegex(canonicalAuthor).replace(/\s+/g, '\\s+');
+            
+            // Step 3: Remove the actual title and author strings (with various forms)
+            page.imagePrompt = page.imagePrompt
+              // Remove exact title (with optional quotes and whitespace variations)
+              .replace(new RegExp(`["']?${titleEscaped}["']?`, 'gi'), '')
+              // Remove exact author (with optional quotes, "by" prefix, and whitespace variations)
+              .replace(new RegExp(`(by\\s+)?["']?${authorEscaped}["']?`, 'gi'), '')
+              // Remove generic title/author keywords that might trigger text rendering
+              .replace(/\b(title|author|book title|story title)\b\s*(text|name)?/gi, '')
+              .replace(/\b(written by|illustrated by|by)\b/gi, '')
+              .replace(/\btitle\s+(displayed|shown|visible|appears|written)/gi, '')
+              .replace(/\bauthor\s+(displayed|shown|visible|appears|written)/gi, '')
+              // Remove quoted text followed by display verbs (catches any remaining quoted strings)
+              .replace(/["']([^"']{1,100})["']\s*(displayed|shown|visible|appears|written|text|at the top|at the bottom)/gi, '')
+              .trim();
+            
+            // Step 4: Clean up punctuation artifacts
+            page.imagePrompt = page.imagePrompt
+              .replace(/\s+/g, ' ')
+              .replace(/\s*,\s*,/g, ',')
+              .replace(/\s*\.\s*\./g, '.')
+              .trim();
+            
+            // Step 5: FINAL VERIFICATION - Ensure title/author don't appear anywhere in the prompt
+            // Use the canonicalized versions for comparison to catch punctuation variants
+            const normalizedPrompt = page.imagePrompt.toLowerCase();
+            const normalizedTitle = canonicalTitle.toLowerCase();
+            const normalizedAuthor = canonicalAuthor.toLowerCase();
+            
+            if (normalizedPrompt.includes(normalizedTitle) || normalizedPrompt.includes(normalizedAuthor)) {
+              console.warn(`  - [WARNING] Page ${page.pageNumber} prompt still contains title/author after sanitization!`);
+              console.warn(`    Original: ${originalPrompt.substring(0, 150)}...`);
+              console.warn(`    Sanitized: ${page.imagePrompt.substring(0, 150)}...`);
+              
+              // Fallback: Replace the entire prompt with a generic safe description from scene metadata
+              let fallbackPrompt = `${page.main_action} in ${page.setting}. ${page.key_objects.join(', ')}. ${page.emotional_tone} mood.`;
+              
+              // CRITICAL: Sanitize the fallback too in case metadata contains title/author
+              // Canonicalize punctuation first, then remove title/author
+              fallbackPrompt = canonicalizePunctuation(fallbackPrompt);
+              fallbackPrompt = fallbackPrompt
+                .replace(new RegExp(`["']?${titleEscaped}["']?`, 'gi'), '')
+                .replace(new RegExp(`(by\\s+)?["']?${authorEscaped}["']?`, 'gi'), '')
+                .replace(/\s+/g, ' ')
+                .trim();
+              
+              page.imagePrompt = fallbackPrompt;
+              console.warn(`    Fallback (before final check): ${page.imagePrompt}`);
+              
+              // FINAL POST-FALLBACK VERIFICATION: Ensure fallback is truly clean
+              const finalNormalized = page.imagePrompt.toLowerCase();
+              if (finalNormalized.includes(normalizedTitle) || finalNormalized.includes(normalizedAuthor)) {
+                console.error(`  - [ERROR] Fallback still contains title/author! Using minimal safe prompt.`);
+                // Last resort: ultra-minimal safe description
+                page.imagePrompt = `Character in a scene. ${page.emotional_tone} atmosphere.`;
+              }
+            }
+            
+            // Log if we sanitized anything (for debugging)
+            if (originalPrompt !== page.imagePrompt) {
+              console.log(`  - [SANITIZED] Removed title/author text from page ${page.pageNumber} prompt`);
+            }
+          }
           
           // Log the extracted scene metadata for debugging
           console.log(`\n[Page ${page.pageNumber}] Scene Details:`);
