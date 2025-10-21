@@ -1,4 +1,4 @@
-import { type Storybook, type InsertStorybook, type StoryGenerationProgress, storybooks, users, type User, type UpsertUser, type Purchase, type InsertPurchase, purchases, passwordResetTokens, type PasswordResetToken, type AdminUser, type InsertAdminUser, adminUsers, type SiteSetting, siteSettings, type HeroStorybookSlot, type InsertHeroStorybookSlot, heroStorybookSlots, type FeaturedStorybook, type InsertFeaturedStorybook, featuredStorybooks, type AdminAuditLog, type InsertAdminAuditLog, adminAuditLogs, type SamplePrompt, type InsertSamplePrompt, samplePrompts, type AnalyticsEvent, type InsertAnalyticsEvent, analyticsEvents, type StoryRating, type InsertStoryRating, storyRatings, type AudioSettings, audioSettings, type IpRateLimit, type InsertIpRateLimit, ipRateLimits, type DownloadVerification, type InsertDownloadVerification, downloadVerifications, type SavedStorybook, type InsertSavedStorybook, savedStorybooks, type PrintOrder, type InsertPrintOrder, printOrders } from "@shared/schema";
+import { type Storybook, type InsertStorybook, type StoryGenerationProgress, storybooks, users, type User, type UpsertUser, type Purchase, type InsertPurchase, purchases, type CartItem, type InsertCartItem, cartItems, passwordResetTokens, type PasswordResetToken, type AdminUser, type InsertAdminUser, adminUsers, type SiteSetting, siteSettings, type HeroStorybookSlot, type InsertHeroStorybookSlot, heroStorybookSlots, type FeaturedStorybook, type InsertFeaturedStorybook, featuredStorybooks, type AdminAuditLog, type InsertAdminAuditLog, adminAuditLogs, type SamplePrompt, type InsertSamplePrompt, samplePrompts, type AnalyticsEvent, type InsertAnalyticsEvent, analyticsEvents, type StoryRating, type InsertStoryRating, storyRatings, type AudioSettings, audioSettings, type IpRateLimit, type InsertIpRateLimit, ipRateLimits, type DownloadVerification, type InsertDownloadVerification, downloadVerifications, type SavedStorybook, type InsertSavedStorybook, savedStorybooks, type PrintOrder, type InsertPrintOrder, printOrders } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, count, countDistinct, isNull, and, lt, gt, sql } from "drizzle-orm";
 import { normalizeEmail } from "./auth";
@@ -38,6 +38,14 @@ export interface IStorage {
   getUserPurchases(userId: string): Promise<Purchase[]>;
   getStorybookPurchase(userId: string, storybookId: string, type: 'digital' | 'print'): Promise<Purchase | null>;
   updatePurchaseStatus(id: string, status: string, stripePaymentIntentId?: string): Promise<Purchase>;
+  
+  // Shopping Cart operations
+  addToCart(userId: string, storybookId: string, productType: 'digital' | 'print', bookSize?: string, quantity?: number): Promise<CartItem>;
+  getCartItems(userId: string): Promise<CartItem[]>;
+  updateCartItemQuantity(id: string, userId: string, quantity: number): Promise<CartItem | null>;
+  removeFromCart(id: string, userId: string): Promise<boolean>;
+  clearCart(userId: string): Promise<void>;
+  getCartItem(userId: string, storybookId: string, productType: string, bookSize?: string | null): Promise<CartItem | null>;
   
   // Password reset operations
   createPasswordResetToken(userId: string, token: string, expiresAt: Date): Promise<PasswordResetToken>;
@@ -390,6 +398,85 @@ export class DatabaseStorage implements IStorage {
       .where(eq(purchases.id, id))
       .returning();
     return updatedPurchase;
+  }
+
+  // Shopping Cart operations
+  async addToCart(userId: string, storybookId: string, productType: 'digital' | 'print', bookSize?: string, quantity: number = 1): Promise<CartItem> {
+    // Check if item already exists
+    const existing = await this.getCartItem(userId, storybookId, productType, bookSize);
+    
+    if (existing) {
+      // Update quantity instead of creating duplicate
+      const updated = await this.updateCartItemQuantity(existing.id, userId, existing.quantity + quantity);
+      if (!updated) {
+        throw new Error('Failed to update cart item quantity');
+      }
+      return updated;
+    }
+    
+    // Create new cart item
+    const [cartItem] = await db
+      .insert(cartItems)
+      .values({
+        userId,
+        storybookId,
+        productType,
+        bookSize: bookSize || null,
+        quantity,
+      })
+      .returning();
+    return cartItem;
+  }
+
+  async getCartItems(userId: string): Promise<CartItem[]> {
+    return await db
+      .select()
+      .from(cartItems)
+      .where(eq(cartItems.userId, userId))
+      .orderBy(desc(cartItems.createdAt));
+  }
+
+  async updateCartItemQuantity(id: string, userId: string, quantity: number): Promise<CartItem | null> {
+    const [updated] = await db
+      .update(cartItems)
+      .set({ quantity })
+      .where(and(eq(cartItems.id, id), eq(cartItems.userId, userId)))
+      .returning();
+    return updated || null;
+  }
+
+  async removeFromCart(id: string, userId: string): Promise<boolean> {
+    const result = await db
+      .delete(cartItems)
+      .where(and(eq(cartItems.id, id), eq(cartItems.userId, userId)))
+      .returning();
+    return result.length > 0;
+  }
+
+  async clearCart(userId: string): Promise<void> {
+    await db.delete(cartItems).where(eq(cartItems.userId, userId));
+  }
+
+  async getCartItem(userId: string, storybookId: string, productType: string, bookSize?: string | null): Promise<CartItem | null> {
+    const conditions = [
+      eq(cartItems.userId, userId),
+      eq(cartItems.storybookId, storybookId),
+      eq(cartItems.productType, productType),
+    ];
+    
+    // Handle bookSize - null values need special handling
+    if (bookSize === null || bookSize === undefined) {
+      conditions.push(isNull(cartItems.bookSize));
+    } else {
+      conditions.push(eq(cartItems.bookSize, bookSize));
+    }
+    
+    const [item] = await db
+      .select()
+      .from(cartItems)
+      .where(and(...conditions));
+    
+    return item || null;
   }
 
   // Password reset operations

@@ -2794,6 +2794,123 @@ Sitemap: ${baseUrl}/sitemap.xml`;
     }
   });
 
+  // Shopping Cart CRUD endpoints
+  
+  // Add item to cart (requires authentication)
+  app.post("/api/cart", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.id || req.user.claims?.sub;
+      const { storybookId, productType, bookSize, quantity } = req.body;
+
+      // Validate input
+      if (!storybookId || !productType) {
+        return res.status(400).json({ message: "storybookId and productType are required" });
+      }
+
+      if (productType !== 'digital' && productType !== 'print') {
+        return res.status(400).json({ message: "productType must be 'digital' or 'print'" });
+      }
+
+      // Validate quantity
+      const qty = quantity || 1;
+      if (qty < 1) {
+        return res.status(400).json({ message: "Quantity must be at least 1" });
+      }
+
+      // Verify storybook exists
+      const storybook = await storage.getStorybook(storybookId);
+      if (!storybook) {
+        return res.status(404).json({ message: "Storybook not found" });
+      }
+
+      // Add to cart (will increment quantity if already exists)
+      const cartItem = await storage.addToCart(
+        userId,
+        storybookId,
+        productType,
+        bookSize,
+        qty
+      );
+
+      res.json({ cartItem });
+    } catch (error) {
+      console.error("Add to cart error:", error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      res.status(500).json({ message: `Failed to add to cart: ${errorMessage}` });
+    }
+  });
+
+  // Get cart items (requires authentication)
+  app.get("/api/cart", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.id || req.user.claims?.sub;
+      const cartItems = await storage.getCartItems(userId);
+      res.json({ items: cartItems });
+    } catch (error) {
+      console.error("Get cart items error:", error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      res.status(500).json({ message: `Failed to get cart items: ${errorMessage}` });
+    }
+  });
+
+  // Update cart item quantity (requires authentication)
+  app.patch("/api/cart/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.id || req.user.claims?.sub;
+      const { id } = req.params;
+      const { quantity } = req.body;
+
+      if (!quantity || quantity < 1) {
+        return res.status(400).json({ message: "Quantity must be at least 1" });
+      }
+
+      const updated = await storage.updateCartItemQuantity(id, userId, quantity);
+      
+      if (!updated) {
+        return res.status(404).json({ message: "Cart item not found or does not belong to you" });
+      }
+      
+      res.json({ cartItem: updated });
+    } catch (error) {
+      console.error("Update cart item error:", error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      res.status(500).json({ message: `Failed to update cart item: ${errorMessage}` });
+    }
+  });
+
+  // Remove item from cart (requires authentication)
+  app.delete("/api/cart/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.id || req.user.claims?.sub;
+      const { id } = req.params;
+      
+      const removed = await storage.removeFromCart(id, userId);
+      
+      if (!removed) {
+        return res.status(404).json({ message: "Cart item not found or does not belong to you" });
+      }
+      
+      res.json({ message: "Item removed from cart" });
+    } catch (error) {
+      console.error("Remove from cart error:", error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      res.status(500).json({ message: `Failed to remove from cart: ${errorMessage}` });
+    }
+  });
+
+  // Clear entire cart (requires authentication)
+  app.delete("/api/cart", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.id || req.user.claims?.sub;
+      await storage.clearCart(userId);
+      res.json({ message: "Cart cleared" });
+    } catch (error) {
+      console.error("Clear cart error:", error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      res.status(500).json({ message: `Failed to clear cart: ${errorMessage}` });
+    }
+  });
+
   // Calculate cart pricing with discounts (requires authentication)
   app.post("/api/cart/calculate-pricing", isAuthenticated, async (req: any, res) => {
     try {
