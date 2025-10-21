@@ -7,11 +7,12 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
-import { ShoppingCart, Trash2, X, Minus, Plus, Loader2 } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { ShoppingCart, Trash2, X, Minus, Plus, Loader2, MapPin } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import type { Storybook, CartItem } from "@shared/schema";
+import type { Storybook, CartItem, Purchase } from "@shared/schema";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { SEO } from "@/components/SEO";
 import { useState } from "react";
@@ -19,9 +20,28 @@ import { loadStripe } from "@stripe/stripe-js";
 import { Elements, PaymentElement, useStripe, useElements } from "@stripe/react-stripe-js";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { BOOK_SIZES, getBookSizesByOrientation, type BookOrientation } from "@shared/bookSizes";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 
 // Initialize Stripe
 const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLIC_KEY || '');
+
+// Shipping address schema
+const shippingAddressSchema = z.object({
+  name: z.string().min(1, "Name is required"),
+  email: z.string().email("Valid email is required"),
+  phoneNumber: z.string().min(1, "Phone number is required"),
+  addressLine1: z.string().min(1, "Address line 1 is required"),
+  addressLine2: z.string().optional(),
+  city: z.string().min(1, "City is required"),
+  state: z.string().optional(),
+  postalCode: z.string().min(1, "Postal/ZIP code is required"),
+  countryCode: z.string().min(2, "Country code is required").default('US'),
+});
+
+type ShippingAddressFormValues = z.infer<typeof shippingAddressSchema>;
 
 interface EnrichedCartItem extends CartItem {
   storybook?: Storybook | null;
@@ -220,28 +240,271 @@ function CartItemCard({
   );
 }
 
+function ShippingAddressForm({ 
+  onSubmit, 
+  onCancel,
+  isProcessing,
+}: {
+  onSubmit: (address: ShippingAddressFormValues) => void;
+  onCancel: () => void;
+  isProcessing: boolean;
+}) {
+  const form = useForm<ShippingAddressFormValues>({
+    resolver: zodResolver(shippingAddressSchema),
+    defaultValues: {
+      name: '',
+      email: '',
+      phoneNumber: '',
+      addressLine1: '',
+      addressLine2: '',
+      city: '',
+      state: '',
+      postalCode: '',
+      countryCode: 'US',
+    },
+  });
+
+  return (
+    <Form {...form}>
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+        <div className="space-y-4">
+          <FormField
+            control={form.control}
+            name="name"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Full Name</FormLabel>
+                <FormControl>
+                  <Input {...field} placeholder="John Doe" data-testid="input-name" />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="email"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Email</FormLabel>
+                <FormControl>
+                  <Input {...field} type="email" placeholder="john@example.com" data-testid="input-email" />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="phoneNumber"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Phone Number</FormLabel>
+                <FormControl>
+                  <Input {...field} placeholder="+1 (555) 123-4567" data-testid="input-phone" />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="addressLine1"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Address Line 1</FormLabel>
+                <FormControl>
+                  <Input {...field} placeholder="123 Main St" data-testid="input-address-line1" />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="addressLine2"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Address Line 2 (Optional)</FormLabel>
+                <FormControl>
+                  <Input {...field} placeholder="Apt 4B" data-testid="input-address-line2" />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <div className="grid grid-cols-2 gap-4">
+            <FormField
+              control={form.control}
+              name="city"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>City</FormLabel>
+                  <FormControl>
+                    <Input {...field} placeholder="New York" data-testid="input-city" />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="state"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>State/Province</FormLabel>
+                  <FormControl>
+                    <Input {...field} placeholder="NY" data-testid="input-state" />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <FormField
+              control={form.control}
+              name="postalCode"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Postal Code</FormLabel>
+                  <FormControl>
+                    <Input {...field} placeholder="10001" data-testid="input-postal-code" />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="countryCode"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Country</FormLabel>
+                  <FormControl>
+                    <Select value={field.value} onValueChange={field.onChange}>
+                      <SelectTrigger data-testid="select-country">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="US">United States</SelectItem>
+                        <SelectItem value="CA">Canada</SelectItem>
+                        <SelectItem value="GB">United Kingdom</SelectItem>
+                        <SelectItem value="AU">Australia</SelectItem>
+                        <SelectItem value="DE">Germany</SelectItem>
+                        <SelectItem value="FR">France</SelectItem>
+                        <SelectItem value="ES">Spain</SelectItem>
+                        <SelectItem value="IT">Italy</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+        </div>
+
+        <div className="flex gap-3 pt-4">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={onCancel}
+            disabled={isProcessing}
+            className="flex-1"
+            data-testid="button-cancel-shipping"
+          >
+            Cancel
+          </Button>
+          <Button
+            type="submit"
+            disabled={isProcessing}
+            className="flex-1 gradient-bg !text-[hsl(258,90%,20%)]"
+            data-testid="button-submit-shipping"
+          >
+            {isProcessing ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                Processing...
+              </>
+            ) : (
+              <>
+                <MapPin className="h-4 w-4 mr-2" />
+                Complete Order
+              </>
+            )}
+          </Button>
+        </div>
+      </form>
+    </Form>
+  );
+}
+
 function CheckoutDialog({ 
   open, 
   onOpenChange, 
   clientSecret, 
   amount,
+  hasPrintItems,
   onSuccess,
 }: { 
   open: boolean; 
   onOpenChange: (open: boolean) => void; 
   clientSecret: string;
   amount: number;
-  onSuccess: (paymentIntentId: string) => void;
+  hasPrintItems: boolean;
+  onSuccess: (paymentIntentId: string, shippingAddress?: ShippingAddressFormValues) => void;
 }) {
+  const [checkoutStep, setCheckoutStep] = useState<'payment' | 'shipping' | 'complete'>('payment');
+  const [paymentIntentId, setPaymentIntentId] = useState<string>('');
+
+  const handlePaymentSuccess = (intentId: string) => {
+    setPaymentIntentId(intentId);
+    
+    if (hasPrintItems) {
+      setCheckoutStep('shipping');
+    } else {
+      onSuccess(intentId);
+    }
+  };
+
+  const handleShippingSubmit = (address: ShippingAddressFormValues) => {
+    onSuccess(paymentIntentId, address);
+  };
+
+  const handleCancel = () => {
+    setCheckoutStep('payment');
+    onOpenChange(false);
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Complete Your Purchase</DialogTitle>
+          <DialogTitle>
+            {checkoutStep === 'payment' ? 'Complete Your Purchase' : 'Shipping Address'}
+          </DialogTitle>
         </DialogHeader>
-        <Elements stripe={stripePromise} options={{ clientSecret }}>
-          <CheckoutForm amount={amount} onSuccess={onSuccess} />
-        </Elements>
+        
+        {checkoutStep === 'payment' ? (
+          <Elements stripe={stripePromise} options={{ clientSecret }}>
+            <CheckoutForm amount={amount} onSuccess={handlePaymentSuccess} />
+          </Elements>
+        ) : (
+          <ShippingAddressForm 
+            onSubmit={handleShippingSubmit} 
+            onCancel={handleCancel}
+            isProcessing={false}
+          />
+        )}
       </DialogContent>
     </Dialog>
   );
@@ -428,23 +691,47 @@ export default function Cart() {
 
   // Finalize purchase mutation
   const finalizeMutation = useMutation({
-    mutationFn: async (paymentIntentId: string) => {
-      const response = await apiRequest('POST', '/api/cart/finalize', { paymentIntentId });
+    mutationFn: async ({ paymentIntentId, shippingAddress }: { paymentIntentId: string; shippingAddress?: ShippingAddressFormValues }) => {
+      const response = await apiRequest('POST', '/api/cart/finalize', { 
+        paymentIntentId,
+        shippingAddress,
+      });
       if (!response.ok) {
         const error = await response.json();
         throw new Error(error.message || 'Failed to finalize purchase');
       }
       return response.json();
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['/api/cart'] });
       queryClient.invalidateQueries({ queryKey: ['/api/purchases'] });
+      
+      const purchases = data.purchases || [];
+      const printPurchases = purchases.filter((p: Purchase) => p.type === 'print');
+      const digitalPurchases = purchases.filter((p: Purchase) => p.type === 'digital');
+      
       setCheckoutDialog({ open: false });
+      
+      // Show enhanced success toast with order details
+      const itemCount = purchases.length;
+      let description = `${itemCount} ${itemCount === 1 ? 'item' : 'items'} purchased successfully. `;
+      
+      if (printPurchases.length > 0) {
+        description += `Your ${printPurchases.length} print ${printPurchases.length === 1 ? 'book' : 'books'} will be shipped soon. `;
+      }
+      
+      description += "Check your library to view your purchases.";
+      
       toast({
-        title: "Purchase successful!",
-        description: "Your order has been completed. Check your library for your purchases.",
+        title: "🎉 Order Confirmed!",
+        description: description,
+        duration: 5000,
       });
-      setLocation('/library');
+      
+      // Redirect to library after a short delay
+      setTimeout(() => {
+        setLocation('/library');
+      }, 2000);
     },
     onError: (error: Error) => {
       toast({
@@ -494,8 +781,8 @@ export default function Cart() {
     checkoutMutation.mutate();
   };
 
-  const handlePaymentSuccess = (paymentIntentId: string) => {
-    finalizeMutation.mutate(paymentIntentId);
+  const handlePaymentSuccess = (paymentIntentId: string, shippingAddress?: ShippingAddressFormValues) => {
+    finalizeMutation.mutate({ paymentIntentId, shippingAddress });
   };
 
   if (!isAuthenticated) {
@@ -704,6 +991,7 @@ export default function Cart() {
           onOpenChange={(open) => setCheckoutDialog({ open })}
           clientSecret={checkoutDialog.clientSecret}
           amount={checkoutDialog.amount}
+          hasPrintItems={hasPrintItems}
           onSuccess={handlePaymentSuccess}
         />
       )}

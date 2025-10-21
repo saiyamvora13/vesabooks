@@ -19,6 +19,9 @@ import { verifyRecaptcha } from "./middleware/recaptcha";
 import { createIpRateLimitMiddleware } from "./middleware/ipRateLimit";
 import { buildFinalImagePrompt } from "./utils/imagePromptBuilder";
 import sharp from "sharp";
+import { generatePrintReadyPDF } from "./services/printPdf";
+import { prodigiService } from "./services/prodigi";
+import { ObjectStorageService } from "./objectStorage";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', {
   apiVersion: "2025-09-30.clover",
@@ -3108,14 +3111,38 @@ Sitemap: ${baseUrl}/sitemap.xml`;
     }
   });
 
+  // Shipping address schema for cart finalize
+  const cartShippingAddressSchema = z.object({
+    name: z.string().min(1, "Name is required"),
+    email: z.string().email("Valid email is required"),
+    phoneNumber: z.string().min(1, "Phone number is required"),
+    addressLine1: z.string().min(1, "Address line 1 is required"),
+    addressLine2: z.string().optional(),
+    city: z.string().min(1, "City is required"),
+    state: z.string().optional(),
+    postalCode: z.string().min(1, "Postal/ZIP code is required"),
+    countryCode: z.string().min(2, "Country code is required"),
+  }).optional();
+
   // Finalize cart purchase after payment succeeds (requires authentication)
   app.post("/api/cart/finalize", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.id || req.user.claims?.sub;
-      const { paymentIntentId } = req.body;
+      const { paymentIntentId, shippingAddress } = req.body;
 
       if (!paymentIntentId) {
         return res.status(400).json({ message: "Payment intent ID is required" });
+      }
+
+      // Validate shipping address if provided
+      if (shippingAddress) {
+        const validation = cartShippingAddressSchema.safeParse(shippingAddress);
+        if (!validation.success) {
+          return res.status(400).json({ 
+            message: "Invalid shipping address", 
+            errors: validation.error.errors 
+          });
+        }
       }
 
       // Verify payment intent belongs to this user
@@ -3131,6 +3158,16 @@ Sitemap: ${baseUrl}/sitemap.xml`;
 
       // Get items from payment intent metadata
       const items = JSON.parse(paymentIntent.metadata.items || '[]');
+      
+      // Check if cart contains print items
+      const hasPrintItems = items.some((item: any) => item.type === 'print');
+      
+      // Require shipping address for print items
+      if (hasPrintItems && !shippingAddress) {
+        return res.status(400).json({ 
+          message: "Shipping address is required for print orders" 
+        });
+      }
       
       const createdPurchases = [];
 
@@ -3163,6 +3200,121 @@ Sitemap: ${baseUrl}/sitemap.xml`;
             } else {
               throw error;
             }
+          }
+        }
+      }
+
+      // Process print orders with Prodigi
+      const printPurchases = createdPurchases.filter(p => p.type === 'print');
+      const objectStorage = new ObjectStorageService();
+      
+      for (const printPurchase of printPurchases) {
+        try {
+          console.log(`[Prodigi] Processing print order for purchase ${printPurchase.id}`);
+          
+          // Get the storybook
+          const storybook = await storage.getStorybook(printPurchase.storybookId);
+          if (!storybook) {
+            throw new Error(`Storybook ${printPurchase.storybookId} not found`);
+          }
+          
+          // Generate print-ready PDF
+          const pdfBuffer = await generatePrintReadyPDF(
+            storybook, 
+            printPurchase.bookSize || 'a5-portrait',
+            printPurchase.spineText || undefined,
+            printPurchase.spineTextColor || undefined,
+            printPurchase.spineBackgroundColor || undefined
+          );
+          
+          // Save PDF to temporary file
+          const tempPdfPath = path.join(process.cwd(), 'uploads', `print-${printPurchase.id}-${Date.now()}.pdf`);
+          fs.writeFileSync(tempPdfPath, pdfBuffer);
+          
+          // Upload PDF to object storage
+          const pdfStoragePath = await objectStorage.uploadFile(
+            tempPdfPath,
+            `print-pdfs/${printPurchase.id}.pdf`,
+            true
+          );
+          
+          // Clean up temporary file
+          fs.unlinkSync(tempPdfPath);
+          
+          console.log(`[Prodigi] PDF uploaded to ${pdfStoragePath}`);
+          
+          // Get full PDF URL for Prodigi
+          const baseUrl = process.env.REPL_SLUG 
+            ? `https://${process.env.REPL_SLUG}.${process.env.REPL_OWNER}.repl.co`
+            : 'http://localhost:5000';
+          const pdfUrl = `${baseUrl}${pdfStoragePath}`;
+          
+          // Get product SKU and dimensions
+          const sku = prodigiService.getProductSKU(printPurchase.bookSize || 'a5-portrait', storybook.pages.length);
+          
+          // Shipping address is required for print orders (validated earlier)
+          if (!shippingAddress) {
+            throw new Error("Shipping address is required for print orders but was not provided");
+          }
+          
+          // Create Prodigi order with shipping address
+          const recipient = {
+            name: shippingAddress.name,
+            email: shippingAddress.email,
+            phoneNumber: shippingAddress.phoneNumber,
+            address: {
+              line1: shippingAddress.addressLine1,
+              line2: shippingAddress.addressLine2 || '',
+              postalOrZipCode: shippingAddress.postalCode,
+              countryCode: shippingAddress.countryCode,
+              townOrCity: shippingAddress.city,
+              stateOrCounty: shippingAddress.state || '',
+            },
+          };
+
+          const prodigiOrder = await prodigiService.createOrder({
+            merchantReference: `ORDER-${printPurchase.id}`,
+            shippingMethod: 'Standard',
+            recipient,
+            items: [{
+              sku,
+              copies: 1,
+              sizing: 'fillPrintArea',
+              assets: [{
+                printArea: 'default',
+                url: pdfUrl,
+              }],
+            }],
+            metadata: {
+              purchaseId: printPurchase.id,
+              storybookId: printPurchase.storybookId,
+              userId: userId,
+            },
+          });
+          
+          console.log(`[Prodigi] Order created: ${prodigiOrder.id}`);
+          
+          // Create print_orders record
+          await storage.createPrintOrder({
+            purchaseId: printPurchase.id,
+            prodigiOrderId: prodigiOrder.id,
+            status: 'submitted',
+          });
+          
+          console.log(`[Prodigi] Print order record created for purchase ${printPurchase.id}`);
+        } catch (error) {
+          // Log error but don't fail the entire purchase
+          console.error(`[Prodigi] Failed to create print order for purchase ${printPurchase.id}:`, error);
+          
+          // Create print_orders record with error status
+          try {
+            await storage.createPrintOrder({
+              purchaseId: printPurchase.id,
+              status: 'failed',
+              errorMessage: error instanceof Error ? error.message : 'Unknown error',
+            });
+          } catch (dbError) {
+            console.error(`[Prodigi] Failed to create print order record:`, dbError);
           }
         }
       }
