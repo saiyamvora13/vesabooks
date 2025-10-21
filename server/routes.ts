@@ -3303,7 +3303,7 @@ Sitemap: ${baseUrl}/sitemap.xml`;
     }
   });
 
-  // Webhook for Prodigi order updates
+  // Webhook for Prodigi order updates (CloudEvents v1.0 format)
   app.post("/api/webhook/prodigi", async (req: any, res) => {
     try {
       // Verify webhook authenticity using shared secret or API key
@@ -3316,30 +3316,75 @@ Sitemap: ${baseUrl}/sitemap.xml`;
         return res.status(401).json({ message: "Unauthorized" });
       }
 
-      const { orderId, status, shipments } = req.body;
+      // Validate CloudEvents v1.0 structure
+      const cloudEventSchema = z.object({
+        specversion: z.string(),
+        type: z.string(),
+        source: z.string(),
+        id: z.string(),
+        time: z.string(),
+        datacontenttype: z.string(),
+        data: z.object({
+          order: z.object({
+            id: z.string(),
+            status: z.object({
+              stage: z.string(),
+              issues: z.array(z.any()).optional(),
+              details: z.record(z.string()).optional(),
+            }),
+            shipments: z.array(z.object({
+              carrier: z.object({
+                name: z.string().optional(),
+                service: z.string().optional(),
+              }).optional(),
+              tracking: z.object({
+                number: z.string().optional(),
+                url: z.string().optional(),
+              }).optional(),
+              dispatchDate: z.string().optional(),
+              estimatedDeliveryDate: z.string().optional(),
+            })).optional(),
+            charges: z.array(z.any()).optional(),
+          }),
+        }),
+      });
 
-      if (!orderId) {
-        return res.status(400).json({ message: "orderId is required" });
+      const validationResult = cloudEventSchema.safeParse(req.body);
+      if (!validationResult.success) {
+        console.error('Invalid CloudEvents payload:', validationResult.error.errors);
+        return res.status(400).json({ 
+          message: "Invalid webhook payload", 
+          errors: validationResult.error.errors 
+        });
       }
 
-      const printOrder = await storage.getPrintOrderByProdigiId(orderId);
+      const { data } = validationResult.data;
+      const order = data.order;
+
+      const printOrder = await storage.getPrintOrderByProdigiId(order.id);
       if (!printOrder) {
-        console.warn(`Received webhook for unknown Prodigi order: ${orderId}`);
+        console.warn(`Received webhook for unknown Prodigi order: ${order.id}`);
         return res.json({ received: true });
       }
 
+      // Extract tracking information from shipments
+      const firstShipment = order.shipments?.[0];
+      const trackingNumber = firstShipment?.tracking?.number;
+      const carrier = firstShipment?.carrier?.name;
+      const estimatedDelivery = firstShipment?.estimatedDeliveryDate 
+        ? new Date(firstShipment.estimatedDeliveryDate) 
+        : undefined;
+
       // Update print order with webhook data
       await storage.updatePrintOrder(printOrder.id, {
-        status: status?.stage || printOrder.status,
+        status: order.status.stage,
         webhookData: req.body,
-        trackingNumber: shipments?.[0]?.tracking?.number,
-        carrier: shipments?.[0]?.carrier?.name,
-        estimatedDelivery: shipments?.[0]?.estimatedDeliveryDate 
-          ? new Date(shipments[0].estimatedDeliveryDate) 
-          : undefined,
+        trackingNumber,
+        carrier,
+        estimatedDelivery,
       });
 
-      console.log(`Updated print order ${printOrder.id} from Prodigi webhook`);
+      console.log(`[Prodigi Webhook] Updated order ${printOrder.id} - Stage: ${order.status.stage}${trackingNumber ? `, Tracking: ${trackingNumber}` : ''}`);
       res.json({ received: true });
     } catch (error) {
       console.error("Prodigi webhook error:", error);
