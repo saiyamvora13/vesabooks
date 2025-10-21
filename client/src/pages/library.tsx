@@ -501,7 +501,7 @@ function CheckoutDialog({ open, onOpenChange, storybook, type, price }: Checkout
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Book Size</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <Select onValueChange={field.onChange} value={field.value}>
                         <FormControl>
                           <SelectTrigger data-testid="select-book-size">
                             <SelectValue placeholder="Select book size" />
@@ -526,7 +526,7 @@ function CheckoutDialog({ open, onOpenChange, storybook, type, price }: Checkout
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Ship to Country</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <Select onValueChange={field.onChange} value={field.value}>
                         <FormControl>
                           <SelectTrigger data-testid="select-destination-country">
                             <SelectValue placeholder="Select country" />
@@ -554,7 +554,7 @@ function CheckoutDialog({ open, onOpenChange, storybook, type, price }: Checkout
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Shipping Speed</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <Select onValueChange={field.onChange} value={field.value}>
                         <FormControl>
                           <SelectTrigger data-testid="select-shipping-method">
                             <SelectValue placeholder="Select shipping method" />
