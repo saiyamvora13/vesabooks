@@ -1,4 +1,4 @@
-import { type Storybook, type InsertStorybook, type StoryGenerationProgress, storybooks, users, type User, type UpsertUser, type Purchase, type InsertPurchase, purchases, passwordResetTokens, type PasswordResetToken, type AdminUser, type InsertAdminUser, adminUsers, type SiteSetting, siteSettings, type HeroStorybookSlot, type InsertHeroStorybookSlot, heroStorybookSlots, type FeaturedStorybook, type InsertFeaturedStorybook, featuredStorybooks, type AdminAuditLog, type InsertAdminAuditLog, adminAuditLogs, type SamplePrompt, type InsertSamplePrompt, samplePrompts, type AnalyticsEvent, type InsertAnalyticsEvent, analyticsEvents, type StoryRating, type InsertStoryRating, storyRatings, type AudioSettings, audioSettings, type IpRateLimit, type InsertIpRateLimit, ipRateLimits, type DownloadVerification, type InsertDownloadVerification, downloadVerifications } from "@shared/schema";
+import { type Storybook, type InsertStorybook, type StoryGenerationProgress, storybooks, users, type User, type UpsertUser, type Purchase, type InsertPurchase, purchases, passwordResetTokens, type PasswordResetToken, type AdminUser, type InsertAdminUser, adminUsers, type SiteSetting, siteSettings, type HeroStorybookSlot, type InsertHeroStorybookSlot, heroStorybookSlots, type FeaturedStorybook, type InsertFeaturedStorybook, featuredStorybooks, type AdminAuditLog, type InsertAdminAuditLog, adminAuditLogs, type SamplePrompt, type InsertSamplePrompt, samplePrompts, type AnalyticsEvent, type InsertAnalyticsEvent, analyticsEvents, type StoryRating, type InsertStoryRating, storyRatings, type AudioSettings, audioSettings, type IpRateLimit, type InsertIpRateLimit, ipRateLimits, type DownloadVerification, type InsertDownloadVerification, downloadVerifications, type SavedStorybook, type InsertSavedStorybook, savedStorybooks } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, count, countDistinct, isNull, and, lt, gt, sql } from "drizzle-orm";
 import { normalizeEmail } from "./auth";
@@ -112,6 +112,12 @@ export interface IStorage {
   createDownloadVerification(storybookId: string, email: string): Promise<{ code: string; expiresAt: Date }>;
   verifyDownloadCode(storybookId: string, email: string, code: string): Promise<boolean>;
   isDownloadVerified(storybookId: string, email: string): Promise<boolean>;
+  
+  // Saved Storybooks operations
+  saveStorybook(userId: string, storybookId: string): Promise<SavedStorybook>;
+  unsaveStorybook(userId: string, storybookId: string): Promise<void>;
+  getSavedStorybooks(userId: string): Promise<Storybook[]>;
+  isSaved(userId: string, storybookId: string): Promise<boolean>;
 }
 
 // Database storage for persistent data
@@ -972,6 +978,60 @@ export class DatabaseStorage implements IStorage {
     
     const verified = verifications.find(v => v.verifiedAt !== null);
     return verified !== undefined;
+  }
+
+  // Saved Storybooks operations
+  async saveStorybook(userId: string, storybookId: string): Promise<SavedStorybook> {
+    const [saved] = await db
+      .insert(savedStorybooks)
+      .values({ userId, storybookId })
+      .onConflictDoNothing()
+      .returning();
+    return saved;
+  }
+
+  async unsaveStorybook(userId: string, storybookId: string): Promise<void> {
+    await db
+      .delete(savedStorybooks)
+      .where(
+        and(
+          eq(savedStorybooks.userId, userId),
+          eq(savedStorybooks.storybookId, storybookId)
+        )
+      );
+  }
+
+  async getSavedStorybooks(userId: string): Promise<Storybook[]> {
+    const saved = await db
+      .select({
+        storybook: storybooks
+      })
+      .from(savedStorybooks)
+      .innerJoin(storybooks, eq(savedStorybooks.storybookId, storybooks.id))
+      .where(
+        and(
+          eq(savedStorybooks.userId, userId),
+          isNull(storybooks.deletedAt)
+        )
+      )
+      .orderBy(desc(savedStorybooks.savedAt));
+    
+    return saved.map(s => s.storybook);
+  }
+
+  async isSaved(userId: string, storybookId: string): Promise<boolean> {
+    const [saved] = await db
+      .select()
+      .from(savedStorybooks)
+      .where(
+        and(
+          eq(savedStorybooks.userId, userId),
+          eq(savedStorybooks.storybookId, storybookId)
+        )
+      )
+      .limit(1);
+    
+    return saved !== undefined;
   }
 }
 

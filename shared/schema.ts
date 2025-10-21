@@ -144,6 +144,26 @@ export const insertPasswordResetTokenSchema = createInsertSchema(passwordResetTo
 export type InsertPasswordResetToken = z.infer<typeof insertPasswordResetTokenSchema>;
 export type PasswordResetToken = typeof passwordResetTokens.$inferSelect;
 
+// Saved Storybooks table - tracks which users have saved which public storybooks from the gallery
+export const savedStorybooks = pgTable("saved_storybooks", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
+  storybookId: varchar("storybook_id").notNull().references(() => storybooks.id, { onDelete: 'cascade' }),
+  savedAt: timestamp("saved_at").defaultNow(),
+}, (table) => [
+  index("idx_saved_storybooks_user").on(table.userId),
+  index("idx_saved_storybooks_storybook").on(table.storybookId),
+  unique().on(table.userId, table.storybookId), // Prevent duplicate saves
+]);
+
+export const insertSavedStorybookSchema = createInsertSchema(savedStorybooks).omit({
+  id: true,
+  savedAt: true,
+});
+
+export type InsertSavedStorybook = z.infer<typeof insertSavedStorybookSchema>;
+export type SavedStorybook = typeof savedStorybooks.$inferSelect;
+
 // Admin Users table - separate from regular users for security
 export const adminUsers = pgTable("admin_users", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
