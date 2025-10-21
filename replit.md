@@ -11,6 +11,8 @@ Preferred communication style: Simple, everyday language.
 ### UI/UX Decisions
 The application features a minimalist design with a soft white and purple color palette, supporting light/dark modes and a mobile-first approach. The storybook viewer provides a 3D flipbook experience on desktop and a single-page view with swipe gestures on mobile. User authentication supports traditional email/password and Replit Auth. A personal library manages created storybooks, and the homepage hero section dynamically showcases generated storybook covers.
 
+**Dynamic Orientation-Based Containers**: The flipbook viewer automatically adapts its container dimensions based on each storybook's orientation (portrait/landscape/square). Square books use `vmin` units (70vmin × 70vmin on mobile, 600px/700px on desktop) to maintain perfect 1:1 aspect ratios across all viewport sizes and orientations. This ensures square storybooks display in square containers, portrait books in taller containers, and landscape books in wider containers, matching the visual format of the book content.
+
 ### Technical Implementations
 The frontend is built with React 18, TypeScript, Vite, Wouter for routing, TanStack Query for state management, Shadcn/ui, Radix UI, and Tailwind CSS. The backend uses Node.js Express.js with TypeScript, Drizzle ORM for PostgreSQL, and a middleware-chain for request processing and error handling.
 
