@@ -58,6 +58,7 @@ Key features include:
 
 ### Security & Monitoring
 - **Security Measures**: bcryptjs for password hashing (12 salt rounds), rate limiting for authentication and password reset endpoints, secure session storage (PostgreSQL), and Zod schema validation for all API endpoints.
+- **Admin Bootstrap System**: Automatic first admin user creation on server startup using environment variables. Solves the chicken-and-egg problem of creating the first admin in fresh deployment environments. Only creates admin when database has zero admin users and bootstrap environment variables are set. Required variables: `ADMIN_BOOTSTRAP_EMAIL`, `ADMIN_BOOTSTRAP_PASSWORD`. Optional: `ADMIN_BOOTSTRAP_FIRST_NAME`, `ADMIN_BOOTSTRAP_LAST_NAME`.
 - **Anonymous Story Creation Protection**: 
   - **IP Rate Limiting**: Anonymous users limited to 3 story creations per day per IP address, with automatic daily reset at midnight
   - **reCAPTCHA v3**: Bot protection with 0.5 minimum score threshold for anonymous story creation
