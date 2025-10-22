@@ -774,11 +774,19 @@ export default function Cart() {
   };
 
   const handleUpdateProductType = (itemId: string, productType: 'digital' | 'print') => {
-    updateItemMutation.mutate({ itemId, updates: { productType } });
+    try {
+      updateItemMutation.mutate({ itemId, updates: { productType } });
+    } catch (error) {
+      console.error('Error updating product type:', error);
+    }
   };
 
   const handleUpdateBookSize = (itemId: string, bookSize: string) => {
-    updateItemMutation.mutate({ itemId, updates: { bookSize } });
+    try {
+      updateItemMutation.mutate({ itemId, updates: { bookSize } });
+    } catch (error) {
+      console.error('Error updating book size:', error);
+    }
   };
 
   const handleCheckout = () => {
