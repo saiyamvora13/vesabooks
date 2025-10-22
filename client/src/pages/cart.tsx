@@ -79,6 +79,12 @@ function CartItemCard({
   const validBookSize = item.bookSize && availableBookSizes.some(size => size.id === item.bookSize) 
     ? item.bookSize 
     : availableBookSizes[0]?.id || 'a5-portrait';
+  
+  // Validate productType to ensure it's always valid
+  const validProductType: 'digital' | 'print' = 
+    (item.productType === 'digital' || item.productType === 'print') 
+      ? item.productType 
+      : 'digital';
 
   return (
     <Card data-testid={`card-item-${item.storybookId}-${item.productType}`}>
@@ -126,27 +132,27 @@ function CartItemCard({
                 Product Type
               </Label>
               <Select
-                value={item.productType}
+                value={validProductType}
                 onValueChange={(value: 'digital' | 'print') => onUpdateProductType(value)}
               >
                 <SelectTrigger 
                   id={`product-type-${item.id}`}
                   data-testid={`select-product-type-${item.storybookId}-${item.productType}`}
                 >
-                  <SelectValue />
+                  <SelectValue placeholder="Select product type" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="digital">Digital (E-book)</SelectItem>
                   <SelectItem value="print">Print (Hardcover)</SelectItem>
                 </SelectContent>
               </Select>
-              {item.productType === 'print' && (
+              {validProductType === 'print' && (
                 <p className="text-xs text-green-600 dark:text-green-400">Includes Free E-book</p>
               )}
             </div>
 
             {/* Book Size Selector (only for print) */}
-            {item.productType === 'print' && (
+            {validProductType === 'print' && (
               <div className="space-y-2">
                 <Label htmlFor={`book-size-${item.id}`} className="text-sm font-medium">
                   Book Size
@@ -159,7 +165,7 @@ function CartItemCard({
                     id={`book-size-${item.id}`}
                     data-testid={`select-book-size-${item.storybookId}-${item.productType}`}
                   >
-                    <SelectValue />
+                    <SelectValue placeholder="Select book size" />
                   </SelectTrigger>
                   <SelectContent>
                     {availableBookSizes.map((size) => (
@@ -173,7 +179,7 @@ function CartItemCard({
             )}
 
             {/* Quantity Control (only for digital) */}
-            {item.productType === 'digital' ? (
+            {validProductType === 'digital' ? (
               <div className="space-y-2">
                 <Label htmlFor={`quantity-${item.id}`} className="text-sm font-medium">
                   Quantity
