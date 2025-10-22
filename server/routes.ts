@@ -3251,6 +3251,7 @@ Sitemap: ${baseUrl}/sitemap.xml`;
           
           // Get product SKU and dimensions
           const sku = prodigiService.getProductSKU(printPurchase.bookSize || 'a5-portrait', storybook.pages.length);
+          console.log(`[Prodigi] Book size: ${printPurchase.bookSize}, Generated SKU: ${sku}`);
           
           // Shipping address is required for print orders (validated earlier)
           if (!shippingAddress) {
