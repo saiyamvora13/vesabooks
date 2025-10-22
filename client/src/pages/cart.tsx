@@ -60,12 +60,14 @@ function CartItemCard({
   onUpdateQuantity,
   onUpdateProductType,
   onUpdateBookSize,
+  isUpdating,
 }: { 
   item: EnrichedCartItem; 
   onRemove: () => void;
   onUpdateQuantity: (quantity: number) => void;
   onUpdateProductType: (productType: 'digital' | 'print') => void;
   onUpdateBookSize: (bookSize: string) => void;
+  isUpdating: boolean;
 }) {
   const { t } = useTranslation();
   const coverImageUrl = item.storybook?.coverImageUrl || item.storybook?.pages?.[0]?.imageUrl;
@@ -75,10 +77,13 @@ function CartItemCard({
   const storybookOrientation: BookOrientation = item.storybook?.orientation as BookOrientation || 'portrait';
   const availableBookSizes = getBookSizesByOrientation(storybookOrientation);
   
+  // Ensure availableBookSizes is never empty (safety check)
+  const safeAvailableBookSizes = availableBookSizes.length > 0 ? availableBookSizes : getBookSizesByOrientation('portrait');
+  
   // Validate current bookSize is in available options, fallback to first available
-  const validBookSize = item.bookSize && availableBookSizes.some(size => size.id === item.bookSize) 
+  const validBookSize = item.bookSize && safeAvailableBookSizes.some(size => size.id === item.bookSize) 
     ? item.bookSize 
-    : availableBookSizes[0]?.id || 'a5-portrait';
+    : safeAvailableBookSizes[0]?.id || 'a5-portrait';
   
   // Validate productType to ensure it's always valid
   const validProductType: 'digital' | 'print' = 
@@ -134,10 +139,12 @@ function CartItemCard({
               <Select
                 value={validProductType}
                 onValueChange={(value: 'digital' | 'print') => onUpdateProductType(value)}
+                disabled={isUpdating}
               >
                 <SelectTrigger 
                   id={`product-type-${item.id}`}
                   data-testid={`select-product-type-${item.storybookId}-${item.productType}`}
+                  disabled={isUpdating}
                 >
                   <SelectValue placeholder="Select product type" />
                 </SelectTrigger>
@@ -160,15 +167,17 @@ function CartItemCard({
                 <Select
                   value={validBookSize}
                   onValueChange={onUpdateBookSize}
+                  disabled={isUpdating}
                 >
                   <SelectTrigger 
                     id={`book-size-${item.id}`}
                     data-testid={`select-book-size-${item.storybookId}-${item.productType}`}
+                    disabled={isUpdating}
                   >
                     <SelectValue placeholder="Select book size" />
                   </SelectTrigger>
                   <SelectContent>
-                    {availableBookSizes.map((size) => (
+                    {safeAvailableBookSizes.map((size) => (
                       <SelectItem key={size.id} value={size.id}>
                         {size.name}
                       </SelectItem>
@@ -883,6 +892,7 @@ export default function Cart() {
                   onUpdateQuantity={(quantity) => handleUpdateQuantity(item.id, quantity)}
                   onUpdateProductType={(productType) => handleUpdateProductType(item.id, productType)}
                   onUpdateBookSize={(bookSize) => handleUpdateBookSize(item.id, bookSize)}
+                  isUpdating={updateItemMutation.isPending}
                 />
               ))}
             </div>
