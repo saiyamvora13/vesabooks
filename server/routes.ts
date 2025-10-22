@@ -412,6 +412,49 @@ Sitemap: ${baseUrl}/sitemap.xml`;
 
   // Admin API Routes
 
+  // POST /api/admin/setup - One-time admin setup (only works when no admins exist)
+  app.post('/api/admin/setup', async (req, res) => {
+    try {
+      const { email, password, firstName, lastName } = req.body;
+
+      // Validate input
+      if (!email || !password) {
+        return res.status(400).json({ message: 'Email and password are required' });
+      }
+
+      // Check if any admin users exist
+      const existingAdmins = await storage.getAllAdminUsers();
+      if (existingAdmins.length > 0) {
+        return res.status(403).json({ 
+          message: 'Admin setup is only available when no admin users exist. Please use the admin login instead.' 
+        });
+      }
+
+      // Create the first admin user
+      const hashedPassword = await hashPassword(password);
+      const adminUser = await storage.createAdminUser({
+        email: normalizeEmail(email),
+        password: hashedPassword,
+        firstName: firstName || null,
+        lastName: lastName || null,
+        isSuperAdmin: true,
+      });
+
+      res.json({ 
+        message: 'Admin user created successfully',
+        admin: {
+          id: adminUser.id,
+          email: adminUser.email,
+          firstName: adminUser.firstName,
+          lastName: adminUser.lastName,
+        }
+      });
+    } catch (error) {
+      console.error('Admin setup error:', error);
+      res.status(500).json({ message: 'Failed to create admin user' });
+    }
+  });
+
   // POST /api/admin/login - Admin login
   app.post('/api/admin/login', authRateLimiter, (req, res, next) => {
     passport.authenticate('admin-local', (err: any, admin: AdminUser | false, info: any) => {
