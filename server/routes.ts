@@ -4053,6 +4053,9 @@ Sitemap: ${baseUrl}/sitemap.xml`;
         ? new Date(firstShipment.estimatedDeliveryDate) 
         : undefined;
 
+      // Check if this is the first time receiving tracking (for email notification)
+      const isFirstShipmentNotification = order.shipments && order.shipments.length > 0 && !printOrder.trackingNumber;
+
       // Update print order with webhook data
       await storage.updatePrintOrder(printOrder.id, {
         status: order.status.stage,
@@ -4063,6 +4066,36 @@ Sitemap: ${baseUrl}/sitemap.xml`;
       });
 
       console.log(`[Prodigi Webhook] Updated order ${printOrder.id} - Stage: ${order.status.stage}${trackingNumber ? `, Tracking: ${trackingNumber}` : ''}`);
+
+      // Send shipping notification email if this is the first shipment notification
+      if (isFirstShipmentNotification && trackingNumber && firstShipment?.tracking?.url) {
+        try {
+          const orderDetails = await storage.getPrintOrderWithDetails(printOrder.id);
+          
+          if (orderDetails && orderDetails.user.email && orderDetails.storybook.coverImageUrl) {
+            const { sendShippingNotification } = await import('./services/resend-email');
+            
+            await sendShippingNotification({
+              recipientEmail: orderDetails.user.email,
+              recipientName: orderDetails.user.firstName || orderDetails.user.email || 'Customer',
+              storybookTitle: orderDetails.storybook.title,
+              storybookCoverUrl: orderDetails.storybook.coverImageUrl,
+              orderId: printOrder.id.substring(0, 8).toUpperCase(),
+              trackingNumber: trackingNumber,
+              trackingUrl: firstShipment.tracking.url,
+              carrier: carrier || 'Carrier',
+              carrierService: firstShipment.carrier?.service || 'Standard',
+              estimatedDelivery: estimatedDelivery || new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // Default to 7 days if not provided
+            });
+            
+            console.log(`✅ Shipping notification sent to ${orderDetails.user.email} for order ${printOrder.id}`);
+          }
+        } catch (emailError) {
+          console.error('❌ Failed to send shipping notification:', emailError);
+          // Don't fail the webhook - email failures should not affect order processing
+        }
+      }
+
       res.json({ received: true });
     } catch (error) {
       console.error("Prodigi webhook error:", error);

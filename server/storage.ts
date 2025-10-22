@@ -133,6 +133,7 @@ export interface IStorage {
   getPrintOrder(id: string): Promise<PrintOrder | null>;
   getPrintOrderByPurchaseId(purchaseId: string): Promise<PrintOrder | null>;
   getPrintOrderByProdigiId(prodigiOrderId: string): Promise<PrintOrder | null>;
+  getPrintOrderWithDetails(printOrderId: string): Promise<{ printOrder: PrintOrder; purchase: Purchase; storybook: Storybook; user: User } | null>;
   updatePrintOrder(id: string, data: Partial<PrintOrder>): Promise<PrintOrder>;
   updatePrintOrderStatus(printOrderId: string, updates: Partial<PrintOrder>): Promise<PrintOrder>;
   getAllPrintOrders(limit?: number): Promise<PrintOrder[]>;
@@ -1192,6 +1193,27 @@ export class DatabaseStorage implements IStorage {
       .from(printOrders)
       .where(eq(printOrders.prodigiOrderId, prodigiOrderId));
     return printOrder || null;
+  }
+
+  async getPrintOrderWithDetails(printOrderId: string): Promise<{ printOrder: PrintOrder; purchase: Purchase; storybook: Storybook; user: User } | null> {
+    const [result] = await db
+      .select()
+      .from(printOrders)
+      .innerJoin(purchases, eq(printOrders.purchaseId, purchases.id))
+      .innerJoin(storybooks, eq(purchases.storybookId, storybooks.id))
+      .innerJoin(users, eq(purchases.userId, users.id))
+      .where(eq(printOrders.id, printOrderId));
+
+    if (!result) {
+      return null;
+    }
+
+    return {
+      printOrder: result.print_orders,
+      purchase: result.purchases,
+      storybook: result.storybooks,
+      user: result.users,
+    };
   }
 
   async updatePrintOrder(id: string, data: Partial<PrintOrder>): Promise<PrintOrder> {

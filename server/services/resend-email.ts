@@ -271,3 +271,157 @@ export async function sendPasswordResetEmail(
     html: htmlBody,
   });
 }
+
+export async function sendShippingNotification(params: {
+  recipientEmail: string;
+  recipientName: string;
+  storybookTitle: string;
+  storybookCoverUrl: string;
+  orderId: string;
+  trackingNumber: string;
+  trackingUrl: string;
+  carrier: string;
+  carrierService: string;
+  estimatedDelivery: Date;
+}): Promise<void> {
+  const { client, fromEmail } = await getUncachableResendClient();
+  
+  const {
+    recipientEmail,
+    recipientName,
+    storybookTitle,
+    storybookCoverUrl,
+    orderId,
+    trackingNumber,
+    trackingUrl,
+    carrier,
+    carrierService,
+    estimatedDelivery,
+  } = params;
+  
+  const formattedDeliveryDate = new Date(estimatedDelivery).toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric'
+  });
+  
+  const htmlBody = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    </head>
+    <body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f5f5f5;">
+      <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f5f5f5;">
+        <tr>
+          <td align="center" style="padding: 40px 20px;">
+            <table width="600" cellpadding="0" cellspacing="0" style="background-color: white; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); max-width: 600px;">
+              <!-- Header -->
+              <tr>
+                <td style="background-color: hsl(258, 90%, 20%); color: #ffffff; padding: 40px 30px; text-align: center; border-radius: 8px 8px 0 0;">
+                  <h1 style="margin: 0; font-size: 32px; font-weight: 600;">Your Order Has Shipped! 📦</h1>
+                  <p style="margin: 15px 0 0 0; font-size: 16px; opacity: 0.9;">Order #${orderId}</p>
+                </td>
+              </tr>
+              
+              <!-- Greeting -->
+              <tr>
+                <td style="padding: 30px 30px 20px 30px;">
+                  <p style="margin: 0; color: #374151; font-size: 16px; line-height: 1.6;">
+                    Hi ${recipientName},
+                  </p>
+                  <p style="margin: 15px 0 0 0; color: #374151; font-size: 16px; line-height: 1.6;">
+                    Great news! Your personalized storybook has shipped and is on its way to you.
+                  </p>
+                </td>
+              </tr>
+              
+              <!-- Storybook Info -->
+              <tr>
+                <td style="padding: 20px 30px;">
+                  <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f9f7f3; border-radius: 8px; overflow: hidden;">
+                    <tr>
+                      <td align="center" style="padding: 20px;">
+                        <img src="${storybookCoverUrl}" alt="${storybookTitle}" style="max-width: 200px; height: auto; border-radius: 4px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);" />
+                        <h2 style="margin: 20px 0 0 0; color: #111827; font-size: 20px; font-weight: 600;">${storybookTitle}</h2>
+                      </td>
+                    </tr>
+                  </table>
+                </td>
+              </tr>
+              
+              <!-- Shipping Information -->
+              <tr>
+                <td style="padding: 20px 30px;">
+                  <h3 style="margin: 0 0 15px 0; color: #111827; font-size: 18px; font-weight: 600;">Shipping Information</h3>
+                  <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border: 2px solid hsl(258, 90%, 20%); border-radius: 8px;">
+                    <tr>
+                      <td style="padding: 15px 20px; border-bottom: 1px solid #e5e7eb;">
+                        <p style="margin: 0 0 5px 0; color: #6b7280; font-size: 14px;">Tracking Number</p>
+                        <p style="margin: 0;">
+                          <a href="${trackingUrl}" style="color: hsl(258, 90%, 20%); text-decoration: none; font-weight: 600; font-size: 16px;">${trackingNumber}</a>
+                        </p>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td style="padding: 15px 20px; border-bottom: 1px solid #e5e7eb;">
+                        <p style="margin: 0 0 5px 0; color: #6b7280; font-size: 14px;">Carrier</p>
+                        <p style="margin: 0; color: #111827; font-size: 16px; font-weight: 500;">${carrier} - ${carrierService}</p>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td style="padding: 15px 20px;">
+                        <p style="margin: 0 0 5px 0; color: #6b7280; font-size: 14px;">Estimated Delivery</p>
+                        <p style="margin: 0; color: #111827; font-size: 16px; font-weight: 500;">${formattedDeliveryDate}</p>
+                      </td>
+                    </tr>
+                  </table>
+                </td>
+              </tr>
+              
+              <!-- CTA Button -->
+              <tr>
+                <td style="padding: 20px 30px 30px 30px; text-align: center;">
+                  <a href="${trackingUrl}" style="display: inline-block; background-color: hsl(258, 90%, 20%); color: #ffffff; padding: 16px 32px; text-decoration: none; border-radius: 6px; font-size: 16px; font-weight: 600;">Track Your Package</a>
+                </td>
+              </tr>
+              
+              <!-- Footer -->
+              <tr>
+                <td style="padding: 20px 30px; border-top: 1px solid #e5e7eb; text-align: center;">
+                  <p style="margin: 0 0 10px 0; color: #374151; font-size: 14px;">
+                    Thank you for using StoryBook AI!
+                  </p>
+                  <p style="margin: 0; color: #6b7280; font-size: 14px;">
+                    We hope you love your personalized storybook.
+                  </p>
+                </td>
+              </tr>
+              
+              <!-- Disclaimer -->
+              <tr>
+                <td style="padding: 20px 30px; text-align: center;">
+                  <p style="margin: 0; color: #9ca3af; font-size: 12px; line-height: 1.5;">
+                    This is an automated shipping notification. Please do not reply to this email.<br>
+                    If you have any questions, please contact our support team.
+                  </p>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+      </table>
+    </body>
+    </html>
+  `;
+
+  await client.emails.send({
+    from: fromEmail,
+    to: recipientEmail,
+    subject: 'Your StoryBook Order Has Shipped! 📦',
+    html: htmlBody,
+  });
+  
+  console.log(`✅ Shipping notification sent to ${recipientEmail} for order ${orderId}`);
+}
