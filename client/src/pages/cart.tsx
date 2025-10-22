@@ -74,6 +74,11 @@ function CartItemCard({
   // Determine storybook orientation for book size filtering
   const storybookOrientation: BookOrientation = item.storybook?.orientation as BookOrientation || 'portrait';
   const availableBookSizes = getBookSizesByOrientation(storybookOrientation);
+  
+  // Validate current bookSize is in available options, fallback to first available
+  const validBookSize = item.bookSize && availableBookSizes.some(size => size.id === item.bookSize) 
+    ? item.bookSize 
+    : availableBookSizes[0]?.id || 'a5-portrait';
 
   return (
     <Card data-testid={`card-item-${item.storybookId}-${item.productType}`}>
@@ -147,7 +152,7 @@ function CartItemCard({
                   Book Size
                 </Label>
                 <Select
-                  value={item.bookSize || 'a5-portrait'}
+                  value={validBookSize}
                   onValueChange={onUpdateBookSize}
                 >
                   <SelectTrigger 
@@ -651,8 +656,11 @@ export default function Cart() {
       }
       return response.json();
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/cart'] });
+    onSuccess: (data, variables) => {
+      // Use setTimeout to prevent race conditions with Select components
+      setTimeout(() => {
+        queryClient.invalidateQueries({ queryKey: ['/api/cart'] });
+      }, 50);
     },
     onError: () => {
       toast({
