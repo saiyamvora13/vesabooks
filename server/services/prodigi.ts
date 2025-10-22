@@ -168,21 +168,23 @@ export class ProdigiService {
   getProductSKU(bookSize: string, pageCount: number): string {
     const normalizedSize = bookSize.toLowerCase();
     
+    // Hardcover books with gloss finish (HARD-G)
     if (normalizedSize.includes('a5') && normalizedSize.includes('portrait')) {
-      return 'BOOK-FE-A5-P';
+      return 'BOOK-FE-A5-P-HARD-G';
     } else if (normalizedSize.includes('a5') && normalizedSize.includes('landscape')) {
-      return 'BOOK-FE-A5-L';
+      return 'BOOK-FE-A5-L-HARD-G';
     } else if (normalizedSize.includes('a4') && normalizedSize.includes('portrait')) {
-      return 'BOOK-FE-A4-P';
+      return 'BOOK-FE-A4-P-HARD-G';
     } else if (normalizedSize.includes('a4') && normalizedSize.includes('landscape')) {
-      return 'BOOK-FE-A4-L';
+      return 'BOOK-FE-A4-L-HARD-G';
     } else if (normalizedSize.includes('square-8')) {
-      return 'BOOK-FE-SQ-8';
+      return 'BOOK-FE-8_3-SQ-HARD-G';
     } else if (normalizedSize.includes('square-11')) {
-      return 'BOOK-FE-SQ-11';
+      return 'BOOK-FE-11_7-SQ-HARD-G';
     }
     
-    return 'BOOK-FE-A5-P';
+    // Default to A5 Portrait hardcover
+    return 'BOOK-FE-A5-P-HARD-G';
   }
 
   calculateBookDimensions(bookSize: string): { width: number; height: number } {
