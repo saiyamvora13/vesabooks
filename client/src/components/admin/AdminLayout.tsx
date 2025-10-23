@@ -13,7 +13,8 @@ import {
   ChevronRight,
   Home,
   TrendingUp,
-  Menu
+  Menu,
+  ShoppingCart
 } from "lucide-react";
 import {
   Sheet,
@@ -34,6 +35,7 @@ interface AdminLayoutProps {
 const navItems = [
   { icon: LayoutDashboard, label: "Dashboard", path: "/admin/dashboard", testId: "nav-dashboard" },
   { icon: TrendingUp, label: "Analytics", path: "/admin/analytics", testId: "nav-analytics" },
+  { icon: ShoppingCart, label: "Orders", path: "/admin/orders", testId: "nav-orders" },
   { icon: Settings, label: "Settings", path: "/admin/settings", testId: "nav-settings" },
   { icon: Star, label: "Hero Management", path: "/admin/hero", testId: "nav-hero" },
   { icon: Sparkles, label: "Featured Content", path: "/admin/featured", testId: "nav-featured" },
