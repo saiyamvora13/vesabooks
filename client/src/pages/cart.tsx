@@ -130,7 +130,7 @@ function CartItemCard({
                 </SelectContent>
               </Select>
               {validProductType === 'print' && (
-                <p className="text-xs text-green-600 dark:text-green-400">Includes Free E-book</p>
+                <p className="text-xs text-green-600 dark:text-green-400 font-medium">✓ Print Includes the E-book</p>
               )}
             </div>
 
