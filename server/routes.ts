@@ -4691,7 +4691,7 @@ Sitemap: ${baseUrl}/sitemap.xml`;
       console.log('[Prodigi] Using callback URL:', callbackUrl);
 
       const orderRequest = {
-        merchantReference: `SB-${storybook.id}-${purchaseId}`,
+        merchantReference: matchingPurchase.orderReference || `SB-${storybook.id}-${purchaseId}`,
         shippingMethod: shippingMethod || 'Standard',
         recipient: recipientDetails,
         items: [
