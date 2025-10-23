@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link, useLocation } from "wouter";
 import { useTranslation } from "react-i18next";
@@ -8,7 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { Package, ShoppingBag, ExternalLink, Calendar, Truck, MapPin, DollarSign, PackageOpen } from "lucide-react";
+import { Package, ShoppingBag, ExternalLink, Calendar, Truck, MapPin, DollarSign, PackageOpen, Copy, Check } from "lucide-react";
 import { format } from "date-fns";
 import { SEO } from "@/components/SEO";
 
@@ -103,10 +104,18 @@ function formatPrice(priceStr: string): string {
 
 function OrderCard({ order }: { order: PrintOrder }) {
   const { t } = useTranslation();
+  const [copied, setCopied] = useState(false);
   const coverImageUrl = order.storybook.coverImageUrl;
   // Use Stripe Payment Intent ID as unified reference across app, Stripe, and Prodigi
-  const orderId = order.purchase.stripePaymentIntentId;
+  const fullOrderId = order.purchase.stripePaymentIntentId;
+  const shortOrderId = fullOrderId.slice(-8); // Show last 8 characters
   const hasTracking = order.trackingNumber || order.trackingUrl;
+
+  const copyFullId = () => {
+    navigator.clipboard.writeText(fullOrderId);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
 
   return (
     <Card className="overflow-hidden" data-testid={`order-card-${order.id}`}>
@@ -139,8 +148,22 @@ function OrderCard({ order }: { order: PrintOrder }) {
               <div className="flex flex-wrap items-center gap-2">
                 <span className="text-sm text-muted-foreground">Order #:</span>
                 <code className="text-sm font-mono bg-muted px-2 py-0.5 rounded" data-testid={`order-id-${order.id}`}>
-                  {orderId}
+                  {shortOrderId}
                 </code>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={copyFullId}
+                  className="h-7 px-2"
+                  data-testid={`copy-order-id-${order.id}`}
+                  title={`Copy full ID: ${fullOrderId}`}
+                >
+                  {copied ? (
+                    <Check className="h-3.5 w-3.5 text-green-600" />
+                  ) : (
+                    <Copy className="h-3.5 w-3.5" />
+                  )}
+                </Button>
               </div>
 
               <div className="flex flex-wrap items-center gap-2">
