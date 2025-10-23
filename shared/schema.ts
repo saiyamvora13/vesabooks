@@ -99,7 +99,7 @@ export interface StoryGenerationProgress {
 
 export const purchases = pgTable("purchases", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
+  userId: varchar("user_id").references(() => users.id, { onDelete: 'cascade' }),
   storybookId: varchar("storybook_id").notNull().references(() => storybooks.id, { onDelete: 'cascade' }),
   type: text("type").notNull(),
   price: numeric("price").notNull(),
@@ -127,7 +127,7 @@ export type Purchase = typeof purchases.$inferSelect;
 // Shopping Cart Items table
 export const cartItems = pgTable("cart_items", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
+  userId: varchar("user_id").references(() => users.id, { onDelete: 'cascade' }),
   storybookId: varchar("storybook_id").notNull().references(() => storybooks.id, { onDelete: 'cascade' }),
   productType: text("product_type").notNull(), // 'digital' | 'print'
   bookSize: text("book_size"), // Only for print items (a5-portrait, a4-landscape, etc.)
