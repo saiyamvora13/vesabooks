@@ -427,6 +427,7 @@ export const userShippingAddresses = pgTable("user_shipping_addresses", {
 
 export const insertUserShippingAddressSchema = createInsertSchema(userShippingAddresses).omit({
   id: true,
+  userId: true,
   createdAt: true,
   updatedAt: true,
 });
@@ -453,6 +454,7 @@ export const userPaymentMethods = pgTable("user_payment_methods", {
 
 export const insertUserPaymentMethodSchema = createInsertSchema(userPaymentMethods).omit({
   id: true,
+  userId: true,
   createdAt: true,
   updatedAt: true,
 });
