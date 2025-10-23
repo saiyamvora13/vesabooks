@@ -1,7 +1,61 @@
-import { type Storybook, type InsertStorybook, type StoryGenerationProgress, storybooks, users, type User, type UpsertUser, type Purchase, type InsertPurchase, purchases, type CartItem, type InsertCartItem, cartItems, passwordResetTokens, type PasswordResetToken, type AdminUser, type InsertAdminUser, adminUsers, type SiteSetting, siteSettings, type HeroStorybookSlot, type InsertHeroStorybookSlot, heroStorybookSlots, type FeaturedStorybook, type InsertFeaturedStorybook, featuredStorybooks, type AdminAuditLog, type InsertAdminAuditLog, adminAuditLogs, type SamplePrompt, type InsertSamplePrompt, samplePrompts, type AnalyticsEvent, type InsertAnalyticsEvent, analyticsEvents, type StoryRating, type InsertStoryRating, storyRatings, type AudioSettings, audioSettings, type IpRateLimit, type InsertIpRateLimit, ipRateLimits, type DownloadVerification, type InsertDownloadVerification, downloadVerifications, type SavedStorybook, type InsertSavedStorybook, savedStorybooks, type PrintOrder, type InsertPrintOrder, printOrders, type UserShippingAddress, type InsertUserShippingAddress, userShippingAddresses, type UserPaymentMethod, type InsertUserPaymentMethod, userPaymentMethods } from "@shared/schema";
+import { type Storybook, type InsertStorybook, type StoryGenerationProgress, storybooks, users, type User, type UpsertUser, type Purchase, type InsertPurchase, purchases, type CartItem, type InsertCartItem, cartItems, passwordResetTokens, type PasswordResetToken, type AdminUser, type InsertAdminUser, adminUsers, type SiteSetting, siteSettings, type HeroStorybookSlot, type InsertHeroStorybookSlot, heroStorybookSlots, type FeaturedStorybook, type InsertFeaturedStorybook, featuredStorybooks, type AdminAuditLog, type InsertAdminAuditLog, adminAuditLogs, type SamplePrompt, type InsertSamplePrompt, samplePrompts, type AnalyticsEvent, type InsertAnalyticsEvent, analyticsEvents, type StoryRating, type InsertStoryRating, storyRatings, type AudioSettings, audioSettings, type IpRateLimit, type InsertIpRateLimit, ipRateLimits, type DownloadVerification, type InsertDownloadVerification, downloadVerifications, type SavedStorybook, type InsertSavedStorybook, savedStorybooks, type PrintOrder, type InsertPrintOrder, printOrders, type UserShippingAddress, type InsertUserShippingAddress, userShippingAddresses, type UserPaymentMethod, type InsertUserPaymentMethod, userPaymentMethods, type OrderNote, type InsertOrderNote, orderNotes, type OrderStatusHistory, type InsertOrderStatusHistory, orderStatusHistory } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc, count, countDistinct, isNull, and, lt, gt, sql, inArray } from "drizzle-orm";
+import { eq, desc, count, countDistinct, isNull, and, lt, gt, sql, inArray, asc, ilike, or, gte, lte } from "drizzle-orm";
 import { normalizeEmail } from "./auth";
+
+export interface OrderSearchFilters {
+  orderReference?: string;
+  email?: string;
+  storybookTitle?: string;
+  stripePaymentIntentId?: string;
+  prodigiOrderId?: string;
+  status?: string;
+  productType?: 'digital' | 'print';
+  dateFrom?: Date;
+  dateTo?: Date;
+  limit?: number;
+  offset?: number;
+}
+
+export interface OrderSearchResult {
+  id: string;
+  orderReference: string | null;
+  userId: string | null;
+  storybookId: string;
+  type: string;
+  price: string;
+  status: string;
+  bookSize: string | null;
+  stripePaymentIntentId: string;
+  createdAt: Date | null;
+  user: {
+    id: string;
+    email: string | null;
+    firstName: string | null;
+    lastName: string | null;
+  } | null;
+  storybook: {
+    id: string;
+    title: string;
+    coverImageUrl: string | null;
+  } | null;
+  printOrder: {
+    id: string;
+    prodigiOrderId: string | null;
+    status: string;
+    trackingNumber: string | null;
+  } | null;
+}
+
+export interface OrderDetails {
+  purchases: Array<Purchase & {
+    user: User | null;
+    storybook: Storybook | null;
+    printOrder: PrintOrder | null;
+  }>;
+  notes: OrderNote[];
+  statusHistory: OrderStatusHistory[];
+}
 
 export interface IStorage {
   // Replit Auth: User operations (mandatory)
@@ -159,6 +213,15 @@ export interface IStorage {
   getPaymentMethod(id: string, userId: string): Promise<UserPaymentMethod | null>;
   deletePaymentMethod(id: string, userId: string): Promise<boolean>;
   setDefaultPaymentMethod(id: string, userId: string): Promise<void>;
+  
+  // Order Management operations (Admin)
+  searchOrders(filters: OrderSearchFilters): Promise<{ orders: OrderSearchResult[]; total: number }>;
+  getOrderDetails(orderReference: string): Promise<OrderDetails | null>;
+  addOrderNote(data: InsertOrderNote): Promise<OrderNote>;
+  getOrderNotes(orderReference: string): Promise<OrderNote[]>;
+  addOrderStatusHistory(data: InsertOrderStatusHistory): Promise<OrderStatusHistory>;
+  getOrderStatusHistory(orderReference: string): Promise<OrderStatusHistory[]>;
+  getUserOrderHistory(userId: string): Promise<Purchase[]>;
 }
 
 // Database storage for persistent data
@@ -1498,6 +1561,204 @@ export class DatabaseStorage implements IStorage {
           eq(userPaymentMethods.userId, userId)
         ));
     });
+  }
+
+  // Order Management operations (Admin)
+  async searchOrders(filters: OrderSearchFilters): Promise<{ orders: OrderSearchResult[]; total: number }> {
+    const limit = filters.limit || 50;
+    const offset = filters.offset || 0;
+
+    // Build WHERE conditions
+    const conditions = [];
+
+    if (filters.orderReference) {
+      conditions.push(ilike(purchases.orderReference, `%${filters.orderReference}%`));
+    }
+
+    if (filters.email) {
+      conditions.push(ilike(users.email, `%${filters.email}%`));
+    }
+
+    if (filters.storybookTitle) {
+      conditions.push(ilike(storybooks.title, `%${filters.storybookTitle}%`));
+    }
+
+    if (filters.stripePaymentIntentId) {
+      conditions.push(ilike(purchases.stripePaymentIntentId, `%${filters.stripePaymentIntentId}%`));
+    }
+
+    if (filters.prodigiOrderId) {
+      conditions.push(ilike(printOrders.prodigiOrderId, `%${filters.prodigiOrderId}%`));
+    }
+
+    if (filters.status) {
+      conditions.push(eq(purchases.status, filters.status));
+    }
+
+    if (filters.productType) {
+      conditions.push(eq(purchases.type, filters.productType));
+    }
+
+    if (filters.dateFrom) {
+      conditions.push(gte(purchases.createdAt, filters.dateFrom));
+    }
+
+    if (filters.dateTo) {
+      conditions.push(lte(purchases.createdAt, filters.dateTo));
+    }
+
+    const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
+
+    // Get total count
+    const countQuery = db
+      .select({ count: count() })
+      .from(purchases)
+      .leftJoin(users, eq(purchases.userId, users.id))
+      .leftJoin(storybooks, eq(purchases.storybookId, storybooks.id))
+      .leftJoin(printOrders, eq(printOrders.purchaseId, purchases.id));
+
+    if (whereClause) {
+      countQuery.where(whereClause);
+    }
+
+    const [countResult] = await countQuery;
+    const total = countResult?.count || 0;
+
+    // Get paginated results with joins
+    const query = db
+      .select({
+        purchase: purchases,
+        user: users,
+        storybook: storybooks,
+        printOrder: printOrders,
+      })
+      .from(purchases)
+      .leftJoin(users, eq(purchases.userId, users.id))
+      .leftJoin(storybooks, eq(purchases.storybookId, storybooks.id))
+      .leftJoin(printOrders, eq(printOrders.purchaseId, purchases.id))
+      .orderBy(desc(purchases.createdAt))
+      .limit(limit)
+      .offset(offset);
+
+    if (whereClause) {
+      query.where(whereClause);
+    }
+
+    const results = await query;
+
+    const orders: OrderSearchResult[] = results.map(row => ({
+      id: row.purchase.id,
+      orderReference: row.purchase.orderReference,
+      userId: row.purchase.userId,
+      storybookId: row.purchase.storybookId,
+      type: row.purchase.type,
+      price: row.purchase.price,
+      status: row.purchase.status,
+      bookSize: row.purchase.bookSize,
+      stripePaymentIntentId: row.purchase.stripePaymentIntentId,
+      createdAt: row.purchase.createdAt,
+      user: row.user ? {
+        id: row.user.id,
+        email: row.user.email,
+        firstName: row.user.firstName,
+        lastName: row.user.lastName,
+      } : null,
+      storybook: row.storybook ? {
+        id: row.storybook.id,
+        title: row.storybook.title,
+        coverImageUrl: row.storybook.coverImageUrl,
+      } : null,
+      printOrder: row.printOrder ? {
+        id: row.printOrder.id,
+        prodigiOrderId: row.printOrder.prodigiOrderId,
+        status: row.printOrder.status,
+        trackingNumber: row.printOrder.trackingNumber,
+      } : null,
+    }));
+
+    return { orders, total };
+  }
+
+  async getOrderDetails(orderReference: string): Promise<OrderDetails | null> {
+    // Fetch all purchases with this orderReference
+    const purchasesData = await db
+      .select({
+        purchase: purchases,
+        user: users,
+        storybook: storybooks,
+        printOrder: printOrders,
+      })
+      .from(purchases)
+      .leftJoin(users, eq(purchases.userId, users.id))
+      .leftJoin(storybooks, eq(purchases.storybookId, storybooks.id))
+      .leftJoin(printOrders, eq(printOrders.purchaseId, purchases.id))
+      .where(eq(purchases.orderReference, orderReference));
+
+    if (purchasesData.length === 0) {
+      return null;
+    }
+
+    // Fetch notes
+    const notes = await this.getOrderNotes(orderReference);
+
+    // Fetch status history
+    const statusHistory = await this.getOrderStatusHistory(orderReference);
+
+    const purchasesList = purchasesData.map(row => ({
+      ...row.purchase,
+      user: row.user,
+      storybook: row.storybook,
+      printOrder: row.printOrder,
+    }));
+
+    return {
+      purchases: purchasesList,
+      notes,
+      statusHistory,
+    };
+  }
+
+  async addOrderNote(data: InsertOrderNote): Promise<OrderNote> {
+    const [note] = await db
+      .insert(orderNotes)
+      .values(data)
+      .returning();
+    return note;
+  }
+
+  async getOrderNotes(orderReference: string): Promise<OrderNote[]> {
+    const notes = await db
+      .select()
+      .from(orderNotes)
+      .where(eq(orderNotes.orderReference, orderReference))
+      .orderBy(desc(orderNotes.createdAt));
+    return notes;
+  }
+
+  async addOrderStatusHistory(data: InsertOrderStatusHistory): Promise<OrderStatusHistory> {
+    const [history] = await db
+      .insert(orderStatusHistory)
+      .values(data)
+      .returning();
+    return history;
+  }
+
+  async getOrderStatusHistory(orderReference: string): Promise<OrderStatusHistory[]> {
+    const history = await db
+      .select()
+      .from(orderStatusHistory)
+      .where(eq(orderStatusHistory.orderReference, orderReference))
+      .orderBy(asc(orderStatusHistory.createdAt));
+    return history;
+  }
+
+  async getUserOrderHistory(userId: string): Promise<Purchase[]> {
+    const userPurchases = await db
+      .select()
+      .from(purchases)
+      .where(eq(purchases.userId, userId))
+      .orderBy(desc(purchases.createdAt));
+    return userPurchases;
   }
 }
 
