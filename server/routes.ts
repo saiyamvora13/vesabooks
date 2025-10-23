@@ -23,6 +23,7 @@ import { generatePrintReadyPDF } from "./services/printPdf";
 import { prodigiService } from "./services/prodigi";
 import { ObjectStorageService } from "./objectStorage";
 import { generateInvoicePDF } from "./services/invoicePdf";
+import { generateOrderReference } from "./utils/orderReference";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', {
   apiVersion: "2025-09-30.clover",
@@ -2655,6 +2656,9 @@ Sitemap: ${baseUrl}/sitemap.xml`;
 
       const items = JSON.parse(itemsJson);
       const createdPurchases = [];
+      
+      // Generate a single orderReference for all items in this payment intent
+      const orderReference = generateOrderReference();
 
       // Create purchase records with idempotency
       for (const item of items) {
@@ -2666,6 +2670,7 @@ Sitemap: ${baseUrl}/sitemap.xml`;
             storybookId,
             type,
             price: price.toString(),
+            orderReference,
             stripePaymentIntentId: paymentIntent.id,
             status: 'completed',
           };
@@ -2709,6 +2714,7 @@ Sitemap: ${baseUrl}/sitemap.xml`;
               storybookId: printPurchase.storybookId,
               type: 'digital',
               price: '0', // Free with print
+              orderReference,
               stripePaymentIntentId: paymentIntent.id,
               status: 'completed',
             });
@@ -3407,7 +3413,7 @@ Sitemap: ${baseUrl}/sitemap.xml`;
       }
 
       // Generate a unique order reference (NOT a PaymentIntent yet - we don't charge yet!)
-      const orderReference = `ORDER-${Date.now()}-${userId.substring(0, 8)}`;
+      const orderReference = generateOrderReference();
       
       const createdPurchases = [];
 
@@ -3422,6 +3428,7 @@ Sitemap: ${baseUrl}/sitemap.xml`;
               storybookId,
               type,
               price: price.toString(),
+              orderReference,
               stripePaymentIntentId: orderReference, // Placeholder - actual PaymentIntent created after Prodigi confirms
               status: 'creating', // Order is being created, NOT completed
             };
@@ -3666,6 +3673,9 @@ Sitemap: ${baseUrl}/sitemap.xml`;
         const items = JSON.parse(itemsJson);
         const createdPurchases = [];
         
+        // Generate a single orderReference for all items in this payment intent
+        const orderReference = generateOrderReference();
+        
         // Create purchase records with duplicate handling
         for (const item of items) {
           const { storybookId, type, price, bookSize, spineText, spineTextColor, spineBackgroundColor } = item;
@@ -3676,6 +3686,7 @@ Sitemap: ${baseUrl}/sitemap.xml`;
               storybookId,
               type,
               price: price.toString(),
+              orderReference,
               stripePaymentIntentId: session.payment_intent as string,
               status: 'completed',
             };
@@ -3716,6 +3727,7 @@ Sitemap: ${baseUrl}/sitemap.xml`;
                 storybookId: printPurchase.storybookId,
                 type: 'digital',
                 price: '0', // Free with print
+                orderReference,
                 stripePaymentIntentId: session.payment_intent as string,
                 status: 'completed',
               });
