@@ -9,11 +9,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { Package, ShoppingBag, ExternalLink, Calendar, Truck, MapPin, DollarSign, PackageOpen, Copy, Check } from "lucide-react";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Package, ShoppingBag, ExternalLink, Calendar, Truck, MapPin, DollarSign, PackageOpen, Copy, Check, ChevronDown, ChevronUp } from "lucide-react";
 import { format } from "date-fns";
 import { SEO } from "@/components/SEO";
 
-interface PrintOrder {
+interface OrderItem {
   id: string;
   purchaseId: string;
   prodigiOrderId: string | null;
@@ -30,8 +31,8 @@ interface PrintOrder {
   purchase: {
     id: string;
     type: string;
-    totalAmount: string;
-    stripePaymentIntentId: string;
+    price: string;
+    bookSize: string;
   };
   storybook: {
     id: string;
@@ -40,22 +41,31 @@ interface PrintOrder {
   };
 }
 
+interface GroupedOrder {
+  orderId: string;
+  itemCount: number;
+  totalAmount: string;
+  status: string;
+  createdAt: string;
+  items: OrderItem[];
+}
+
 interface OrdersResponse {
-  orders: PrintOrder[];
+  orders: GroupedOrder[];
 }
 
 function getStatusBadgeVariant(status: string): "default" | "secondary" | "destructive" | "outline" {
   switch (status.toLowerCase()) {
     case 'complete':
-      return 'default'; // Green success color
+      return 'default';
     case 'inprogress':
     case 'in progress':
-      return 'secondary'; // Blue info color
+      return 'secondary';
     case 'cancelled':
-      return 'destructive'; // Red error color
+      return 'destructive';
     case 'pending':
     default:
-      return 'outline'; // Gray/neutral color
+      return 'outline';
   }
 }
 
@@ -102,14 +112,107 @@ function formatPrice(priceStr: string): string {
   return (price / 100).toFixed(2);
 }
 
-function OrderCard({ order }: { order: PrintOrder }) {
+function OrderItemCard({ item }: { item: OrderItem }) {
+  const coverImageUrl = item.storybook.coverImageUrl;
+  const hasTracking = item.trackingNumber || item.trackingUrl;
+
+  return (
+    <div className="border rounded-lg p-4 bg-muted/30 dark:bg-muted/10" data-testid={`order-item-${item.id}`}>
+      <div className="flex flex-col sm:flex-row gap-4">
+        {/* Cover Image */}
+        <div className="flex-shrink-0">
+          {coverImageUrl ? (
+            <img
+              src={coverImageUrl}
+              alt={`${item.storybook.title} cover`}
+              className="w-full sm:w-20 h-28 sm:h-30 object-cover rounded-lg"
+              data-testid={`item-cover-${item.id}`}
+              loading="lazy"
+            />
+          ) : (
+            <div className="w-full sm:w-20 h-28 sm:h-30 bg-muted rounded-lg flex items-center justify-center">
+              <Package className="h-8 w-8 text-muted-foreground" />
+            </div>
+          )}
+        </div>
+
+        {/* Item Details */}
+        <div className="flex-1 min-w-0 space-y-2">
+          <h4 className="font-semibold text-base" data-testid={`item-title-${item.id}`}>
+            {item.storybook.title}
+          </h4>
+          
+          <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
+            <span data-testid={`item-size-${item.id}`}>
+              {item.purchase.bookSize?.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+            </span>
+            <span>•</span>
+            <span data-testid={`item-price-${item.id}`}>
+              ${formatPrice(item.purchase.price)}
+            </span>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <Badge 
+              variant={getStatusBadgeVariant(item.status)}
+              className={`${getStatusBadgeClasses(item.status)} text-xs`}
+              data-testid={`item-status-${item.id}`}
+            >
+              {formatStatus(item.status)}
+            </Badge>
+          </div>
+
+          {/* Tracking Information */}
+          {hasTracking && (
+            <div className="space-y-1.5 text-sm pt-2 border-t">
+              {item.carrier && item.carrierService && (
+                <div className="flex items-center gap-2">
+                  <Truck className="h-3.5 w-3.5 text-muted-foreground" />
+                  <span data-testid={`item-carrier-${item.id}`}>
+                    {item.carrier} {item.carrierService}
+                  </span>
+                </div>
+              )}
+
+              {item.trackingNumber && (
+                <div className="flex items-center gap-2">
+                  <Package className="h-3.5 w-3.5 text-muted-foreground" />
+                  {item.trackingUrl ? (
+                    <a
+                      href={item.trackingUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-primary hover:underline inline-flex items-center gap-1"
+                      data-testid={`item-tracking-link-${item.id}`}
+                    >
+                      <code className="text-xs bg-muted px-1.5 py-0.5 rounded">
+                        {item.trackingNumber}
+                      </code>
+                      <ExternalLink className="h-3 w-3" />
+                    </a>
+                  ) : (
+                    <code className="text-xs bg-muted px-1.5 py-0.5 rounded">
+                      {item.trackingNumber}
+                    </code>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function OrderCard({ order }: { order: GroupedOrder }) {
   const { t } = useTranslation();
   const [copied, setCopied] = useState(false);
-  const coverImageUrl = order.storybook.coverImageUrl;
+  const [isOpen, setIsOpen] = useState(false);
+  
   // Use Stripe Payment Intent ID as unified reference across app, Stripe, and Prodigi
-  const fullOrderId = order.purchase.stripePaymentIntentId;
-  const shortOrderId = fullOrderId.slice(-8); // Show last 8 characters
-  const hasTracking = order.trackingNumber || order.trackingUrl;
+  const fullOrderId = order.orderId;
+  const shortOrderId = fullOrderId.slice(-8);
 
   const copyFullId = () => {
     navigator.clipboard.writeText(fullOrderId);
@@ -117,172 +220,113 @@ function OrderCard({ order }: { order: PrintOrder }) {
     setTimeout(() => setCopied(false), 2000);
   };
 
+  // Get first item's cover for preview (when collapsed)
+  const previewCover = order.items[0]?.storybook.coverImageUrl;
+
   return (
-    <Card className="overflow-hidden" data-testid={`order-card-${order.id}`}>
-      <CardHeader className="pb-4">
-        <div className="flex flex-col sm:flex-row gap-4">
-          {/* Cover Image */}
-          <div className="flex-shrink-0">
-            {coverImageUrl ? (
-              <img
-                src={coverImageUrl}
-                alt={`${order.storybook.title} cover`}
-                className="w-full sm:w-24 h-32 sm:h-36 object-cover rounded-lg"
-                data-testid={`order-cover-${order.id}`}
-                loading="lazy"
-              />
-            ) : (
-              <div className="w-full sm:w-24 h-32 sm:h-36 bg-muted rounded-lg flex items-center justify-center">
-                <Package className="h-10 w-10 text-muted-foreground" />
+    <Card className="overflow-hidden" data-testid={`order-card-${order.orderId}`}>
+      <Collapsible open={isOpen} onOpenChange={setIsOpen}>
+        <CardHeader className="pb-4">
+          <div className="flex flex-col sm:flex-row gap-4">
+            {/* Preview Cover (only when collapsed and single item) */}
+            {!isOpen && order.itemCount === 1 && previewCover && (
+              <div className="flex-shrink-0">
+                <img
+                  src={previewCover}
+                  alt="Order preview"
+                  className="w-full sm:w-24 h-32 sm:h-36 object-cover rounded-lg"
+                  loading="lazy"
+                />
               </div>
             )}
-          </div>
 
-          {/* Order Info */}
-          <div className="flex-1 min-w-0">
-            <CardTitle className="text-xl mb-2" data-testid={`order-title-${order.id}`}>
-              {order.storybook.title}
-            </CardTitle>
-            
-            <div className="space-y-2">
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="text-sm text-muted-foreground">Order #:</span>
-                <code className="text-sm font-mono bg-muted px-2 py-0.5 rounded" data-testid={`order-id-${order.id}`}>
-                  {shortOrderId}
-                </code>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={copyFullId}
-                  className="h-7 px-2"
-                  data-testid={`copy-order-id-${order.id}`}
-                  title={`Copy full ID: ${fullOrderId}`}
-                >
-                  {copied ? (
-                    <Check className="h-3.5 w-3.5 text-green-600" />
-                  ) : (
-                    <Copy className="h-3.5 w-3.5" />
-                  )}
-                </Button>
+            {/* Order Summary */}
+            <div className="flex-1 min-w-0">
+              <div className="flex items-start justify-between gap-4 mb-2">
+                <CardTitle className="text-xl" data-testid={`order-title-${order.orderId}`}>
+                  Order {order.itemCount > 1 ? `(${order.itemCount} books)` : ''}
+                </CardTitle>
+                <CollapsibleTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-8 w-8 p-0"
+                    data-testid={`toggle-order-${order.orderId}`}
+                  >
+                    {isOpen ? (
+                      <ChevronUp className="h-4 w-4" />
+                    ) : (
+                      <ChevronDown className="h-4 w-4" />
+                    )}
+                  </Button>
+                </CollapsibleTrigger>
               </div>
+              
+              <div className="space-y-2">
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="text-sm text-muted-foreground">Order #:</span>
+                  <code className="text-sm font-mono bg-muted px-2 py-0.5 rounded" data-testid={`order-id-${order.orderId}`}>
+                    {shortOrderId}
+                  </code>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={copyFullId}
+                    className="h-7 px-2"
+                    data-testid={`copy-order-id-${order.orderId}`}
+                    title={`Copy full ID: ${fullOrderId}`}
+                  >
+                    {copied ? (
+                      <Check className="h-3.5 w-3.5 text-green-600" />
+                    ) : (
+                      <Copy className="h-3.5 w-3.5" />
+                    )}
+                  </Button>
+                </div>
 
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="text-sm text-muted-foreground">Status:</span>
-                <Badge 
-                  variant={getStatusBadgeVariant(order.status)}
-                  className={getStatusBadgeClasses(order.status)}
-                  data-testid={`order-status-${order.id}`}
-                >
-                  {formatStatus(order.status)}
-                </Badge>
-              </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="text-sm text-muted-foreground">Status:</span>
+                  <Badge 
+                    variant={getStatusBadgeVariant(order.status)}
+                    className={getStatusBadgeClasses(order.status)}
+                    data-testid={`order-status-${order.orderId}`}
+                  >
+                    {formatStatus(order.status)}
+                  </Badge>
+                </div>
 
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <Calendar className="h-4 w-4" />
-                <span>Ordered: {formatDate(order.createdAt)}</span>
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Calendar className="h-4 w-4" />
+                  <span>Ordered: {formatDate(order.createdAt)}</span>
+                </div>
+
+                <div className="flex items-center gap-2 text-sm">
+                  <DollarSign className="h-4 w-4 text-muted-foreground" />
+                  <span className="font-medium" data-testid={`order-total-${order.orderId}`}>
+                    ${formatPrice(order.totalAmount)}
+                  </span>
+                </div>
               </div>
             </div>
           </div>
-        </div>
-      </CardHeader>
+        </CardHeader>
 
-      <CardContent className="space-y-4">
-        {/* Tracking Information */}
-        {hasTracking && (
-          <>
+        {/* Expandable Items Section */}
+        <CollapsibleContent>
+          <CardContent className="space-y-3 pt-0">
             <Separator />
             <div className="space-y-3">
               <div className="flex items-center gap-2 text-sm font-medium">
-                <Truck className="h-4 w-4" />
-                <span>Tracking Information</span>
+                <PackageOpen className="h-4 w-4" />
+                <span>Books in this order:</span>
               </div>
-
-              {order.carrier && order.carrierService && (
-                <div className="flex items-start gap-2 text-sm">
-                  <MapPin className="h-4 w-4 mt-0.5 text-muted-foreground flex-shrink-0" />
-                  <div>
-                    <span className="font-medium">Carrier:</span>{' '}
-                    <span data-testid={`order-carrier-${order.id}`}>
-                      {order.carrier} {order.carrierService}
-                    </span>
-                  </div>
-                </div>
-              )}
-
-              {order.trackingNumber && (
-                <div className="flex items-start gap-2 text-sm">
-                  <Package className="h-4 w-4 mt-0.5 text-muted-foreground flex-shrink-0" />
-                  <div className="flex-1 min-w-0">
-                    <span className="font-medium">Tracking Number:</span>{' '}
-                    {order.trackingUrl ? (
-                      <a
-                        href={order.trackingUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-primary hover:underline inline-flex items-center gap-1"
-                        data-testid={`order-tracking-link-${order.id}`}
-                      >
-                        <code className="text-xs bg-muted px-1.5 py-0.5 rounded">
-                          {order.trackingNumber}
-                        </code>
-                        <ExternalLink className="h-3 w-3" />
-                      </a>
-                    ) : (
-                      <code className="text-xs bg-muted px-1.5 py-0.5 rounded">
-                        {order.trackingNumber}
-                      </code>
-                    )}
-                  </div>
-                </div>
-              )}
-
-              {order.dispatchDate && (
-                <div className="flex items-start gap-2 text-sm">
-                  <Calendar className="h-4 w-4 mt-0.5 text-muted-foreground flex-shrink-0" />
-                  <div>
-                    <span className="font-medium">Shipped:</span>{' '}
-                    <span data-testid={`order-dispatch-date-${order.id}`}>
-                      {formatDate(order.dispatchDate)}
-                    </span>
-                  </div>
-                </div>
-              )}
-
-              {order.estimatedDelivery && (
-                <div className="flex items-start gap-2 text-sm">
-                  <PackageOpen className="h-4 w-4 mt-0.5 text-muted-foreground flex-shrink-0" />
-                  <div>
-                    <span className="font-medium">Est. Delivery:</span>{' '}
-                    <span data-testid={`order-estimated-delivery-${order.id}`}>
-                      {formatDate(order.estimatedDelivery)}
-                    </span>
-                  </div>
-                </div>
-              )}
+              {order.items.map((item) => (
+                <OrderItemCard key={item.id} item={item} />
+              ))}
             </div>
-          </>
-        )}
-
-        {/* Total Amount */}
-        <Separator />
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2 text-sm font-medium">
-            <DollarSign className="h-4 w-4" />
-            <span>Total Paid</span>
-          </div>
-          <span className="text-xl font-bold gradient-text" data-testid={`order-total-${order.id}`}>
-            ${formatPrice(order.purchase.totalAmount)}
-          </span>
-        </div>
-
-        {/* View Storybook Link */}
-        <Link href={`/view/${order.storybook.id}`}>
-          <Button variant="outline" className="w-full" data-testid={`button-view-storybook-${order.id}`}>
-            <ShoppingBag className="h-4 w-4 mr-2" />
-            View Storybook
-          </Button>
-        </Link>
-      </CardContent>
+          </CardContent>
+        </CollapsibleContent>
+      </Collapsible>
     </Card>
   );
 }
@@ -293,130 +337,121 @@ function OrdersSkeleton() {
       {[1, 2, 3].map((i) => (
         <Card key={i} className="overflow-hidden">
           <CardHeader className="pb-4">
-            <div className="flex flex-col sm:flex-row gap-4">
-              <Skeleton className="w-full sm:w-24 h-32 sm:h-36 rounded-lg" />
+            <div className="flex gap-4">
+              <Skeleton className="w-24 h-36 rounded-lg" />
               <div className="flex-1 space-y-3">
-                <Skeleton className="h-6 w-3/4" />
+                <Skeleton className="h-6 w-1/3" />
                 <Skeleton className="h-4 w-1/2" />
                 <Skeleton className="h-4 w-2/3" />
               </div>
             </div>
           </CardHeader>
-          <CardContent className="space-y-3">
-            <Skeleton className="h-px w-full" />
-            <Skeleton className="h-4 w-full" />
-            <Skeleton className="h-4 w-3/4" />
-            <Skeleton className="h-10 w-full" />
-          </CardContent>
         </Card>
       ))}
     </div>
   );
 }
 
-function EmptyState() {
-  const { t } = useTranslation();
-  
-  return (
-    <Card className="text-center py-12">
-      <CardContent className="space-y-4">
-        <div className="flex justify-center">
-          <div className="rounded-full bg-muted p-6">
-            <Package className="h-12 w-12 text-muted-foreground" />
-          </div>
-        </div>
-        <div className="space-y-2">
-          <h3 className="text-xl font-semibold">No Print Orders Yet</h3>
-          <p className="text-muted-foreground max-w-md mx-auto">
-            You haven't ordered any printed storybooks yet. Browse your library to order your first printed book!
-          </p>
-        </div>
-        <div className="flex flex-col sm:flex-row gap-3 justify-center pt-4">
-          <Link href="/library">
-            <Button className="gradient-bg hover:opacity-90 !text-[hsl(258,90%,20%)]" data-testid="button-go-to-library">
-              <ShoppingBag className="h-4 w-4 mr-2" />
-              Go to Library
-            </Button>
-          </Link>
-          <Link href="/create">
-            <Button variant="outline" data-testid="button-create-storybook">
-              Create New Storybook
-            </Button>
-          </Link>
-        </div>
-      </CardContent>
-    </Card>
-  );
-}
-
 export default function Orders() {
   const { t } = useTranslation();
   const [, setLocation] = useLocation();
-  const { user, isLoading: isAuthLoading } = useAuth();
+  const { user, isLoading: authLoading } = useAuth();
 
-  // Redirect to login if not authenticated
-  if (!isAuthLoading && !user) {
-    setLocation("/login");
-    return null;
-  }
-
-  // Fetch user's print orders
-  const { data, isLoading, error } = useQuery<OrdersResponse>({
-    queryKey: ['/api/print-orders/user'],
-    enabled: !!user,
+  const { data: ordersData, isLoading, error } = useQuery<OrdersResponse>({
+    queryKey: ["/api/print-orders/user"],
+    enabled: !!user && !authLoading,
   });
 
-  const orders = data?.orders || [];
-  
-  // Sort orders by creation date (newest first)
-  const sortedOrders = [...orders].sort((a, b) => 
-    new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-  );
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Navigation />
+        <div className="container mx-auto px-4 py-8">
+          <OrdersSkeleton />
+        </div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return (
+      <div className="min-h-screen bg-background">
+        <SEO
+          title="My Orders | AI Storybook Builder"
+          description="Track your print book orders and shipping status."
+        />
+        <Navigation />
+        <div className="container mx-auto px-4 py-16 text-center">
+          <Package className="h-16 w-16 mx-auto mb-4 text-muted-foreground" />
+          <h1 className="text-2xl font-bold mb-2">Sign in to view your orders</h1>
+          <p className="text-muted-foreground mb-6">
+            Please sign in to track your print book orders and shipping status.
+          </p>
+          <Button onClick={() => setLocation("/auth")} data-testid="button-sign-in">
+            Sign In
+          </Button>
+        </div>
+      </div>
+    );
+  }
+
+  const orders = ordersData?.orders || [];
 
   return (
     <div className="min-h-screen bg-background">
-      <SEO 
-        title="My Print Orders - StoryForge"
-        description="Track your print storybook orders and shipping status"
+      <SEO
+        title="My Orders | AI Storybook Builder"
+        description="Track your print book orders and shipping status."
       />
       <Navigation />
       
-      <main className="container mx-auto px-4 py-8 max-w-4xl">
-        {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl sm:text-4xl font-bold mb-2 gradient-text">
-            My Print Orders
-          </h1>
-          <p className="text-muted-foreground">
-            Track your print storybook orders and shipping status
-          </p>
-        </div>
-
-        {/* Loading State */}
-        {(isLoading || isAuthLoading) && <OrdersSkeleton />}
-
-        {/* Error State */}
-        {error && (
-          <Card className="border-destructive">
-            <CardContent className="pt-6">
-              <p className="text-destructive text-center">
-                Failed to load orders. Please try again later.
-              </p>
-            </CardContent>
-          </Card>
-        )}
-
-        {/* Empty State */}
-        {!isLoading && !error && sortedOrders.length === 0 && <EmptyState />}
-
-        {/* Orders List */}
-        {!isLoading && !error && sortedOrders.length > 0 && (
-          <div className="space-y-6" data-testid="orders-list">
-            {sortedOrders.map((order) => (
-              <OrderCard key={order.id} order={order} />
-            ))}
+      <main className="container mx-auto px-4 py-8">
+        <div className="max-w-4xl mx-auto">
+          {/* Header */}
+          <div className="mb-8">
+            <h1 className="text-3xl font-bold mb-2" data-testid="heading-orders">
+              {t('orders.title', 'My Orders')}
+            </h1>
+            <p className="text-muted-foreground">
+              {t('orders.description', 'Track your print book orders and shipping status')}
+            </p>
           </div>
-        )}
+
+          {/* Orders List */}
+          {isLoading ? (
+            <OrdersSkeleton />
+          ) : error ? (
+            <Card>
+              <CardContent className="py-12 text-center">
+                <PackageOpen className="h-12 w-12 mx-auto mb-4 text-destructive" />
+                <p className="text-destructive font-medium mb-2">Failed to load orders</p>
+                <p className="text-sm text-muted-foreground">
+                  {error instanceof Error ? error.message : 'An error occurred'}
+                </p>
+              </CardContent>
+            </Card>
+          ) : orders.length === 0 ? (
+            <Card>
+              <CardContent className="py-16 text-center">
+                <ShoppingBag className="h-16 w-16 mx-auto mb-4 text-muted-foreground" />
+                <h2 className="text-xl font-semibold mb-2">No orders yet</h2>
+                <p className="text-muted-foreground mb-6">
+                  When you order print books, they'll appear here.
+                </p>
+                <Button onClick={() => setLocation("/library")} data-testid="button-browse-library">
+                  <Package className="mr-2 h-4 w-4" />
+                  Browse Library
+                </Button>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="space-y-6" data-testid="orders-list">
+              {orders.map((order) => (
+                <OrderCard key={order.orderId} order={order} />
+              ))}
+            </div>
+          )}
+        </div>
       </main>
     </div>
   );

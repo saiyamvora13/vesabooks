@@ -4200,42 +4200,84 @@ Sitemap: ${baseUrl}/sitemap.xml`;
     }
   });
 
-  // Get user's print orders (requires authentication)
+  // Get user's print orders grouped by Stripe Payment Intent (requires authentication)
   app.get("/api/print-orders/user", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.id || req.user.claims?.sub;
       
       const orders = await storage.getUserPrintOrders(userId);
       
-      // Format response according to specification
-      const formattedOrders = orders.map(order => ({
-        id: order.id,
-        purchaseId: order.purchaseId,
-        prodigiOrderId: order.prodigiOrderId,
-        status: order.status,
-        trackingNumber: order.trackingNumber,
-        trackingUrl: order.trackingUrl,
-        carrier: order.carrier,
-        carrierService: order.carrierService,
-        shipmentStatus: order.shipmentStatus,
-        dispatchDate: order.dispatchDate,
-        estimatedDelivery: order.estimatedDelivery,
-        createdAt: order.createdAt,
-        updatedAt: order.updatedAt,
-        purchase: {
-          id: order.purchase.id,
-          type: order.purchase.type,
-          totalAmount: order.purchase.price,
-          stripePaymentIntentId: order.purchase.stripePaymentIntentId,
-        },
-        storybook: {
-          id: order.storybook.id,
-          title: order.storybook.title,
-          coverImageUrl: order.storybook.coverImageUrl,
-        },
-      }));
+      // Group orders by stripePaymentIntentId
+      const orderGroups = new Map<string, any[]>();
+      
+      orders.forEach(order => {
+        const paymentIntentId = order.purchase.stripePaymentIntentId;
+        if (!orderGroups.has(paymentIntentId)) {
+          orderGroups.set(paymentIntentId, []);
+        }
+        orderGroups.get(paymentIntentId)!.push(order);
+      });
+      
+      // Create grouped order objects
+      const groupedOrders = Array.from(orderGroups.entries()).map(([paymentIntentId, items]) => {
+        // Calculate total amount across all items
+        const totalAmount = items.reduce((sum, item) => sum + parseFloat(item.purchase.price), 0).toString();
+        
+        // Determine overall status (prioritize: InProgress > Pending > Complete > Cancelled)
+        const statusPriority: Record<string, number> = { 'InProgress': 3, 'Pending': 2, 'Complete': 1, 'Cancelled': 0 };
+        const overallStatus = items.reduce((prevStatus: string, item) => {
+          const itemStatus = item.status || 'Pending';
+          return (statusPriority[itemStatus] || 0) > (statusPriority[prevStatus] || 0) ? itemStatus : prevStatus;
+        }, 'Pending');
+        
+        // Use earliest creation date for the order
+        const orderDate = items.reduce((earliest, item) => {
+          const itemDate = new Date(item.createdAt);
+          return itemDate < earliest ? itemDate : earliest;
+        }, new Date(items[0].createdAt));
+        
+        // Format individual items
+        const formattedItems = items.map(order => ({
+          id: order.id,
+          purchaseId: order.purchaseId,
+          prodigiOrderId: order.prodigiOrderId,
+          status: order.status,
+          trackingNumber: order.trackingNumber,
+          trackingUrl: order.trackingUrl,
+          carrier: order.carrier,
+          carrierService: order.carrierService,
+          shipmentStatus: order.shipmentStatus,
+          dispatchDate: order.dispatchDate,
+          estimatedDelivery: order.estimatedDelivery,
+          createdAt: order.createdAt,
+          updatedAt: order.updatedAt,
+          purchase: {
+            id: order.purchase.id,
+            type: order.purchase.type,
+            price: order.purchase.price,
+            bookSize: order.purchase.bookSize,
+          },
+          storybook: {
+            id: order.storybook.id,
+            title: order.storybook.title,
+            coverImageUrl: order.storybook.coverImageUrl,
+          },
+        }));
+        
+        return {
+          orderId: paymentIntentId,
+          itemCount: items.length,
+          totalAmount,
+          status: overallStatus,
+          createdAt: orderDate.toISOString(),
+          items: formattedItems,
+        };
+      });
+      
+      // Sort by creation date (newest first)
+      groupedOrders.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
-      res.json({ orders: formattedOrders });
+      res.json({ orders: groupedOrders });
     } catch (error) {
       console.error("Get user print orders error:", error);
       res.status(500).json({ message: "Internal server error" });
