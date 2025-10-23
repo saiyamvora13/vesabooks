@@ -5257,7 +5257,7 @@ async function generateStorybookAsync(
     // This ensures the final cover has beautiful AI-generated typography
     console.time('🎨 Final cover generation (with title/author)');
     await storage.setGenerationProgress(sessionId, {
-      step: 'generating_cover',
+      step: 'finalizing',
       progress: 88,
       message: 'Generating final cover with title and author...',
     });
