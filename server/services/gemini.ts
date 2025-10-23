@@ -138,16 +138,18 @@ export async function generateStoryFromPrompt(
 
 Create a cohesive story following ${narrativeStructure}
 
-IMPORTANT INSTRUCTIONS FOR IMAGE DESCRIPTIONS:
+CRITICAL INSTRUCTIONS FOR IMAGE DESCRIPTIONS:
 - For the COVER: describe a compelling scene showing the main character (title and author text will be added automatically)
-- For INTERIOR PAGES: create DIVERSE, VARIED scenes with different:
-  * Camera angles (close-up, wide shot, over-the-shoulder, bird's eye view)
-  * Character poses and expressions
-  * Settings and backgrounds
-  * Lighting and time of day
-  * Actions and compositions
-- NEVER include title text or author name in interior page descriptions
-- Each page should look visually distinct while maintaining character consistency
+- For INTERIOR PAGES: create MAXIMALLY DIVERSE AND VISUALLY DISTINCT scenes - EACH PAGE MUST BE UNIQUE:
+  * MANDATORY: Use a DIFFERENT camera angle for EVERY page (close-up, wide shot, over-the-shoulder, bird's eye view, worm's eye view, dutch angle, etc.)
+  * MANDATORY: Vary character poses dramatically (sitting, standing, running, reaching, looking away, jumping, etc.)
+  * MANDATORY: Change settings/locations between pages when story allows (indoor vs outdoor, different rooms, different lighting)
+  * MANDATORY: Vary time of day and lighting (morning sunlight, golden hour, twilight, overcast, dramatic shadows, soft light)
+  * MANDATORY: Use different color palettes per page (warm tones, cool tones, vibrant, muted, etc.)
+  * MANDATORY: Vary composition and framing (centered, rule of thirds, dynamic diagonal, symmetrical, asymmetrical)
+  * AVOID repetition: NO two pages should have similar camera angles, poses, or compositions
+- ABSOLUTELY FORBIDDEN: NEVER include title text, author name, book title, or ANY written text in interior page descriptions
+- CRITICAL: Each page must be immediately visually distinguishable from all other pages while maintaining character consistency
 
 Return JSON following the schema with exactly ${pagesPerBook} pages.`;
 
@@ -436,8 +438,11 @@ export async function generateIllustration(
         styleDirective = ', in the style of a vibrant and colorful illustrated storybook';
       }
       
-      // Step 4: Combine everything
-      fullPrompt = photoMatchingPrefix + sceneDescription + styleDirective;
+      // Step 4: Add explicit NO TEXT constraint (prevents AI from rendering text/titles/author names)
+      const noTextConstraint = '\n\nCRITICAL CONSTRAINT: This is a pure visual illustration with NO text, NO words, NO letters, NO title, NO author name, NO book title visible anywhere in the image. Do not render any typography, captions, labels, or written content whatsoever. This image should contain only the illustrated scene described above.';
+      
+      // Step 5: Combine everything
+      fullPrompt = photoMatchingPrefix + sceneDescription + styleDirective + noTextConstraint;
       
       console.log(`[generateIllustration] Full prompt sent to Gemini: ${fullPrompt.substring(0, 250)}...`);
       
