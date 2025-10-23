@@ -3668,16 +3668,20 @@ Sitemap: ${baseUrl}/sitemap.xml`;
       const sourceIp = req.ip || req.headers['x-forwarded-for'] || req.connection.remoteAddress || 'unknown';
       console.log(`[Prodigi Webhook] Received webhook from IP: ${sourceIp}`);
       
-      // Log all request details for debugging
-      console.log('[Prodigi Webhook] Headers:', JSON.stringify(req.headers, null, 2));
-      console.log('[Prodigi Webhook] Content-Type:', req.headers['content-type']);
-      console.log('[Prodigi Webhook] Body length:', req.rawBody ? req.rawBody.length : 'undefined');
-      console.log('[Prodigi Webhook] Raw body:', req.rawBody ? req.rawBody.toString('utf8').substring(0, 500) : 'undefined');
+      // Log only safe request details for debugging (no sensitive headers)
+      if (process.env.NODE_ENV === 'development') {
+        console.log('[Prodigi Webhook] Content-Type:', req.headers['content-type']);
+        console.log('[Prodigi Webhook] Content-Length:', req.headers['content-length']);
+        console.log('[Prodigi Webhook] Body parsed successfully:', !!req.body && Object.keys(req.body).length > 0);
+      }
       
       const callback = req.body;
       
-      // Log webhook event for debugging
-      console.log('[Prodigi Webhook] Parsed body:', JSON.stringify(callback, null, 2));
+      // Log webhook event for debugging (in development only)
+      if (process.env.NODE_ENV === 'development') {
+        console.log('[Prodigi Webhook] Parsed body keys:', Object.keys(callback));
+        console.log('[Prodigi Webhook] Parsed body:', JSON.stringify(callback, null, 2));
+      }
 
       // Support both CloudEvents format and simple Order format
       // CloudEvents format: { specversion, type, data: { order: {...} } }
@@ -3714,7 +3718,7 @@ Sitemap: ${baseUrl}/sitemap.xml`;
       }
       
       // Additional security: Validate merchant reference matches our format
-      if (merchantReference && !merchantReference.startsWith('SB-')) {
+      if (merchantReference && !merchantReference.startsWith('ORDER-')) {
         console.warn(`[Prodigi Webhook] Invalid merchant reference format: ${merchantReference}`);
         return res.status(200).json({ received: true, message: "Invalid merchant reference" });
       }
