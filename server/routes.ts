@@ -3353,10 +3353,15 @@ Sitemap: ${baseUrl}/sitemap.xml`;
             },
           };
 
-          // Generate callback URL for order status updates
-          const callbackUrl = process.env.REPLIT_DOMAINS 
-            ? `https://${process.env.REPLIT_DOMAINS.split(',')[0]}/api/webhook/prodigi`
-            : 'http://localhost:5000/api/webhook/prodigi';
+          // Generate callback URL for order status updates (using secret webhook path)
+          // Note: webhookPathSecret is defined later in this file at module level
+          const webhookSecret = process.env.PRODIGI_WEBHOOK_PATH_SECRET || 'vesa12345';
+          const baseCallbackUrl = process.env.REPLIT_DOMAINS 
+            ? `https://${process.env.REPLIT_DOMAINS.split(',')[0]}`
+            : 'http://localhost:5000';
+          const callbackUrl = `${baseCallbackUrl}/api/webhook/prodigi-${webhookSecret}`;
+          
+          console.log(`[Prodigi] Using callback URL: ${callbackUrl}`);
 
           const prodigiOrder = await prodigiService.createOrder({
             merchantReference: `ORDER-${printPurchase.id}`,
@@ -3975,6 +3980,12 @@ Sitemap: ${baseUrl}/sitemap.xml`;
       // Get SKU and create order
       const sku = prodigiService.getProductSKU(matchingPurchase.bookSize || 'a5-portrait', storybook.pages.length);
 
+      // Generate callback URL for order status updates (using secret webhook path)
+      const webhookSecret = process.env.PRODIGI_WEBHOOK_PATH_SECRET || 'vesa12345';
+      const callbackUrl = `${baseUrl}/api/webhook/prodigi-${webhookSecret}`;
+      
+      console.log('[Prodigi] Using callback URL:', callbackUrl);
+
       const orderRequest = {
         merchantReference: `SB-${storybook.id}-${purchaseId}`,
         shippingMethod: shippingMethod || 'Standard',
@@ -3992,6 +4003,7 @@ Sitemap: ${baseUrl}/sitemap.xml`;
             ],
           },
         ],
+        callbackUrl,
         metadata: {
           storybookId: storybook.id,
           purchaseId,

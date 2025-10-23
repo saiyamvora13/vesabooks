@@ -161,13 +161,17 @@ export class ObjectStorageService {
         console.warn(`Unknown file extension: ${ext}, using default content type`);
     }
     
-    // Upload the file
+    // Upload the file with explicit content type and cache control
     await file.save(fs.readFileSync(localPath), {
       contentType,
       metadata: {
+        contentType, // Also set in metadata for GCS compatibility
         cacheControl: 'public, max-age=3600',
       },
     });
+    
+    // Log upload for debugging
+    console.log(`[ObjectStorage] Uploaded ${destinationPath} with content type: ${contentType}`);
     
     // Return the public URL path
     return `/api/storage/${finalPath}`;
