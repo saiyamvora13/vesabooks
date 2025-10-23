@@ -3306,133 +3306,176 @@ Sitemap: ${baseUrl}/sitemap.xml`;
         }
       }
 
-      // Process print orders with Prodigi
+      // Process print orders with Prodigi - combine all items into ONE order
       const printPurchases = createdPurchases.filter(p => p.type === 'print');
-      const objectStorage = new ObjectStorageService();
       
-      for (const printPurchase of printPurchases) {
-        try {
-          console.log(`[Prodigi] Processing print order for purchase ${printPurchase.id}`);
+      if (printPurchases.length > 0) {
+        const objectStorage = new ObjectStorageService();
+        
+        // Shipping address is required for print orders (validated earlier)
+        if (!shippingAddress) {
+          throw new Error("Shipping address is required for print orders but was not provided");
+        }
+        
+        // Step 1: Generate PDFs and prepare items for all print purchases
+        const prodigiItems = [];
+        const purchaseIdMapping: { [itemIndex: number]: string } = {};
+        
+        for (let i = 0; i < printPurchases.length; i++) {
+          const printPurchase = printPurchases[i];
           
-          // Get the storybook
-          const storybook = await storage.getStorybook(printPurchase.storybookId);
-          if (!storybook) {
-            throw new Error(`Storybook ${printPurchase.storybookId} not found`);
-          }
-          
-          // Generate print-ready PDF
-          const pdfBuffer = await generatePrintReadyPDF(
-            storybook, 
-            printPurchase.bookSize || 'a5-portrait',
-            printPurchase.spineText || undefined,
-            printPurchase.spineTextColor || undefined,
-            printPurchase.spineBackgroundColor || undefined
-          );
-          
-          // Save PDF to temporary file
-          const tempPdfPath = path.join(process.cwd(), 'uploads', `print-${printPurchase.id}-${Date.now()}.pdf`);
-          fs.writeFileSync(tempPdfPath, pdfBuffer);
-          
-          // Upload PDF to object storage
-          const pdfStoragePath = await objectStorage.uploadFile(
-            tempPdfPath,
-            `print-pdfs/${printPurchase.id}.pdf`,
-            true
-          );
-          
-          // Clean up temporary file
-          fs.unlinkSync(tempPdfPath);
-          
-          console.log(`[Prodigi] PDF uploaded to ${pdfStoragePath}`);
-          
-          // Get full PDF URL for Prodigi (use REPLIT_DOMAINS for correct dev/prod URL)
-          const baseUrl = process.env.REPLIT_DOMAINS 
-            ? `https://${process.env.REPLIT_DOMAINS.split(',')[0]}`
-            : 'http://localhost:5000';
-          const pdfUrl = `${baseUrl}${pdfStoragePath}`;
-          
-          console.log(`[Prodigi] DEBUG - baseUrl: ${baseUrl}`);
-          console.log(`[Prodigi] DEBUG - pdfStoragePath: ${pdfStoragePath}`);
-          console.log(`[Prodigi] DEBUG - Final pdfUrl being sent to Prodigi: ${pdfUrl}`);
-          
-          // Get product SKU and dimensions
-          const sku = prodigiService.getProductSKU(printPurchase.bookSize || 'a5-portrait', storybook.pages.length);
-          console.log(`[Prodigi] Book size: ${printPurchase.bookSize}, Generated SKU: ${sku}`);
-          
-          // Shipping address is required for print orders (validated earlier)
-          if (!shippingAddress) {
-            throw new Error("Shipping address is required for print orders but was not provided");
-          }
-          
-          // Create Prodigi order with shipping address
-          const recipient = {
-            name: shippingAddress.name,
-            email: shippingAddress.email,
-            phoneNumber: shippingAddress.phoneNumber,
-            address: {
-              line1: shippingAddress.addressLine1,
-              line2: shippingAddress.addressLine2 || '',
-              postalOrZipCode: shippingAddress.postalCode,
-              countryCode: shippingAddress.countryCode,
-              townOrCity: shippingAddress.city,
-              stateOrCounty: shippingAddress.state || '',
-            },
-          };
-
-          // Generate callback URL for order status updates (using secret webhook path)
-          // Note: webhookPathSecret is defined later in this file at module level
-          const webhookSecret = process.env.PRODIGI_WEBHOOK_PATH_SECRET || 'vesa12345';
-          const baseCallbackUrl = process.env.REPLIT_DOMAINS 
-            ? `https://${process.env.REPLIT_DOMAINS.split(',')[0]}`
-            : 'http://localhost:5000';
-          const callbackUrl = `${baseCallbackUrl}/api/webhook/prodigi-${webhookSecret}`;
-          
-          console.log(`[Prodigi] Using callback URL: ${callbackUrl}`);
-
-          const prodigiOrder = await prodigiService.createOrder({
-            merchantReference: `ORDER-${printPurchase.id}`,
-            shippingMethod: 'Standard',
-            recipient,
-            items: [{
+          try {
+            console.log(`[Prodigi] Processing print item ${i + 1}/${printPurchases.length} for purchase ${printPurchase.id}`);
+            
+            // Get the storybook
+            const storybook = await storage.getStorybook(printPurchase.storybookId);
+            if (!storybook) {
+              throw new Error(`Storybook ${printPurchase.storybookId} not found`);
+            }
+            
+            // Generate print-ready PDF
+            const pdfBuffer = await generatePrintReadyPDF(
+              storybook, 
+              printPurchase.bookSize || 'a5-portrait',
+              printPurchase.spineText || undefined,
+              printPurchase.spineTextColor || undefined,
+              printPurchase.spineBackgroundColor || undefined
+            );
+            
+            // Save PDF to temporary file
+            const tempPdfPath = path.join(process.cwd(), 'uploads', `print-${printPurchase.id}-${Date.now()}.pdf`);
+            fs.writeFileSync(tempPdfPath, pdfBuffer);
+            
+            // Upload PDF to object storage
+            const pdfStoragePath = await objectStorage.uploadFile(
+              tempPdfPath,
+              `print-pdfs/${printPurchase.id}.pdf`,
+              true
+            );
+            
+            // Clean up temporary file
+            fs.unlinkSync(tempPdfPath);
+            
+            console.log(`[Prodigi] PDF uploaded to ${pdfStoragePath}`);
+            
+            // Get full PDF URL for Prodigi (use REPLIT_DOMAINS for correct dev/prod URL)
+            const baseUrl = process.env.REPLIT_DOMAINS 
+              ? `https://${process.env.REPLIT_DOMAINS.split(',')[0]}`
+              : 'http://localhost:5000';
+            const pdfUrl = `${baseUrl}${pdfStoragePath}`;
+            
+            console.log(`[Prodigi] DEBUG - pdfUrl for item ${i + 1}: ${pdfUrl}`);
+            
+            // Get product SKU
+            const sku = prodigiService.getProductSKU(printPurchase.bookSize || 'a5-portrait', storybook.pages.length);
+            console.log(`[Prodigi] Book size: ${printPurchase.bookSize}, Generated SKU: ${sku}`);
+            
+            // Add item to Prodigi order
+            prodigiItems.push({
               sku,
               copies: 1,
               sizing: 'fillPrintArea',
+              merchantReference: printPurchase.id,
               assets: [{
                 printArea: 'default',
                 url: pdfUrl,
               }],
-            }],
-            callbackUrl,
-            metadata: {
-              purchaseId: printPurchase.id,
-              storybookId: printPurchase.storybookId,
-              userId: userId,
-            },
-          });
-          
-          console.log(`[Prodigi] Order created: ${prodigiOrder.id}`);
-          
-          // Create print_orders record
-          await storage.createPrintOrder({
-            purchaseId: printPurchase.id,
-            prodigiOrderId: prodigiOrder.id,
-            status: 'submitted',
-          });
-          
-          console.log(`[Prodigi] Print order record created for purchase ${printPurchase.id}`);
-        } catch (error) {
-          // Log error but don't fail the entire purchase
-          console.error(`[Prodigi] Failed to create print order for purchase ${printPurchase.id}:`, error);
-          
-          // Create print_orders record with error status
-          try {
-            await storage.createPrintOrder({
-              purchaseId: printPurchase.id,
-              status: 'failed',
-              errorMessage: error instanceof Error ? error.message : 'Unknown error',
             });
-          } catch (dbError) {
-            console.error(`[Prodigi] Failed to create print order record:`, dbError);
+            
+            // Map item index to purchase ID for later reference
+            purchaseIdMapping[i] = printPurchase.id;
+          } catch (error) {
+            console.error(`[Prodigi] Failed to prepare item for purchase ${printPurchase.id}:`, error);
+            
+            // Create print_orders record with error status
+            try {
+              await storage.createPrintOrder({
+                purchaseId: printPurchase.id,
+                status: 'failed',
+                errorMessage: error instanceof Error ? error.message : 'Unknown error',
+              });
+            } catch (dbError) {
+              console.error(`[Prodigi] Failed to create print order record:`, dbError);
+            }
+          }
+        }
+        
+        // Step 2: Create ONE Prodigi order with all items (only if we have items)
+        if (prodigiItems.length > 0) {
+          try {
+            const recipient = {
+              name: shippingAddress.name,
+              email: shippingAddress.email,
+              phoneNumber: shippingAddress.phoneNumber,
+              address: {
+                line1: shippingAddress.addressLine1,
+                line2: shippingAddress.addressLine2 || '',
+                postalOrZipCode: shippingAddress.postalCode,
+                countryCode: shippingAddress.countryCode,
+                townOrCity: shippingAddress.city,
+                stateOrCounty: shippingAddress.state || '',
+              },
+            };
+
+            // Generate callback URL for order status updates
+            const webhookSecret = process.env.PRODIGI_WEBHOOK_PATH_SECRET || 'vesa12345';
+            const baseCallbackUrl = process.env.REPLIT_DOMAINS 
+              ? `https://${process.env.REPLIT_DOMAINS.split(',')[0]}`
+              : 'http://localhost:5000';
+            const callbackUrl = `${baseCallbackUrl}/api/webhook/prodigi-${webhookSecret}`;
+            
+            console.log(`[Prodigi] Creating single order with ${prodigiItems.length} items`);
+            console.log(`[Prodigi] Using callback URL: ${callbackUrl}`);
+
+            // Use payment intent ID as merchant reference for the combined order
+            const prodigiOrder = await prodigiService.createOrder({
+              merchantReference: `ORDER-${paymentIntentId}`,
+              shippingMethod: 'Standard',
+              recipient,
+              items: prodigiItems,
+              callbackUrl,
+              metadata: {
+                paymentIntentId,
+                userId,
+                purchaseCount: prodigiItems.length,
+              },
+            });
+            
+            console.log(`[Prodigi] Order created: ${prodigiOrder.id} with ${prodigiItems.length} items`);
+            
+            // Step 3: Create print_orders records for each purchase, all linking to the same Prodigi order
+            for (let i = 0; i < prodigiItems.length; i++) {
+              const purchaseId = purchaseIdMapping[i];
+              
+              try {
+                await storage.createPrintOrder({
+                  purchaseId,
+                  prodigiOrderId: prodigiOrder.id,
+                  status: 'submitted',
+                });
+                
+                console.log(`[Prodigi] Print order record created for purchase ${purchaseId}`);
+              } catch (error) {
+                console.error(`[Prodigi] Failed to create print order record for purchase ${purchaseId}:`, error);
+              }
+            }
+          } catch (error) {
+            console.error(`[Prodigi] Failed to create combined Prodigi order:`, error);
+            
+            // Create failed print_orders records for all purchases that were supposed to be in this order
+            for (let i = 0; i < prodigiItems.length; i++) {
+              const purchaseId = purchaseIdMapping[i];
+              
+              try {
+                await storage.createPrintOrder({
+                  purchaseId,
+                  status: 'failed',
+                  errorMessage: error instanceof Error ? error.message : 'Unknown error',
+                });
+              } catch (dbError) {
+                console.error(`[Prodigi] Failed to create print order record for purchase ${purchaseId}:`, dbError);
+              }
+            }
           }
         }
       }

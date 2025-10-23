@@ -65,5 +65,6 @@ Data is stored in PostgreSQL via Drizzle ORM, with file uploads using Replit Obj
 ### Performance Optimizations
 - **Image Optimization**: Centralized utility with preset-aware sizing.
 - **Batch Purchase Checking**: Library page uses `/api/purchases/check-batch` endpoint to check ownership for all storybooks in 2 API calls (digital + print) instead of 50+ individual requests, significantly improving page load performance.
+- **Batch Prodigi Orders**: When ordering multiple print books, the system combines all items into a single Prodigi order instead of creating separate orders for each book, reducing shipping costs and order management complexity.
 - **Lazy Loading**: `loading="lazy"` for images and `React.lazy()` for code splitting.
 - **Code Splitting**: Route-based code splitting.
