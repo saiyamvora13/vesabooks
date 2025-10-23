@@ -5267,8 +5267,8 @@ async function generateStorybookAsync(
 
 IMPORTANT: This is a book cover. Include the title "${generatedStory.title}" prominently at the top in elegant, readable typography. Add "By ${author}" near the bottom in a smaller, complementary font. Make the text blend beautifully with the illustration style.`;
 
-    // Generate final cover with AI-generated title/author text
-    await generateIllustration(finalCoverPrompt, coverImagePath, coverReferences, illustrationStyle);
+    // Generate final cover with AI-generated title/author text (allowText: true to permit text rendering)
+    await generateIllustration(finalCoverPrompt, coverImagePath, coverReferences, illustrationStyle, true);
     
     // Upload the final cover to replace the clean one
     const coverImageUrl = await objectStorage.uploadFile(coverImagePath, coverImageFileName);

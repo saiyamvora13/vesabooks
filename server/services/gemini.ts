@@ -400,7 +400,8 @@ export async function generateIllustration(
   imagePrompt: string,
   outputPath: string,
   referenceImagePaths?: string[], // Multiple reference images for better consistency
-  explicitStyle?: string // Optional: explicit art style from user prompt for consistency
+  explicitStyle?: string, // Optional: explicit art style from user prompt for consistency
+  allowText?: boolean // Optional: allow text in the image (for cover with title/author)
 ): Promise<void> {
   let retries = 3;
   let waitTime = 2000; // Start with a 2-second delay
@@ -439,7 +440,10 @@ export async function generateIllustration(
       }
       
       // Step 4: Add explicit NO TEXT constraint (prevents AI from rendering text/titles/author names)
-      const noTextConstraint = '\n\nCRITICAL CONSTRAINT: This is a pure visual illustration with NO text, NO words, NO letters, NO title, NO author name, NO book title visible anywhere in the image. Do not render any typography, captions, labels, or written content whatsoever. This image should contain only the illustrated scene described above.';
+      // UNLESS this is a cover image that should have title/author text
+      const noTextConstraint = allowText
+        ? '' // Allow text for cover images with title/author
+        : '\n\nCRITICAL CONSTRAINT: This is a pure visual illustration with NO text, NO words, NO letters, NO title, NO author name, NO book title visible anywhere in the image. Do not render any typography, captions, labels, or written content whatsoever. This image should contain only the illustrated scene described above.';
       
       // Step 5: Combine everything
       fullPrompt = photoMatchingPrefix + sceneDescription + styleDirective + noTextConstraint;
