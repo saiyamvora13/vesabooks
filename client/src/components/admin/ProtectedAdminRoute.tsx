@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { AdminUser } from "@shared/schema";
@@ -16,6 +17,12 @@ export default function ProtectedAdminRoute({ children, requireSuperAdmin = fals
     retry: false,
   });
 
+  useEffect(() => {
+    if (!isLoading && !admin) {
+      setLocation("/admin/login");
+    }
+  }, [isLoading, admin, setLocation]);
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-slate-950 flex items-center justify-center">
@@ -29,7 +36,6 @@ export default function ProtectedAdminRoute({ children, requireSuperAdmin = fals
   }
 
   if (!admin) {
-    setLocation("/admin/login");
     return null;
   }
 

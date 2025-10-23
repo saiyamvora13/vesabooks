@@ -1,4 +1,4 @@
-import { type Storybook, type InsertStorybook, type StoryGenerationProgress, storybooks, users, type User, type UpsertUser, type Purchase, type InsertPurchase, purchases, type CartItem, type InsertCartItem, cartItems, passwordResetTokens, type PasswordResetToken, type AdminUser, type InsertAdminUser, adminUsers, type SiteSetting, siteSettings, type HeroStorybookSlot, type InsertHeroStorybookSlot, heroStorybookSlots, type FeaturedStorybook, type InsertFeaturedStorybook, featuredStorybooks, type AdminAuditLog, type InsertAdminAuditLog, adminAuditLogs, type SamplePrompt, type InsertSamplePrompt, samplePrompts, type AnalyticsEvent, type InsertAnalyticsEvent, analyticsEvents, type StoryRating, type InsertStoryRating, storyRatings, type AudioSettings, audioSettings, type IpRateLimit, type InsertIpRateLimit, ipRateLimits, type DownloadVerification, type InsertDownloadVerification, downloadVerifications, type SavedStorybook, type InsertSavedStorybook, savedStorybooks, type PrintOrder, type InsertPrintOrder, printOrders } from "@shared/schema";
+import { type Storybook, type InsertStorybook, type StoryGenerationProgress, storybooks, users, type User, type UpsertUser, type Purchase, type InsertPurchase, purchases, type CartItem, type InsertCartItem, cartItems, passwordResetTokens, type PasswordResetToken, type AdminUser, type InsertAdminUser, adminUsers, type SiteSetting, siteSettings, type HeroStorybookSlot, type InsertHeroStorybookSlot, heroStorybookSlots, type FeaturedStorybook, type InsertFeaturedStorybook, featuredStorybooks, type AdminAuditLog, type InsertAdminAuditLog, adminAuditLogs, type SamplePrompt, type InsertSamplePrompt, samplePrompts, type AnalyticsEvent, type InsertAnalyticsEvent, analyticsEvents, type StoryRating, type InsertStoryRating, storyRatings, type AudioSettings, audioSettings, type IpRateLimit, type InsertIpRateLimit, ipRateLimits, type DownloadVerification, type InsertDownloadVerification, downloadVerifications, type SavedStorybook, type InsertSavedStorybook, savedStorybooks, type PrintOrder, type InsertPrintOrder, printOrders, type UserShippingAddress, type InsertUserShippingAddress, userShippingAddresses, type UserPaymentMethod, type InsertUserPaymentMethod, userPaymentMethods } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, count, countDistinct, isNull, and, lt, gt, sql, inArray } from "drizzle-orm";
 import { normalizeEmail } from "./auth";
@@ -142,6 +142,21 @@ export interface IStorage {
   updatePrintOrderStatus(printOrderId: string, updates: Partial<PrintOrder>): Promise<PrintOrder>;
   getAllPrintOrders(limit?: number): Promise<PrintOrder[]>;
   getUserPrintOrders(userId: string): Promise<Array<PrintOrder & { purchase: Purchase; storybook: Storybook }>>;
+  
+  // User Shipping Address operations
+  createShippingAddress(userId: string, address: InsertUserShippingAddress): Promise<UserShippingAddress>;
+  getUserShippingAddresses(userId: string): Promise<UserShippingAddress[]>;
+  getShippingAddress(id: string, userId: string): Promise<UserShippingAddress | null>;
+  updateShippingAddress(id: string, userId: string, updates: Partial<InsertUserShippingAddress>): Promise<UserShippingAddress>;
+  deleteShippingAddress(id: string, userId: string): Promise<boolean>;
+  setDefaultShippingAddress(id: string, userId: string): Promise<void>;
+  
+  // User Payment Method operations
+  createPaymentMethod(userId: string, paymentMethod: InsertUserPaymentMethod): Promise<UserPaymentMethod>;
+  getUserPaymentMethods(userId: string): Promise<UserPaymentMethod[]>;
+  getPaymentMethod(id: string, userId: string): Promise<UserPaymentMethod | null>;
+  deletePaymentMethod(id: string, userId: string): Promise<boolean>;
+  setDefaultPaymentMethod(id: string, userId: string): Promise<void>;
 }
 
 // Database storage for persistent data
@@ -1330,6 +1345,132 @@ export class DatabaseStorage implements IStorage {
       purchase: row.purchases,
       storybook: row.storybooks,
     }));
+  }
+
+  // User Shipping Address operations
+  async createShippingAddress(userId: string, address: InsertUserShippingAddress): Promise<UserShippingAddress> {
+    const [newAddress] = await db
+      .insert(userShippingAddresses)
+      .values({ ...address, userId })
+      .returning();
+    return newAddress;
+  }
+
+  async getUserShippingAddresses(userId: string): Promise<UserShippingAddress[]> {
+    const addresses = await db
+      .select()
+      .from(userShippingAddresses)
+      .where(eq(userShippingAddresses.userId, userId))
+      .orderBy(desc(userShippingAddresses.isDefault), desc(userShippingAddresses.createdAt));
+    return addresses;
+  }
+
+  async getShippingAddress(id: string, userId: string): Promise<UserShippingAddress | null> {
+    const [address] = await db
+      .select()
+      .from(userShippingAddresses)
+      .where(and(
+        eq(userShippingAddresses.id, id),
+        eq(userShippingAddresses.userId, userId)
+      ));
+    return address || null;
+  }
+
+  async updateShippingAddress(id: string, userId: string, updates: Partial<InsertUserShippingAddress>): Promise<UserShippingAddress> {
+    const [updatedAddress] = await db
+      .update(userShippingAddresses)
+      .set({ ...updates, updatedAt: new Date() })
+      .where(and(
+        eq(userShippingAddresses.id, id),
+        eq(userShippingAddresses.userId, userId)
+      ))
+      .returning();
+    return updatedAddress;
+  }
+
+  async deleteShippingAddress(id: string, userId: string): Promise<boolean> {
+    const result = await db
+      .delete(userShippingAddresses)
+      .where(and(
+        eq(userShippingAddresses.id, id),
+        eq(userShippingAddresses.userId, userId)
+      ))
+      .returning();
+    return result.length > 0;
+  }
+
+  async setDefaultShippingAddress(id: string, userId: string): Promise<void> {
+    await db.transaction(async (tx) => {
+      await tx
+        .update(userShippingAddresses)
+        .set({ isDefault: false })
+        .where(eq(userShippingAddresses.userId, userId));
+      
+      await tx
+        .update(userShippingAddresses)
+        .set({ isDefault: true, updatedAt: new Date() })
+        .where(and(
+          eq(userShippingAddresses.id, id),
+          eq(userShippingAddresses.userId, userId)
+        ));
+    });
+  }
+
+  // User Payment Method operations
+  async createPaymentMethod(userId: string, paymentMethod: InsertUserPaymentMethod): Promise<UserPaymentMethod> {
+    const [newPaymentMethod] = await db
+      .insert(userPaymentMethods)
+      .values({ ...paymentMethod, userId })
+      .returning();
+    return newPaymentMethod;
+  }
+
+  async getUserPaymentMethods(userId: string): Promise<UserPaymentMethod[]> {
+    const methods = await db
+      .select()
+      .from(userPaymentMethods)
+      .where(eq(userPaymentMethods.userId, userId))
+      .orderBy(desc(userPaymentMethods.isDefault), desc(userPaymentMethods.createdAt));
+    return methods;
+  }
+
+  async getPaymentMethod(id: string, userId: string): Promise<UserPaymentMethod | null> {
+    const [method] = await db
+      .select()
+      .from(userPaymentMethods)
+      .where(and(
+        eq(userPaymentMethods.id, id),
+        eq(userPaymentMethods.userId, userId)
+      ));
+    return method || null;
+  }
+
+  async deletePaymentMethod(id: string, userId: string): Promise<boolean> {
+    const result = await db
+      .delete(userPaymentMethods)
+      .where(and(
+        eq(userPaymentMethods.id, id),
+        eq(userPaymentMethods.userId, userId)
+      ))
+      .returning();
+    return result.length > 0;
+  }
+
+  async setDefaultPaymentMethod(id: string, userId: string): Promise<void> {
+    await db.transaction(async (tx) => {
+      await tx
+        .update(userPaymentMethods)
+        .set({ isDefault: false })
+        .where(eq(userPaymentMethods.userId, userId));
+      
+      await tx
+        .update(userPaymentMethods)
+        .set({ isDefault: true, updatedAt: new Date() })
+        .where(and(
+          eq(userPaymentMethods.id, id),
+          eq(userPaymentMethods.userId, userId)
+        ));
+    });
   }
 }
 

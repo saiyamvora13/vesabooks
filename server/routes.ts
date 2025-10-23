@@ -3921,6 +3921,266 @@ Sitemap: ${baseUrl}/sitemap.xml`;
     }
   });
 
+  // User Shipping Address API Routes
+  
+  // Get all shipping addresses for authenticated user
+  app.get("/api/shipping-addresses", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.id || req.user.claims?.sub;
+      const addresses = await storage.getUserShippingAddresses(userId);
+      res.json(addresses);
+    } catch (error) {
+      console.error("Get shipping addresses error:", error);
+      res.status(500).json({ message: "Failed to get shipping addresses" });
+    }
+  });
+
+  // Create new shipping address
+  app.post("/api/shipping-addresses", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.id || req.user.claims?.sub;
+      const addressData = req.body;
+
+      // Validate required fields
+      const schema = z.object({
+        fullName: z.string().min(1).max(200),
+        addressLine1: z.string().min(1).max(200),
+        addressLine2: z.string().max(200).optional(),
+        city: z.string().min(1).max(100),
+        stateProvince: z.string().min(1).max(100),
+        postalCode: z.string().min(1).max(20),
+        country: z.string().length(2).default('US'),
+        phoneNumber: z.string().max(20).optional(),
+        isDefault: z.boolean().default(false),
+      });
+
+      const validatedData = schema.parse(addressData);
+      
+      // Create the address
+      const newAddress = await storage.createShippingAddress(userId, validatedData);
+      
+      // If setting as default, use the transactional helper
+      if (validatedData.isDefault) {
+        await storage.setDefaultShippingAddress(newAddress.id, userId);
+      }
+      res.status(201).json(newAddress);
+    } catch (error) {
+      console.error("Create shipping address error:", error);
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid address data", errors: error.errors });
+      }
+      res.status(500).json({ message: "Failed to create shipping address" });
+    }
+  });
+
+  // Update shipping address
+  app.patch("/api/shipping-addresses/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.id || req.user.claims?.sub;
+      const { id } = req.params;
+      const updates = req.body;
+
+      // Verify address belongs to user
+      const existing = await storage.getShippingAddress(id, userId);
+      if (!existing) {
+        return res.status(404).json({ message: "Shipping address not found" });
+      }
+
+      // If setting as default, unset other defaults first
+      if (updates.isDefault === true) {
+        const addresses = await storage.getUserShippingAddresses(userId);
+        for (const addr of addresses) {
+          if (addr.isDefault && addr.id !== id) {
+            await storage.updateShippingAddress(addr.id, userId, { isDefault: false });
+          }
+        }
+      }
+
+      const updatedAddress = await storage.updateShippingAddress(id, userId, updates);
+      res.json(updatedAddress);
+    } catch (error) {
+      console.error("Update shipping address error:", error);
+      res.status(500).json({ message: "Failed to update shipping address" });
+    }
+  });
+
+  // Set default shipping address
+  app.post("/api/shipping-addresses/:id/set-default", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.id || req.user.claims?.sub;
+      const { id } = req.params;
+
+      // Verify address belongs to user
+      const existing = await storage.getShippingAddress(id, userId);
+      if (!existing) {
+        return res.status(404).json({ message: "Shipping address not found" });
+      }
+
+      await storage.setDefaultShippingAddress(id, userId);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Set default shipping address error:", error);
+      res.status(500).json({ message: "Failed to set default shipping address" });
+    }
+  });
+
+  // Delete shipping address
+  app.delete("/api/shipping-addresses/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.id || req.user.claims?.sub;
+      const { id } = req.params;
+
+      // Verify address belongs to user
+      const existing = await storage.getShippingAddress(id, userId);
+      if (!existing) {
+        return res.status(404).json({ message: "Shipping address not found" });
+      }
+
+      const deleted = await storage.deleteShippingAddress(id, userId);
+      if (deleted) {
+        res.json({ success: true });
+      } else {
+        res.status(500).json({ message: "Failed to delete shipping address" });
+      }
+    } catch (error) {
+      console.error("Delete shipping address error:", error);
+      res.status(500).json({ message: "Failed to delete shipping address" });
+    }
+  });
+
+  // User Payment Method API Routes
+
+  // Get all payment methods for authenticated user
+  app.get("/api/payment-methods", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.id || req.user.claims?.sub;
+      const methods = await storage.getUserPaymentMethods(userId);
+      res.json(methods);
+    } catch (error) {
+      console.error("Get payment methods error:", error);
+      res.status(500).json({ message: "Failed to get payment methods" });
+    }
+  });
+
+  // Create SetupIntent for saving a payment method without charging
+  app.post("/api/payment-methods/setup-intent", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.id || req.user.claims?.sub;
+      const user = await storage.getUser(userId);
+
+      if (!user || !user.email) {
+        return res.status(400).json({ message: "User email not found" });
+      }
+
+      const setupIntent = await stripe.setupIntents.create({
+        payment_method_types: ['card'],
+        metadata: {
+          userId,
+          email: user.email,
+        },
+      });
+
+      res.json({ clientSecret: setupIntent.client_secret });
+    } catch (error) {
+      console.error("Create SetupIntent error:", error);
+      res.status(500).json({ message: "Failed to create payment method setup" });
+    }
+  });
+
+  // Save payment method after successful SetupIntent
+  app.post("/api/payment-methods", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.id || req.user.claims?.sub;
+      const { setupIntentId, isDefault } = req.body;
+
+      if (!setupIntentId) {
+        return res.status(400).json({ message: "Setup Intent ID is required" });
+      }
+
+      // Retrieve the SetupIntent to get the payment method
+      const setupIntent = await stripe.setupIntents.retrieve(setupIntentId);
+      
+      if (!setupIntent.payment_method) {
+        return res.status(400).json({ message: "No payment method attached to SetupIntent" });
+      }
+
+      // Get payment method details from Stripe
+      const paymentMethod = await stripe.paymentMethods.retrieve(setupIntent.payment_method as string);
+
+      // Verify it's a card
+      if (paymentMethod.type !== 'card' || !paymentMethod.card) {
+        return res.status(400).json({ message: "Only card payment methods are supported" });
+      }
+
+      // Save to database
+      const savedMethod = await storage.createPaymentMethod(userId, {
+        stripePaymentMethodId: paymentMethod.id,
+        cardBrand: paymentMethod.card.brand,
+        cardLast4: paymentMethod.card.last4,
+        cardExpMonth: paymentMethod.card.exp_month,
+        cardExpYear: paymentMethod.card.exp_year,
+        isDefault: false,
+      });
+
+      // If setting as default, use the transactional helper
+      if (isDefault) {
+        await storage.setDefaultPaymentMethod(savedMethod.id, userId);
+      }
+
+      res.status(201).json(savedMethod);
+    } catch (error) {
+      console.error("Save payment method error:", error);
+      res.status(500).json({ message: "Failed to save payment method" });
+    }
+  });
+
+  // Set default payment method
+  app.post("/api/payment-methods/:id/set-default", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.id || req.user.claims?.sub;
+      const { id } = req.params;
+
+      // Verify payment method belongs to user
+      const existing = await storage.getPaymentMethod(id, userId);
+      if (!existing) {
+        return res.status(404).json({ message: "Payment method not found" });
+      }
+
+      await storage.setDefaultPaymentMethod(id, userId);
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Set default payment method error:", error);
+      res.status(500).json({ message: "Failed to set default payment method" });
+    }
+  });
+
+  // Delete payment method
+  app.delete("/api/payment-methods/:id", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.id || req.user.claims?.sub;
+      const { id } = req.params;
+
+      // Verify payment method belongs to user
+      const existing = await storage.getPaymentMethod(id, userId);
+      if (!existing) {
+        return res.status(404).json({ message: "Payment method not found" });
+      }
+
+      // Optionally detach from Stripe (but keep for reference)
+      // await stripe.paymentMethods.detach(existing.stripePaymentMethodId);
+
+      const deleted = await storage.deletePaymentMethod(id, userId);
+      if (deleted) {
+        res.json({ success: true });
+      } else {
+        res.status(500).json({ message: "Failed to delete payment method" });
+      }
+    } catch (error) {
+      console.error("Delete payment method error:", error);
+      res.status(500).json({ message: "Failed to delete payment method" });
+    }
+  });
+
   // Prodigi Print API Routes
 
   // Validation schemas for Prodigi endpoints
