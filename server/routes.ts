@@ -5136,33 +5136,10 @@ async function generateStorybookAsync(
     
     // For cover image: use all uploaded inspiration images as references
     const coverReferences = imagePaths.length > 0 ? imagePaths : undefined;
-    console.time('🎨 Cover image generation');
+    // Generate CLEAN cover image first (no title/author) to use as reference for interior pages
+    console.time('🎨 Clean cover image generation (for reference)');
     await generateIllustration(coverPromptWithCharacter, coverImagePath, coverReferences, illustrationStyle);
-    console.timeEnd('🎨 Cover image generation');
-    
-    // Add title and author text overlay to cover image
-    console.time('📝 Cover text overlay');
-    const coverImageBuffer = fs.readFileSync(coverImagePath);
-    const coverMetadata = await sharp(coverImageBuffer).metadata();
-    const coverWidth = coverMetadata.width || 800;
-    const coverHeight = coverMetadata.height || 1200;
-    
-    // Import text overlay helper function
-    const { addTextToCoverImage } = await import("./services/coverText");
-    const compositeCoverBuffer = await addTextToCoverImage(
-      coverImageBuffer,
-      generatedStory.title,
-      author,
-      coverWidth,
-      coverHeight
-    );
-    
-    // Write composite cover back to disk
-    fs.writeFileSync(coverImagePath, compositeCoverBuffer);
-    console.timeEnd('📝 Cover text overlay');
-    
-    // Upload cover image to Object Storage
-    const coverImageUrl = await objectStorage.uploadFile(coverImagePath, coverImageFileName);
+    console.timeEnd('🎨 Clean cover image generation (for reference)');
     
     // Detect orientation from cover image dimensions
     const metadata = await sharp(coverImagePath).metadata();
@@ -5275,6 +5252,27 @@ async function generateStorybookAsync(
     ]);
 
     console.timeEnd('⚡ Parallel image generation');
+
+    // Now regenerate the cover WITH title and author (AI-generated text)
+    // This ensures the final cover has beautiful AI-generated typography
+    console.time('🎨 Final cover generation (with title/author)');
+    await storage.setGenerationProgress(sessionId, {
+      step: 'generating_cover',
+      progress: 88,
+      message: 'Generating final cover with title and author...',
+    });
+
+    // Create final cover prompt WITH title and author instruction
+    const finalCoverPrompt = `${coverPromptWithCharacter}
+
+IMPORTANT: This is a book cover. Include the title "${generatedStory.title}" prominently at the top in elegant, readable typography. Add "By ${author}" near the bottom in a smaller, complementary font. Make the text blend beautifully with the illustration style.`;
+
+    // Generate final cover with AI-generated title/author text
+    await generateIllustration(finalCoverPrompt, coverImagePath, coverReferences, illustrationStyle);
+    
+    // Upload the final cover to replace the clean one
+    const coverImageUrl = await objectStorage.uploadFile(coverImagePath, coverImageFileName);
+    console.timeEnd('🎨 Final cover generation (with title/author)');
 
     // Update progress after all images are done
     await storage.setGenerationProgress(sessionId, {

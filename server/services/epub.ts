@@ -18,17 +18,17 @@ export async function generateEpub(storybook: Storybook): Promise<Buffer> {
   // Use localhost HTTP URLs - epub-gen-memory will fetch and package images automatically
   const baseUrl = "http://localhost:5000";
 
-  // Use the plain cover image (AI already generates title and author in the image)
+  // Use the AI-generated cover image (includes AI-generated title and author text)
   const coverImageUrl = storybook.coverImageUrl || storybook.pages[0]?.imageUrl;
   let compositeCoverPath: string | undefined;
   
   if (coverImageUrl) {
-    // Download the plain cover image without text overlay
+    // Download the cover image from object storage
     const objectStorageService = new ObjectStorageService();
     const filePath = coverImageUrl.replace('/api/storage/', '');
     const coverBuffer = await objectStorageService.getFileBuffer(filePath);
     
-    // Save plain cover to temporary file for epub-gen-memory
+    // Save cover to temporary file for epub-gen-memory
     const tempDir = os.tmpdir();
     const uniqueId = randomUUID();
     compositeCoverPath = path.join(tempDir, `epub-cover-${storybook.id}-${uniqueId}.png`);
