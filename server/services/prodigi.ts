@@ -178,11 +178,11 @@ export class ProdigiService {
     } else if (normalizedSize.includes('a4') && normalizedSize.includes('landscape')) {
       return 'BOOK-FE-A4-L-HARD-G';
     } else if (normalizedSize.includes('us-letter') && normalizedSize.includes('portrait')) {
-      // US Letter Portrait (8.5" × 11") maps to A4 Portrait (8.3" × 11.7") - closest match
-      return 'BOOK-FE-A4-P-HARD-G';
+      // US Letter Portrait (8.5" × 11" / 216×280mm) - Prodigi Standard Letter Portrait
+      return 'BOOK-FE-LETTER-P-HARD-G';
     } else if (normalizedSize.includes('us-letter') && normalizedSize.includes('landscape')) {
-      // US Letter Landscape (11" × 8.5") maps to A4 Landscape (11.7" × 8.3") - closest match
-      return 'BOOK-FE-A4-L-HARD-G';
+      // US Letter Landscape (11" × 8.5" / 280×216mm) - Prodigi Standard Letter Landscape
+      return 'BOOK-FE-LETTER-L-HARD-G';
     } else if (normalizedSize.includes('square-small')) {
       return 'BOOK-FE-8_3-SQ-HARD-G';
     } else if (normalizedSize.includes('square-large')) {
