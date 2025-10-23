@@ -1057,6 +1057,8 @@ function StorybookPurchaseButtons({
     },
   });
 
+  const inCart = inCartDigital || inCartPrint;
+
   return (
     <>
       <div className="space-y-2 mt-3">
@@ -1077,16 +1079,16 @@ function StorybookPurchaseButtons({
               Download
             </Button>
           </>
-        ) : inCartDigital ? (
+        ) : inCart ? (
           <Button
             size="sm"
             variant="secondary"
             className="w-full"
             disabled
-            data-testid={`button-in-cart-digital-${storybook.id}`}
+            data-testid={`button-in-cart-${storybook.id}`}
           >
             <Check className="h-4 w-4 mr-1" />
-            Digital in Cart
+            In Cart
           </Button>
         ) : (
           <Button
@@ -1095,43 +1097,14 @@ function StorybookPurchaseButtons({
             className="w-full gradient-bg hover:opacity-90 !text-[hsl(258,90%,20%)]"
             onClick={() => addToCartMutation.mutate({ productType: 'digital' })}
             disabled={addToCartMutation.isPending}
-            data-testid={`button-add-cart-digital-${storybook.id}`}
+            data-testid={`button-add-to-cart-${storybook.id}`}
           >
             {addToCartMutation.isPending ? (
               <Loader2 className="h-4 w-4 mr-1 animate-spin" />
             ) : (
               <ShoppingCart className="h-4 w-4 mr-1" />
             )}
-            Add E-book to Cart
-          </Button>
-        )}
-
-        {inCartPrint ? (
-          <Button
-            size="sm"
-            variant="secondary"
-            className="w-full"
-            disabled
-            data-testid={`button-in-cart-print-${storybook.id}`}
-          >
-            <Check className="h-4 w-4 mr-1" />
-            Print in Cart
-          </Button>
-        ) : (
-          <Button
-            size="sm"
-            variant="outline"
-            className="w-full"
-            onClick={() => addToCartMutation.mutate({ productType: 'print', bookSize: 'a5-portrait' })}
-            disabled={addToCartMutation.isPending}
-            data-testid={`button-add-cart-print-${storybook.id}`}
-          >
-            {addToCartMutation.isPending ? (
-              <Loader2 className="h-4 w-4 mr-1 animate-spin" />
-            ) : (
-              <ShoppingCart className="h-4 w-4 mr-1" />
-            )}
-            Add Print to Cart
+            Add to Cart
           </Button>
         )}
       </div>
