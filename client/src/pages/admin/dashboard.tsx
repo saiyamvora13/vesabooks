@@ -1,17 +1,30 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import ProtectedAdminRoute from "@/components/admin/ProtectedAdminRoute";
 import AdminLayout from "@/components/admin/AdminLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { BookOpen, Users, Settings } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { BookOpen, Users, Settings, AlertCircle, Loader2 } from "lucide-react";
 import { Storybook, SiteSetting } from "@shared/schema";
+import { apiRequest } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 
 interface Metrics {
   storiesCreated: number;
   activeUsers: number;
 }
 
+interface StuckOrdersResult {
+  checked: number;
+  cancelled: number;
+  refunded: number;
+  emailsSent: number;
+  errors: string[];
+}
+
 export default function AdminDashboard() {
+  const { toast } = useToast();
+
   const { data: storybooks, isLoading: storybooksLoading } = useQuery<Storybook[]>({
     queryKey: ["/api/storybooks"],
   });
@@ -22,6 +35,51 @@ export default function AdminDashboard() {
 
   const { data: settings, isLoading: settingsLoading } = useQuery<SiteSetting[]>({
     queryKey: ["/api/admin/settings"],
+  });
+
+  const checkStuckOrders = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest("POST", "/api/admin/check-stuck-orders");
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ message: 'Unknown error occurred' }));
+        throw new Error(errorData.message || `Server error: ${response.status}`);
+      }
+      
+      return response.json() as Promise<StuckOrdersResult>;
+    },
+    onSuccess: (data) => {
+      const checked = data.checked ?? 0;
+      const cancelled = data.cancelled ?? 0;
+      const refunded = data.refunded ?? 0;
+      const emailsSent = data.emailsSent ?? 0;
+      const errors = data.errors ?? [];
+      
+      if (cancelled === 0 && errors.length === 0) {
+        toast({
+          title: "No Stuck Orders",
+          description: `Checked ${checked} orders - all are processing normally.`,
+        });
+      } else if (errors.length > 0) {
+        toast({
+          title: "Check Complete (with errors)",
+          description: `Checked: ${checked} | Cancelled: ${cancelled} | Refunded: ${refunded} | Emails: ${emailsSent} | Errors: ${errors.length}`,
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Stuck Orders Processed",
+          description: `Checked: ${checked} | Cancelled: ${cancelled} | Refunded: ${refunded} | Emails sent: ${emailsSent}`,
+        });
+      }
+    },
+    onError: (error) => {
+      toast({
+        title: "Failed to Check Orders",
+        description: error instanceof Error ? error.message : "Unknown error occurred",
+        variant: "destructive",
+      });
+    },
   });
 
   const totalStories = storybooks?.length || 0;
@@ -140,6 +198,29 @@ export default function AdminDashboard() {
                   <h3 className="font-semibold text-base sm:text-lg text-slate-100 mb-1">Audit Logs</h3>
                   <p className="text-xs sm:text-sm text-slate-400">View admin activity logs</p>
                 </a>
+                <Button
+                  onClick={() => checkStuckOrders.mutate()}
+                  disabled={checkStuckOrders.isPending}
+                  className="block p-4 rounded-lg border border-slate-800 bg-slate-950 hover:bg-slate-800 transition-colors min-h-[60px] sm:min-h-[auto] w-full text-left h-auto"
+                  variant="ghost"
+                  data-testid="button-check-stuck-orders"
+                >
+                  <div className="flex items-start gap-3">
+                    {checkStuckOrders.isPending ? (
+                      <Loader2 className="w-5 h-5 text-purple-500 flex-shrink-0 animate-spin mt-0.5" />
+                    ) : (
+                      <AlertCircle className="w-5 h-5 text-purple-500 flex-shrink-0 mt-0.5" />
+                    )}
+                    <div>
+                      <h3 className="font-semibold text-base sm:text-lg text-slate-100 mb-1">
+                        {checkStuckOrders.isPending ? "Checking..." : "Check Stuck Orders"}
+                      </h3>
+                      <p className="text-xs sm:text-sm text-slate-400">
+                        Find and cancel orders stuck in processing
+                      </p>
+                    </div>
+                  </div>
+                </Button>
               </div>
             </CardContent>
           </Card>

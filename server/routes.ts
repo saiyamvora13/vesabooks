@@ -1602,6 +1602,19 @@ Sitemap: ${baseUrl}/sitemap.xml`;
     }
   });
 
+  // POST /api/admin/check-stuck-orders - Manually trigger stuck order check (admin only)
+  app.post('/api/admin/check-stuck-orders', isAdmin, async (req, res) => {
+    try {
+      const { checkAndCancelStuckOrders } = await import('./services/stuck-orders');
+      console.log('[Admin] Manually triggering stuck order check...');
+      const result = await checkAndCancelStuckOrders();
+      res.json(result);
+    } catch (error) {
+      console.error('Manual stuck order check error:', error);
+      res.status(500).json({ message: 'Failed to check stuck orders', error: String(error) });
+    }
+  });
+
   // GET /api/metrics (public - no auth required)
   app.get('/api/metrics', async (req, res) => {
     try {
