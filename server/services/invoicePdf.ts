@@ -64,7 +64,7 @@ export async function generateInvoicePDF(invoiceData: InvoiceData): Promise<Buff
     color: darkGray,
   });
   
-  page.drawText(`Order #: ${invoiceData.orderId.slice(-8)}`, {
+  page.drawText(`Order #: ${invoiceData.orderId.slice(-8).toUpperCase()}`, {
     x: rightX - 200,
     y: height - 75,
     size: 10,

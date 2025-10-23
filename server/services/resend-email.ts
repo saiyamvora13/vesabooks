@@ -313,7 +313,7 @@ export async function sendPrintOrderConfirmation(params: {
               <tr>
                 <td style="background-color: hsl(258, 90%, 20%); color: #ffffff; padding: 40px 30px; text-align: center; border-radius: 8px 8px 0 0;">
                   <h1 style="margin: 0; font-size: 32px; font-weight: 600;">Order Confirmed! ✓</h1>
-                  <p style="margin: 15px 0 0 0; font-size: 16px; opacity: 0.9;">Order #${orderId}</p>
+                  <p style="margin: 15px 0 0 0; font-size: 16px; opacity: 0.9;">Order #${orderId.slice(-8).toUpperCase()}</p>
                 </td>
               </tr>
               
@@ -486,7 +486,7 @@ export async function sendShippingNotification(params: {
               <tr>
                 <td style="background-color: hsl(258, 90%, 20%); color: #ffffff; padding: 40px 30px; text-align: center; border-radius: 8px 8px 0 0;">
                   <h1 style="margin: 0; font-size: 32px; font-weight: 600;">Your Order Has Shipped! 📦</h1>
-                  <p style="margin: 15px 0 0 0; font-size: 16px; opacity: 0.9;">Order #${orderId}</p>
+                  <p style="margin: 15px 0 0 0; font-size: 16px; opacity: 0.9;">Order #${orderId.slice(-8).toUpperCase()}</p>
                 </td>
               </tr>
               
