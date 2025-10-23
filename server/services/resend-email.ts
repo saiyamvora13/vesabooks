@@ -54,7 +54,9 @@ export async function sendInvoiceEmail(
 ): Promise<void> {
   const { client, fromEmail } = await getUncachableResendClient();
   
-  const invoiceNumber = paymentIntentId.slice(-8).toUpperCase();
+  // Use orderReference if available, otherwise fallback to paymentIntentId
+  const orderRef = purchases[0]?.orderReference || paymentIntentId;
+  const invoiceNumber = orderRef.slice(-8).toUpperCase();
   
   const t = getEmailTranslations(language, 'invoice');
   
