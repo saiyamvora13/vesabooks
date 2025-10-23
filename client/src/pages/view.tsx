@@ -85,6 +85,22 @@ export default function View() {
     enabled: !!isAuthenticated && !!storybookId,
   });
 
+  const { data: printPurchase } = useQuery<{ owned: boolean }>({
+    queryKey: ['/api/purchases/check', storybookId, 'print'],
+    queryFn: async () => {
+      if (!isAuthenticated || !storybookId) return { owned: false };
+      const response = await fetch('/api/purchases/check', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ storybookId, type: 'print' }),
+        credentials: 'include',
+      });
+      if (!response.ok) return { owned: false };
+      return response.json();
+    },
+    enabled: !!isAuthenticated && !!storybookId,
+  });
+
   const { data: averageRatingData } = useQuery<{ averageRating: number | null; count: number }>({
     queryKey: ['/api/storybooks', storybookId, 'average-rating'],
     enabled: !!storybookId,
@@ -402,25 +418,36 @@ export default function View() {
     }
   };
 
-  const handleAddToCart = () => {
+  const handleAddToCart = async () => {
     if (!storybook || !pricing) return;
     
-    const digitalPrice = parseInt(pricing.digital_price) || 399;
+    // Determine what to add based on ownership
+    // If they own digital, add print; otherwise add digital
+    const productType = digitalPurchase?.owned ? 'print' : 'digital';
+    const productName = productType === 'digital' ? 'Digital Edition' : 'Print Edition';
     
-    addToCart({
-      storybookId: storybook.id,
-      type: 'digital',
-      title: storybook.title,
-      price: digitalPrice,
-    });
-    
-    toast({
-      title: "Added to cart",
-      description: `${storybook.title} - Digital Edition`,
-    });
-    
-    window.dispatchEvent(new Event('cartUpdated'));
-    setLocation('/cart');
+    try {
+      // Add to backend cart (database)
+      await apiRequest('POST', '/api/cart', {
+        storybookId: storybook.id,
+        productType: productType,
+        quantity: 1,
+      });
+      
+      toast({
+        title: "Added to cart",
+        description: `${storybook.title} - ${productName}`,
+      });
+      
+      window.dispatchEvent(new Event('cartUpdated'));
+      setLocation('/cart');
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to add item to cart. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
   if (isLoading) {
@@ -564,7 +591,8 @@ export default function View() {
                 </Button>
               )}
               
-              {digitalPurchase?.owned ? (
+              {/* Download button - shown if user owns digital version */}
+              {digitalPurchase?.owned && (
                 <Button 
                   variant="outline" 
                   className="rounded-xl flex-1 md:flex-initial min-h-[48px] md:min-h-0" 
@@ -577,45 +605,53 @@ export default function View() {
                     {isDownloading ? 'Preparing...' : 'Download'}
                   </span>
                 </Button>
-              ) : (
-                <>
-                  <Button 
-                    variant="default" 
-                    className="rounded-xl gradient-bg !text-[hsl(258,90%,20%)] flex-1 md:flex-initial min-h-[48px] md:min-h-0" 
-                    onClick={handleDirectDigitalCheckout}
-                    disabled={!pricing}
-                    data-testid="button-buy-ebook-direct"
-                  >
-                    <i className="fas fa-book mr-2"></i>
-                    <span className="text-sm md:text-base font-semibold">
-                      Buy E-book ${pricing ? (parseInt(pricing.digital_price) / 100).toFixed(2) : '3.99'}
-                    </span>
-                  </Button>
+              )}
 
-                  <Button 
-                    variant="default" 
-                    className="rounded-xl gradient-bg !text-[hsl(258,90%,20%)] flex-1 md:flex-initial min-h-[48px] md:min-h-0" 
-                    onClick={handleDirectPrintCheckout}
-                    disabled={!pricing}
-                    data-testid="button-buy-print-direct"
-                  >
-                    <i className="fas fa-print mr-2"></i>
-                    <span className="text-sm md:text-base font-semibold">
-                      Buy Print ${pricing ? (parseInt(pricing.print_price) / 100).toFixed(2) : '29.99'}
-                    </span>
-                  </Button>
+              {/* Buy E-book button - shown if user doesn't own digital version */}
+              {!digitalPurchase?.owned && (
+                <Button 
+                  variant="default" 
+                  className="rounded-xl gradient-bg !text-[hsl(258,90%,20%)] flex-1 md:flex-initial min-h-[48px] md:min-h-0" 
+                  onClick={handleDirectDigitalCheckout}
+                  disabled={!pricing}
+                  data-testid="button-buy-ebook-direct"
+                >
+                  <i className="fas fa-book mr-2"></i>
+                  <span className="text-sm md:text-base font-semibold">
+                    Buy E-book ${pricing ? (parseInt(pricing.digital_price) / 100).toFixed(2) : '3.99'}
+                  </span>
+                </Button>
+              )}
 
-                  <Button 
-                    variant="outline" 
-                    className="rounded-xl flex-1 md:flex-initial min-h-[48px] md:min-h-0" 
-                    onClick={handleAddToCart}
-                    disabled={!pricing}
-                    data-testid="button-add-to-cart"
-                  >
-                    <ShoppingCart className="h-4 md:h-4 w-4 md:w-4 mr-2" />
-                    <span className="text-sm md:text-base">Add to Cart</span>
-                  </Button>
-                </>
+              {/* Buy Print button - shown if user doesn't own print version */}
+              {!printPurchase?.owned && (
+                <Button 
+                  variant="default" 
+                  className="rounded-xl gradient-bg !text-[hsl(258,90%,20%)] flex-1 md:flex-initial min-h-[48px] md:min-h-0" 
+                  onClick={handleDirectPrintCheckout}
+                  disabled={!pricing}
+                  data-testid="button-buy-print-direct"
+                >
+                  <i className="fas fa-print mr-2"></i>
+                  <span className="text-sm md:text-base font-semibold">
+                    Buy Print ${pricing ? (parseInt(pricing.print_price) / 100).toFixed(2) : '29.99'}
+                    {digitalPurchase?.owned && <span className="ml-1 text-xs">(Digital discount applied)</span>}
+                  </span>
+                </Button>
+              )}
+
+              {/* Add to Cart button - shown if user doesn't own both versions */}
+              {!(digitalPurchase?.owned && printPurchase?.owned) && (
+                <Button 
+                  variant="outline" 
+                  className="rounded-xl flex-1 md:flex-initial min-h-[48px] md:min-h-0" 
+                  onClick={handleAddToCart}
+                  disabled={!pricing}
+                  data-testid="button-add-to-cart"
+                >
+                  <ShoppingCart className="h-4 md:h-4 w-4 md:w-4 mr-2" />
+                  <span className="text-sm md:text-base">Add to Cart</span>
+                </Button>
               )}
             </div>
           </div>
