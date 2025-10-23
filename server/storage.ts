@@ -1,6 +1,6 @@
 import { type Storybook, type InsertStorybook, type StoryGenerationProgress, storybooks, users, type User, type UpsertUser, type Purchase, type InsertPurchase, purchases, type CartItem, type InsertCartItem, cartItems, passwordResetTokens, type PasswordResetToken, type AdminUser, type InsertAdminUser, adminUsers, type SiteSetting, siteSettings, type HeroStorybookSlot, type InsertHeroStorybookSlot, heroStorybookSlots, type FeaturedStorybook, type InsertFeaturedStorybook, featuredStorybooks, type AdminAuditLog, type InsertAdminAuditLog, adminAuditLogs, type SamplePrompt, type InsertSamplePrompt, samplePrompts, type AnalyticsEvent, type InsertAnalyticsEvent, analyticsEvents, type StoryRating, type InsertStoryRating, storyRatings, type AudioSettings, audioSettings, type IpRateLimit, type InsertIpRateLimit, ipRateLimits, type DownloadVerification, type InsertDownloadVerification, downloadVerifications, type SavedStorybook, type InsertSavedStorybook, savedStorybooks, type PrintOrder, type InsertPrintOrder, printOrders } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc, count, countDistinct, isNull, and, lt, gt, sql } from "drizzle-orm";
+import { eq, desc, count, countDistinct, isNull, and, lt, gt, sql, inArray } from "drizzle-orm";
 import { normalizeEmail } from "./auth";
 
 export interface IStorage {
@@ -37,6 +37,7 @@ export interface IStorage {
   createPurchase(purchase: InsertPurchase): Promise<Purchase>;
   getUserPurchases(userId: string): Promise<Purchase[]>;
   getStorybookPurchase(userId: string, storybookId: string, type: 'digital' | 'print'): Promise<Purchase | null>;
+  checkStorybookPurchasesBatch(userId: string, storybookIds: string[], type: 'digital' | 'print'): Promise<Record<string, boolean>>;
   updatePurchaseStatus(id: string, status: string, stripePaymentIntentId?: string): Promise<Purchase>;
   
   // Shopping Cart operations
@@ -390,6 +391,39 @@ export class DatabaseStorage implements IStorage {
         )
       );
     return purchase || null;
+  }
+
+  async checkStorybookPurchasesBatch(userId: string, storybookIds: string[], type: 'digital' | 'print'): Promise<Record<string, boolean>> {
+    if (storybookIds.length === 0) {
+      return {};
+    }
+
+    // Query all purchases for this user and type that match any of the storybook IDs
+    const userPurchases = await db
+      .select()
+      .from(purchases)
+      .where(
+        and(
+          eq(purchases.userId, userId),
+          eq(purchases.type, type),
+          inArray(purchases.storybookId, storybookIds)
+        )
+      );
+
+    // Create a map of storybookId -> true for owned books
+    const ownedMap: Record<string, boolean> = {};
+    
+    // Initialize all as false
+    storybookIds.forEach(id => {
+      ownedMap[id] = false;
+    });
+    
+    // Mark owned ones as true
+    userPurchases.forEach(purchase => {
+      ownedMap[purchase.storybookId] = true;
+    });
+
+    return ownedMap;
   }
 
   async updatePurchaseStatus(id: string, status: string, stripePaymentIntentId?: string): Promise<Purchase> {
