@@ -104,7 +104,8 @@ function formatPrice(priceStr: string): string {
 function OrderCard({ order }: { order: PrintOrder }) {
   const { t } = useTranslation();
   const coverImageUrl = order.storybook.coverImageUrl;
-  const orderId = order.id.slice(-8);
+  // Use Stripe Payment Intent ID as unified reference across app, Stripe, and Prodigi
+  const orderId = order.purchase.stripePaymentIntentId;
   const hasTracking = order.trackingNumber || order.trackingUrl;
 
   return (
