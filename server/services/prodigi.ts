@@ -165,6 +165,10 @@ export class ProdigiService {
     await this.makeRequest(`/orders/${orderId}/actions/cancel`, 'POST');
   }
 
+  async getProduct(sku: string): Promise<any> {
+    return this.makeRequest<any>(`/products/${sku}`);
+  }
+
   getProductSKU(bookSize: string, pageCount: number): string {
     const normalizedSize = bookSize.toLowerCase();
     
