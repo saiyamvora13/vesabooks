@@ -153,7 +153,7 @@ export default function OrderDetails() {
     );
   }
 
-  const shortOrderId = order.orderId.slice(-8);
+  const shortOrderId = order.orderId.slice(-8).toUpperCase();
   const hasTracking = order.items.some(item => item.trackingUrl || item.trackingNumber);
 
   return (

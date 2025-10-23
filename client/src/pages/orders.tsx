@@ -118,7 +118,7 @@ function OrderCard({ order }: { order: GroupedOrder }) {
   const [copied, setCopied] = useState(false);
   
   const fullOrderId = order.orderId;
-  const shortOrderId = fullOrderId.slice(-8);
+  const shortOrderId = fullOrderId.slice(-8).toUpperCase();
   const hasTracking = order.items.some(item => item.trackingUrl || item.trackingNumber);
   const primaryTracking = order.items.find(item => item.trackingUrl)?.trackingUrl;
 
