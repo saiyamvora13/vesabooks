@@ -3654,6 +3654,14 @@ Sitemap: ${baseUrl}/sitemap.xml`;
   // Log the webhook URL on server startup
   console.log(`[Prodigi Webhook] Webhook endpoint: ${webhookPath}`);
   
+  // Test endpoint to verify body parsing works (can manually POST to this)
+  app.post('/api/webhook/test-body-parser', (req: any, res) => {
+    console.log('[Test Webhook] Headers:', JSON.stringify(req.headers, null, 2));
+    console.log('[Test Webhook] Body:', JSON.stringify(req.body, null, 2));
+    console.log('[Test Webhook] Raw body length:', req.rawBody ? req.rawBody.length : 'undefined');
+    res.json({ received: req.body, headers: req.headers });
+  });
+  
   app.post(webhookPath, async (req: any, res) => {
     try {
       // Log source IP for monitoring

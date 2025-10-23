@@ -17,7 +17,8 @@ declare module 'http' {
 app.use(express.json({
   verify: (req, _res, buf) => {
     req.rawBody = buf;
-  }
+  },
+  type: ['application/json', 'application/cloudevents+json']
 }));
 app.use(express.urlencoded({ extended: false }));
 
