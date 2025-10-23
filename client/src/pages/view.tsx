@@ -35,6 +35,7 @@ import { ShareDialog } from "@/components/share-dialog";
 import { AudioControls } from "@/components/audio-controls";
 import { audioManager } from "@/lib/audioManager";
 import { EmailVerificationDialog } from "@/components/email-verification-dialog";
+import { NewCheckoutDialog } from "@/components/cart/NewCheckoutDialog";
 import bookOpenUrl from "@assets/ES_Book_Open - Epidemic Sound_1760551479317.mp3";
 import pageTurnUrl from "@assets/ES_Page Turn 01 - Epidemic Sound_1760551479319.mp3";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -54,6 +55,8 @@ export default function View() {
   const [audioInitialized, setAudioInitialized] = useState(false);
   const [emailVerificationOpen, setEmailVerificationOpen] = useState(false);
   const [verifiedEmail, setVerifiedEmail] = useState<string | null>(null);
+  const [checkoutDialogOpen, setCheckoutDialogOpen] = useState(false);
+  const [checkoutType, setCheckoutType] = useState<'digital' | 'print'>('digital');
   const { toast } = useToast();
   const { isAuthenticated, user} = useAuth();
 
@@ -85,6 +88,10 @@ export default function View() {
   const { data: averageRatingData } = useQuery<{ averageRating: number | null; count: number }>({
     queryKey: ['/api/storybooks', storybookId, 'average-rating'],
     enabled: !!storybookId,
+  });
+
+  const { data: pricing } = useQuery<{ digital_price: string; print_price: string }>({
+    queryKey: ['/api/settings/pricing'],
   });
 
   // Regenerate page mutation
@@ -349,14 +356,50 @@ export default function View() {
     setTimeout(() => downloadEpub(), 100);
   };
 
-  const handleBuyDigital = () => {
-    if (!storybook) return;
+  const handleDirectDigitalCheckout = () => {
+    if (!storybook || !pricing) return;
+    
+    const digitalPrice = parseInt(pricing.digital_price) || 399;
     
     addToCart({
       storybookId: storybook.id,
       type: 'digital',
       title: storybook.title,
-      price: 399,
+      price: digitalPrice,
+    });
+    
+    window.dispatchEvent(new Event('cartUpdated'));
+    setCheckoutType('digital');
+    setCheckoutDialogOpen(true);
+  };
+
+  const handleDirectPrintCheckout = () => {
+    if (!storybook || !pricing) return;
+    
+    const printPrice = parseInt(pricing.print_price) || 2999;
+    
+    addToCart({
+      storybookId: storybook.id,
+      type: 'print',
+      title: storybook.title,
+      price: printPrice,
+    });
+    
+    window.dispatchEvent(new Event('cartUpdated'));
+    setCheckoutType('print');
+    setCheckoutDialogOpen(true);
+  };
+
+  const handleAddToCart = () => {
+    if (!storybook || !pricing) return;
+    
+    const digitalPrice = parseInt(pricing.digital_price) || 399;
+    
+    addToCart({
+      storybookId: storybook.id,
+      type: 'digital',
+      title: storybook.title,
+      price: digitalPrice,
     });
     
     toast({
@@ -524,33 +567,41 @@ export default function View() {
                 </Button>
               ) : (
                 <>
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button 
-                          variant="outline" 
-                          className="rounded-xl opacity-50 cursor-not-allowed hidden md:flex" 
-                          disabled
-                          data-testid="button-download-epub-disabled"
-                        >
-                          <i className="fas fa-book mr-2"></i>
-                          {t('storybook.viewer.download.button')}
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>{t('storybook.viewer.download.purchaseTooltip')}</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                  
                   <Button 
                     variant="default" 
                     className="rounded-xl gradient-bg !text-[hsl(258,90%,20%)] flex-1 md:flex-initial min-h-[48px] md:min-h-0" 
-                    onClick={handleBuyDigital}
-                    data-testid="button-buy-digital-viewer"
+                    onClick={handleDirectDigitalCheckout}
+                    disabled={!pricing}
+                    data-testid="button-buy-ebook-direct"
+                  >
+                    <i className="fas fa-book mr-2"></i>
+                    <span className="text-sm md:text-base font-semibold">
+                      Buy E-book ${pricing ? (parseInt(pricing.digital_price) / 100).toFixed(2) : '3.99'}
+                    </span>
+                  </Button>
+
+                  <Button 
+                    variant="default" 
+                    className="rounded-xl gradient-bg !text-[hsl(258,90%,20%)] flex-1 md:flex-initial min-h-[48px] md:min-h-0" 
+                    onClick={handleDirectPrintCheckout}
+                    disabled={!pricing}
+                    data-testid="button-buy-print-direct"
+                  >
+                    <i className="fas fa-print mr-2"></i>
+                    <span className="text-sm md:text-base font-semibold">
+                      Buy Print ${pricing ? (parseInt(pricing.print_price) / 100).toFixed(2) : '29.99'}
+                    </span>
+                  </Button>
+
+                  <Button 
+                    variant="outline" 
+                    className="rounded-xl flex-1 md:flex-initial min-h-[48px] md:min-h-0" 
+                    onClick={handleAddToCart}
+                    disabled={!pricing}
+                    data-testid="button-add-to-cart"
                   >
                     <ShoppingCart className="h-4 md:h-4 w-4 md:w-4 mr-2" />
-                    <span className="text-sm md:text-base font-semibold">Buy $3.99</span>
+                    <span className="text-sm md:text-base">Add to Cart</span>
                   </Button>
                 </>
               )}
@@ -755,6 +806,30 @@ export default function View() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Checkout Dialog */}
+      <NewCheckoutDialog
+        open={checkoutDialogOpen}
+        onOpenChange={setCheckoutDialogOpen}
+        hasPrintItems={checkoutType === 'print'}
+        amount={pricing ? (checkoutType === 'digital' ? parseInt(pricing.digital_price) : parseInt(pricing.print_price)) : 0}
+        onSuccess={() => {
+          queryClient.invalidateQueries({ queryKey: ['/api/cart'] });
+          queryClient.invalidateQueries({ queryKey: ['/api/purchases'] });
+          setCheckoutDialogOpen(false);
+          
+          toast({
+            title: "Purchase complete!",
+            description: checkoutType === 'digital' 
+              ? "Your e-book is now available for download." 
+              : "Your print order has been placed successfully.",
+          });
+
+          if (checkoutType === 'digital') {
+            queryClient.invalidateQueries({ queryKey: ['/api/purchases/check', storybookId, 'digital'] });
+          }
+        }}
+      />
     </div>
   );
 }
