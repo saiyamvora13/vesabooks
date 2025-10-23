@@ -2558,6 +2558,28 @@ Sitemap: ${baseUrl}/sitemap.xml`;
     }
   });
 
+  // Batch check if user owns multiple books (requires authentication)
+  app.post("/api/purchases/check-batch", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.id || req.user.claims?.sub;
+      const { storybookIds, type } = req.body;
+
+      if (!storybookIds || !Array.isArray(storybookIds) || storybookIds.length === 0) {
+        return res.status(400).json({ message: "storybookIds array is required" });
+      }
+
+      if (!type) {
+        return res.status(400).json({ message: "type is required" });
+      }
+
+      const ownershipMap = await storage.checkStorybookPurchasesBatch(userId, storybookIds, type);
+      res.json(ownershipMap);
+    } catch (error) {
+      console.error("Batch check purchase error:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
   // Create purchase from payment intent (requires authentication)
   app.post("/api/purchases/create", isAuthenticated, async (req: any, res) => {
     try {
