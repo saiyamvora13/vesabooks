@@ -6,6 +6,9 @@ import { bootstrapAdminUser } from "./services/adminBootstrap";
 
 const app = express();
 
+// Trust proxy for correct IP addresses and HTTPS protocol detection behind Replit proxy
+app.set('trust proxy', true);
+
 declare module 'http' {
   interface IncomingMessage {
     rawBody: unknown

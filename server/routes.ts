@@ -3630,18 +3630,27 @@ Sitemap: ${baseUrl}/sitemap.xml`;
     }
   });
 
-  // Prodigi webhook handler (no authentication - validated by X-API-Key header)
+  // Prodigi webhook handler with shared secret authentication
   app.post("/api/webhook/prodigi", async (req: any, res) => {
     try {
-      // Validate request is from Prodigi by checking X-API-Key header
-      const apiKey = req.headers['x-api-key'];
-      const expectedApiKey = process.env.PRODIGI_SANDBOX_API_KEY;
-
-      if (!apiKey || apiKey !== expectedApiKey) {
-        console.warn('[Prodigi Webhook] Unauthorized webhook attempt - invalid API key');
-        return res.status(401).json({ message: "Unauthorized" });
+      // Log source IP for monitoring
+      const sourceIp = req.ip || req.headers['x-forwarded-for'] || req.connection.remoteAddress || 'unknown';
+      console.log(`[Prodigi Webhook] Received webhook from IP: ${sourceIp}`);
+      
+      // Authenticate webhook using shared secret
+      // Configure this secret in Prodigi dashboard webhook settings
+      const webhookSecret = process.env.PRODIGI_WEBHOOK_SECRET;
+      const receivedSecret = req.headers['x-webhook-secret'] || req.headers['authorization']?.replace('Bearer ', '');
+      
+      if (webhookSecret && receivedSecret !== webhookSecret) {
+        console.warn(`[Prodigi Webhook] Invalid webhook secret from IP: ${sourceIp}`);
+        return res.status(401).json({ message: "Unauthorized - Invalid webhook secret" });
       }
-
+      
+      if (!webhookSecret) {
+        console.warn('[Prodigi Webhook] PRODIGI_WEBHOOK_SECRET not configured - webhooks are unauthenticated!');
+      }
+      
       const callback = req.body;
       
       // Log webhook event for debugging
@@ -3660,8 +3669,15 @@ Sitemap: ${baseUrl}/sitemap.xml`;
 
       if (!printOrder) {
         console.warn(`[Prodigi Webhook] Print order not found for Prodigi order ID: ${prodigiOrderId}`);
-        // Still return 200 to acknowledge receipt
+        // Still return 200 to acknowledge receipt (prevent retries for unknown orders)
         return res.status(200).json({ received: true, message: "Order not found in database" });
+      }
+      
+      // Additional security: Validate merchant reference matches our format
+      const merchantRef = callback.merchantReference;
+      if (merchantRef && !merchantRef.startsWith('SB-')) {
+        console.warn(`[Prodigi Webhook] Invalid merchant reference format: ${merchantRef}`);
+        return res.status(200).json({ received: true, message: "Invalid merchant reference" });
       }
 
       // Prepare updates object
@@ -3896,7 +3912,17 @@ Sitemap: ${baseUrl}/sitemap.xml`;
       // Upload to object storage and get public URL
       const objectStorage = new ObjectStorageService();
       const storagePath = `print-pdfs/${storybook.id}.pdf`;
-      const pdfUrl = await objectStorage.uploadFile(tempPdfPath, storagePath, false);
+      const relativePdfUrl = await objectStorage.uploadFile(tempPdfPath, storagePath, false);
+      
+      // Convert relative URL to absolute URL for Prodigi
+      // Use REPLIT_DOMAINS (production/staging) or fall back to request origin
+      const replitDomains = process.env.REPLIT_DOMAINS?.split(',')[0];
+      const baseUrl = replitDomains 
+        ? `https://${replitDomains}`
+        : `${req.protocol}://${req.get('host')}`;
+      const absolutePdfUrl = `${baseUrl}${relativePdfUrl}`;
+      
+      console.log('[Print Order] PDF uploaded to:', absolutePdfUrl);
       
       // Clean up temp file
       unlinkSync(tempPdfPath);
@@ -3916,7 +3942,7 @@ Sitemap: ${baseUrl}/sitemap.xml`;
             assets: [
               {
                 printArea: 'default',
-                url: pdfUrl,
+                url: absolutePdfUrl,
               },
             ],
           },
@@ -3937,6 +3963,38 @@ Sitemap: ${baseUrl}/sitemap.xml`;
         status: prodigiOrder.status.stage,
         webhookData: prodigiOrder,
       });
+
+      // Send order confirmation email
+      const { sendPrintOrderConfirmation } = await import("./services/resend-email");
+      const addressParts = [
+        recipientDetails.address.line1,
+        recipientDetails.address.line2,
+        recipientDetails.address.townOrCity,
+        recipientDetails.address.stateOrCounty,
+        recipientDetails.address.postalOrZipCode,
+        recipientDetails.address.countryCode
+      ].filter(Boolean);
+      const recipientAddress = addressParts.join(', ');
+      
+      // Only send confirmation email if recipient email is provided
+      if (recipientDetails.email) {
+        const coverUrl = storybook.coverImageUrl || `${baseUrl}/api/storybooks/${storybook.id}/preview`;
+        
+        sendPrintOrderConfirmation({
+          recipientEmail: recipientDetails.email,
+          recipientName: recipientDetails.name,
+          storybookTitle: storybook.title,
+          storybookCoverUrl: coverUrl,
+          orderId: prodigiOrder.id,
+          bookSize: matchingPurchase.bookSize || 'A5 Portrait',
+          shippingMethod: shippingMethod || 'Standard',
+          recipientAddress,
+          estimatedProduction: '3-5 business days',
+        }).catch(err => {
+          console.error('Failed to send order confirmation email:', err);
+          // Don't fail the request if email fails
+        });
+      }
 
       res.json({ printOrder, prodigiOrder });
     } catch (error) {
