@@ -10,15 +10,14 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Loader2 } from "lucide-react";
 
 const addressSchema = z.object({
-  name: z.string().min(1, "Name is required"),
-  email: z.string().email("Invalid email address"),
-  phoneNumber: z.string().min(1, "Phone number is required"),
+  fullName: z.string().min(1, "Name is required"),
+  phoneNumber: z.string().optional(),
   addressLine1: z.string().min(1, "Address is required"),
   addressLine2: z.string().optional(),
   city: z.string().min(1, "City is required"),
-  state: z.string().optional(),
+  stateProvince: z.string().min(1, "State/Province is required"),
   postalCode: z.string().min(1, "Postal code is required"),
-  countryCode: z.string().min(2, "Country code is required"),
+  country: z.string().min(2, "Country is required"),
 });
 
 type AddressFormValues = z.infer<typeof addressSchema>;
@@ -35,15 +34,14 @@ export function AddressForm({ address, onSuccess, onCancel }: AddressFormProps) 
   const form = useForm<AddressFormValues>({
     resolver: zodResolver(addressSchema),
     defaultValues: address || {
-      name: '',
-      email: '',
+      fullName: '',
       phoneNumber: '',
       addressLine1: '',
       addressLine2: '',
       city: '',
-      state: '',
+      stateProvince: '',
       postalCode: '',
-      countryCode: 'US',
+      country: 'US',
     },
   });
 
@@ -90,7 +88,7 @@ export function AddressForm({ address, onSuccess, onCancel }: AddressFormProps) 
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
         <FormField
           control={form.control}
-          name="name"
+          name="fullName"
           render={({ field }) => (
             <FormItem>
               <FormLabel>Full Name</FormLabel>
@@ -102,35 +100,19 @@ export function AddressForm({ address, onSuccess, onCancel }: AddressFormProps) 
           )}
         />
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <FormField
-            control={form.control}
-            name="email"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Email</FormLabel>
-                <FormControl>
-                  <Input {...field} type="email" placeholder="john@example.com" data-testid="input-email" />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          <FormField
-            control={form.control}
-            name="phoneNumber"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Phone Number</FormLabel>
-                <FormControl>
-                  <Input {...field} placeholder="+1 (555) 123-4567" data-testid="input-phone" />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-        </div>
+        <FormField
+          control={form.control}
+          name="phoneNumber"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Phone Number (Optional)</FormLabel>
+              <FormControl>
+                <Input {...field} placeholder="+1 (555) 123-4567" data-testid="input-phone" />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
 
         <FormField
           control={form.control}
@@ -177,12 +159,12 @@ export function AddressForm({ address, onSuccess, onCancel }: AddressFormProps) 
 
           <FormField
             control={form.control}
-            name="state"
+            name="stateProvince"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>State/Province (Optional)</FormLabel>
+                <FormLabel>State/Province</FormLabel>
                 <FormControl>
-                  <Input {...field} placeholder="NY" data-testid="input-state" />
+                  <Input {...field} placeholder="CA" data-testid="input-state" />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -207,12 +189,12 @@ export function AddressForm({ address, onSuccess, onCancel }: AddressFormProps) 
 
           <FormField
             control={form.control}
-            name="countryCode"
+            name="country"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Country Code</FormLabel>
+                <FormLabel>Country</FormLabel>
                 <FormControl>
-                  <Input {...field} placeholder="US" data-testid="input-country-code" />
+                  <Input {...field} placeholder="United States" data-testid="input-country" />
                 </FormControl>
                 <FormMessage />
               </FormItem>

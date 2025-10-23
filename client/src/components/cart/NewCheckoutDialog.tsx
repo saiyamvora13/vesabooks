@@ -14,15 +14,14 @@ import { Separator } from "@/components/ui/separator";
 
 interface ShippingAddress {
   id: string;
-  name: string;
-  email: string;
-  phoneNumber: string;
+  fullName: string;
+  phoneNumber?: string;
   addressLine1: string;
   addressLine2?: string;
   city: string;
-  state?: string;
+  stateProvince: string;
   postalCode: string;
-  countryCode: string;
+  country: string;
   isDefault: boolean;
 }
 
@@ -105,15 +104,14 @@ export function NewCheckoutDialog({ open, onOpenChange, hasPrintItems, amount, o
         }
         
         payload.shippingAddress = {
-          name: selectedAddress.name,
-          email: selectedAddress.email,
+          fullName: selectedAddress.fullName,
           phoneNumber: selectedAddress.phoneNumber,
           addressLine1: selectedAddress.addressLine1,
           addressLine2: selectedAddress.addressLine2,
           city: selectedAddress.city,
-          state: selectedAddress.state,
+          stateProvince: selectedAddress.stateProvince,
           postalCode: selectedAddress.postalCode,
-          countryCode: selectedAddress.countryCode,
+          country: selectedAddress.country,
         };
       }
 
@@ -303,14 +301,14 @@ export function NewCheckoutDialog({ open, onOpenChange, hasPrintItems, amount, o
                               <Label htmlFor={`address-${address.id}`} className="flex-1 cursor-pointer">
                                 <div className="flex items-start justify-between">
                                   <div className="space-y-1">
-                                    <p className="font-medium">{address.name}</p>
+                                    <p className="font-medium">{address.fullName}</p>
                                     <div className="text-sm text-muted-foreground space-y-0.5">
                                       <p>{address.addressLine1}</p>
                                       {address.addressLine2 && <p>{address.addressLine2}</p>}
                                       <p>
-                                        {address.city}, {address.state && `${address.state}, `}{address.postalCode}
+                                        {address.city}, {address.stateProvince}, {address.postalCode}
                                       </p>
-                                      <p>{address.countryCode}</p>
+                                      <p>{address.country}</p>
                                     </div>
                                   </div>
                                   {address.isDefault && (

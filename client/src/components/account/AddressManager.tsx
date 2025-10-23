@@ -10,15 +10,14 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 
 interface ShippingAddress {
   id: string;
-  name: string;
-  email: string;
-  phoneNumber: string;
+  fullName: string;
+  phoneNumber?: string;
   addressLine1: string;
   addressLine2?: string;
   city: string;
-  state?: string;
+  stateProvince: string;
   postalCode: string;
-  countryCode: string;
+  country: string;
   isDefault: boolean;
 }
 
@@ -144,7 +143,7 @@ export function AddressManager() {
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-2">
                         <h4 className="font-semibold" data-testid={`address-name-${address.id}`}>
-                          {address.name}
+                          {address.fullName}
                         </h4>
                         {address.isDefault && (
                           <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-primary/10 text-primary text-xs font-medium" data-testid={`address-default-${address.id}`}>
@@ -157,11 +156,10 @@ export function AddressManager() {
                         <p>{address.addressLine1}</p>
                         {address.addressLine2 && <p>{address.addressLine2}</p>}
                         <p>
-                          {address.city}, {address.state && `${address.state}, `}{address.postalCode}
+                          {address.city}, {address.stateProvince}, {address.postalCode}
                         </p>
-                        <p>{address.countryCode}</p>
-                        <p className="mt-2">{address.email}</p>
-                        <p>{address.phoneNumber}</p>
+                        <p>{address.country}</p>
+                        {address.phoneNumber && <p className="mt-2">{address.phoneNumber}</p>}
                       </div>
                     </div>
                     <div className="flex flex-col gap-2 ml-4">
