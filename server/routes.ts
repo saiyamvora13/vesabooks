@@ -1635,7 +1635,17 @@ Sitemap: ${baseUrl}/sitemap.xml`;
         const files = req.files as Express.Multer.File[] | undefined;
         
         // Determine user ID (authenticated or null for anonymous)
-        const userId = req.user ? (req.user.id || req.user.claims?.sub) : null;
+        let userId = req.user ? (req.user.id || req.user.claims?.sub) : null;
+        
+        // Verify user exists in database if userId is provided
+        if (userId) {
+          const userExists = await storage.getUser(userId);
+          if (!userExists) {
+            console.warn(`User ${userId} from session not found in database, treating as anonymous`);
+            userId = null;
+          }
+        }
+        
         const isAnonymous = !userId;
 
         // Get user info for author fallback (authenticated users only)
