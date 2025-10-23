@@ -384,6 +384,7 @@ export default function OrderDetails() {
               )}
               <Button
                 variant="outline"
+                onClick={() => window.open(`/api/print-orders/invoice/${order.orderId}`, '_blank')}
                 data-testid="button-download-invoice"
               >
                 <Download className="h-4 w-4 mr-2" />

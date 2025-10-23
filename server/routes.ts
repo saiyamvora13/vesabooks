@@ -22,6 +22,7 @@ import sharp from "sharp";
 import { generatePrintReadyPDF } from "./services/printPdf";
 import { prodigiService } from "./services/prodigi";
 import { ObjectStorageService } from "./objectStorage";
+import { generateInvoicePDF } from "./services/invoicePdf";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', {
   apiVersion: "2025-09-30.clover",
@@ -4281,6 +4282,54 @@ Sitemap: ${baseUrl}/sitemap.xml`;
     } catch (error) {
       console.error("Get user print orders error:", error);
       res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Download invoice for an order (requires authentication)
+  app.get("/api/print-orders/invoice/:orderId", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.id || req.user.claims?.sub;
+      const { orderId } = req.params; // This is the Stripe Payment Intent ID
+      
+      // Get all orders for the user
+      const orders = await storage.getUserPrintOrders(userId);
+      
+      // Filter to orders matching this payment intent ID
+      const orderItems = orders.filter(order => order.purchase.stripePaymentIntentId === orderId);
+      
+      if (orderItems.length === 0) {
+        return res.status(404).json({ message: "Order not found or unauthorized" });
+      }
+      
+      // Prepare invoice data
+      const totalAmount = orderItems.reduce((sum, item) => sum + parseFloat(item.purchase.price), 0);
+      const { format } = await import('date-fns');
+      const orderDateObj = orderItems[0]?.createdAt ? new Date(orderItems[0].createdAt) : new Date();
+      const orderDate = format(orderDateObj, 'MMMM d, yyyy');
+      
+      const invoiceData = {
+        orderId,
+        orderDate,
+        items: orderItems.map(item => ({
+          title: item.storybook.title,
+          size: item.purchase.bookSize || 'Hardcover Book',
+          price: parseFloat(item.purchase.price),
+        })),
+        totalAmount: Math.round(totalAmount),
+      };
+      
+      // Generate PDF
+      const pdfBuffer = await generateInvoicePDF(invoiceData);
+      
+      // Send as downloadable file
+      const shortId = orderId.slice(-8);
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', `attachment; filename="invoice-${shortId}.pdf"`);
+      res.send(pdfBuffer);
+    } catch (error) {
+      console.error("Generate invoice error:", error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      res.status(500).json({ message: `Failed to generate invoice: ${errorMessage}` });
     }
   });
 

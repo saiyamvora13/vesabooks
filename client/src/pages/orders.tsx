@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link, useLocation } from "wouter";
 import { useTranslation } from "react-i18next";
@@ -9,8 +9,9 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { Package, ShoppingBag, ExternalLink, Calendar, Truck, MapPin, Copy, Check, ChevronRight, FileText, Download } from "lucide-react";
-import { format } from "date-fns";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Package, ShoppingBag, ExternalLink, Calendar, Truck, MapPin, Copy, Check, ChevronRight, FileText, Download, Filter } from "lucide-react";
+import { format, subMonths, subYears, subDays, isWithinInterval, startOfYear, endOfYear, startOfDay, endOfDay } from "date-fns";
 import { SEO } from "@/components/SEO";
 
 interface OrderItem {
@@ -257,6 +258,7 @@ function OrderCard({ order }: { order: GroupedOrder }) {
           <Button
             variant="outline"
             size="sm"
+            onClick={() => window.open(`/api/print-orders/invoice/${order.orderId}`, '_blank')}
             data-testid={`download-invoice-${order.orderId}`}
           >
             <Download className="h-4 w-4 mr-2" />
@@ -327,15 +329,61 @@ function OrdersSkeleton() {
   );
 }
 
+type DateFilter = 'all' | 'last-30-days' | 'last-3-months' | 'this-year' | 'last-year';
+
 export default function Orders() {
   const { t } = useTranslation();
   const [, setLocation] = useLocation();
   const { user, isLoading: authLoading } = useAuth();
+  const [dateFilter, setDateFilter] = useState<DateFilter>('all');
 
   const { data: ordersData, isLoading, error } = useQuery<OrdersResponse>({
     queryKey: ["/api/print-orders/user"],
     enabled: !!user && !authLoading,
   });
+
+  // Filter orders by date (using inclusive intervals)
+  const filteredOrders = useMemo(() => {
+    if (!ordersData?.orders) return [];
+    
+    const now = new Date();
+    const orders = ordersData.orders;
+    
+    switch (dateFilter) {
+      case 'last-30-days': {
+        const start = startOfDay(subDays(now, 30));
+        const end = endOfDay(now);
+        return orders.filter(order => 
+          isWithinInterval(new Date(order.createdAt), { start, end })
+        );
+      }
+      case 'last-3-months': {
+        const start = startOfDay(subMonths(now, 3));
+        const end = endOfDay(now);
+        return orders.filter(order => 
+          isWithinInterval(new Date(order.createdAt), { start, end })
+        );
+      }
+      case 'this-year': {
+        const start = startOfYear(now);
+        const end = endOfDay(now);
+        return orders.filter(order => 
+          isWithinInterval(new Date(order.createdAt), { start, end })
+        );
+      }
+      case 'last-year': {
+        const lastYear = subYears(now, 1);
+        const start = startOfYear(lastYear);
+        const end = endOfYear(lastYear);
+        return orders.filter(order => 
+          isWithinInterval(new Date(order.createdAt), { start, end })
+        );
+      }
+      case 'all':
+      default:
+        return orders;
+    }
+  }, [ordersData, dateFilter]);
 
   if (authLoading) {
     return (
@@ -370,7 +418,7 @@ export default function Orders() {
     );
   }
 
-  const orders = ordersData?.orders || [];
+  const orders = filteredOrders;
 
   return (
     <div className="min-h-screen bg-background">
@@ -384,9 +432,33 @@ export default function Orders() {
         <div className="max-w-6xl mx-auto">
           {/* Header */}
           <div className="mb-6">
-            <h1 className="text-3xl font-bold mb-2" data-testid="heading-orders">
-              Your Orders
-            </h1>
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-2">
+              <h1 className="text-3xl font-bold" data-testid="heading-orders">
+                Your Orders
+              </h1>
+              {ordersData && ordersData.orders.length > 0 && (
+                <div className="flex items-center gap-2">
+                  <Filter className="h-4 w-4 text-muted-foreground" />
+                  <Select value={dateFilter} onValueChange={(value) => setDateFilter(value as DateFilter)}>
+                    <SelectTrigger className="w-48" data-testid="select-date-filter">
+                      <SelectValue placeholder="Filter by date" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">All Orders</SelectItem>
+                      <SelectItem value="last-30-days">Last 30 Days</SelectItem>
+                      <SelectItem value="last-3-months">Last 3 Months</SelectItem>
+                      <SelectItem value="this-year">This Year</SelectItem>
+                      <SelectItem value="last-year">Last Year</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+            </div>
+            {dateFilter !== 'all' && orders.length > 0 && (
+              <p className="text-sm text-muted-foreground">
+                Showing {orders.length} {orders.length === 1 ? 'order' : 'orders'}
+              </p>
+            )}
           </div>
 
           {/* Orders List */}
