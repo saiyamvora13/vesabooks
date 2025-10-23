@@ -356,38 +356,50 @@ export default function View() {
     setTimeout(() => downloadEpub(), 100);
   };
 
-  const handleDirectDigitalCheckout = () => {
+  const handleDirectDigitalCheckout = async () => {
     if (!storybook || !pricing) return;
     
-    const digitalPrice = parseInt(pricing.digital_price) || 399;
-    
-    addToCart({
-      storybookId: storybook.id,
-      type: 'digital',
-      title: storybook.title,
-      price: digitalPrice,
-    });
-    
-    window.dispatchEvent(new Event('cartUpdated'));
-    setCheckoutType('digital');
-    setCheckoutDialogOpen(true);
+    try {
+      // Add to backend cart (database)
+      await apiRequest('POST', '/api/cart', {
+        storybookId: storybook.id,
+        productType: 'digital',
+        quantity: 1,
+      });
+      
+      window.dispatchEvent(new Event('cartUpdated'));
+      setCheckoutType('digital');
+      setCheckoutDialogOpen(true);
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to add item to cart. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
-  const handleDirectPrintCheckout = () => {
+  const handleDirectPrintCheckout = async () => {
     if (!storybook || !pricing) return;
     
-    const printPrice = parseInt(pricing.print_price) || 2999;
-    
-    addToCart({
-      storybookId: storybook.id,
-      type: 'print',
-      title: storybook.title,
-      price: printPrice,
-    });
-    
-    window.dispatchEvent(new Event('cartUpdated'));
-    setCheckoutType('print');
-    setCheckoutDialogOpen(true);
+    try {
+      // Add to backend cart (database)
+      await apiRequest('POST', '/api/cart', {
+        storybookId: storybook.id,
+        productType: 'print',
+        quantity: 1,
+      });
+      
+      window.dispatchEvent(new Event('cartUpdated'));
+      setCheckoutType('print');
+      setCheckoutDialogOpen(true);
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to add item to cart. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleAddToCart = () => {
