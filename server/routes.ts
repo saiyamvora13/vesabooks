@@ -1788,6 +1788,19 @@ Sitemap: ${baseUrl}/sitemap.xml`;
     }
   });
 
+  // Get user's saved storybooks (requires authentication)
+  // IMPORTANT: Must be before wildcard route to prevent matching "saved" as an ID
+  app.get("/api/storybooks/saved", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.id || req.user.claims?.sub;
+      const savedStorybooks = await storage.getSavedStorybooks(userId);
+      res.json(savedStorybooks);
+    } catch (error) {
+      console.error("Get saved storybooks error:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
   // Get storybook by ID
   app.get("/api/storybooks/:id", async (req, res) => {
     try {
@@ -1894,18 +1907,6 @@ Sitemap: ${baseUrl}/sitemap.xml`;
       res.json({ message: "Storybook removed from library" });
     } catch (error) {
       console.error("Unsave storybook error:", error);
-      res.status(500).json({ message: "Internal server error" });
-    }
-  });
-
-  // Get user's saved storybooks (requires authentication)
-  app.get("/api/storybooks/saved", isAuthenticated, async (req: any, res) => {
-    try {
-      const userId = req.user.id || req.user.claims?.sub;
-      const savedStorybooks = await storage.getSavedStorybooks(userId);
-      res.json(savedStorybooks);
-    } catch (error) {
-      console.error("Get saved storybooks error:", error);
       res.status(500).json({ message: "Internal server error" });
     }
   });
