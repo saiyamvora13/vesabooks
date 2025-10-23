@@ -4818,19 +4818,19 @@ Sitemap: ${baseUrl}/sitemap.xml`;
       
       const orders = await storage.getUserPrintOrders(userId);
       
-      // Group orders by stripePaymentIntentId
+      // Group orders by orderReference (clean ORDER-XXX format)
       const orderGroups = new Map<string, any[]>();
       
       orders.forEach(order => {
-        const paymentIntentId = order.purchase.stripePaymentIntentId;
-        if (!orderGroups.has(paymentIntentId)) {
-          orderGroups.set(paymentIntentId, []);
+        const orderReference = order.purchase.orderReference || order.purchase.stripePaymentIntentId;
+        if (!orderGroups.has(orderReference)) {
+          orderGroups.set(orderReference, []);
         }
-        orderGroups.get(paymentIntentId)!.push(order);
+        orderGroups.get(orderReference)!.push(order);
       });
       
       // Create grouped order objects
-      const groupedOrders = Array.from(orderGroups.entries()).map(([paymentIntentId, items]) => {
+      const groupedOrders = Array.from(orderGroups.entries()).map(([orderReference, items]) => {
         // Calculate total amount across all items
         const totalAmount = items.reduce((sum, item) => sum + parseFloat(item.purchase.price), 0).toString();
         
@@ -4877,7 +4877,9 @@ Sitemap: ${baseUrl}/sitemap.xml`;
         }));
         
         return {
-          orderId: paymentIntentId,
+          orderId: orderReference,
+          orderReference,
+          stripePaymentIntentId: items[0]?.purchase.stripePaymentIntentId,
           itemCount: items.length,
           totalAmount,
           status: overallStatus,
