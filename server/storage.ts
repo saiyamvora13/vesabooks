@@ -16,6 +16,7 @@ export interface IStorage {
   // Storybook operations
   createStorybook(storybook: InsertStorybook): Promise<Storybook>;
   getStorybook(id: string): Promise<Storybook | undefined>;
+  getStorybooksBatch(ids: string[]): Promise<Storybook[]>;
   getStorybookByShareUrl(shareUrl: string): Promise<Storybook | undefined>;
   getUserStorybooks(userId: string): Promise<Storybook[]>;
   getAllStorybooks(): Promise<Storybook[]>;
@@ -270,6 +271,15 @@ export class DatabaseStorage implements IStorage {
       .from(storybooks)
       .where(and(eq(storybooks.id, id), isNull(storybooks.deletedAt)));
     return storybook || undefined;
+  }
+
+  async getStorybooksBatch(ids: string[]): Promise<Storybook[]> {
+    if (ids.length === 0) return [];
+    const storybooksResult = await db
+      .select()
+      .from(storybooks)
+      .where(and(inArray(storybooks.id, ids), isNull(storybooks.deletedAt)));
+    return storybooksResult;
   }
 
   async getStorybookByShareUrl(shareUrl: string): Promise<Storybook | undefined> {

@@ -31,28 +31,50 @@ export default function Purchases() {
     enabled: isAuthenticated,
   });
 
-  // Fetch storybook details for each purchase
+  // Fetch storybook details for each purchase using batch API
   const purchasesWithStorybooks = useQuery<PurchaseWithStorybook[]>({
     queryKey: ['/api/purchases/with-storybooks', purchases],
     queryFn: async () => {
       if (!purchases || purchases.length === 0) return [];
       
-      const purchasesWithDetails = await Promise.all(
-        purchases.map(async (purchase) => {
-          try {
-            const response = await fetch(`/api/storybooks/${purchase.storybookId}`);
-            if (response.ok) {
-              const storybook = await response.json();
-              return { ...purchase, storybook };
-            }
-            return purchase;
-          } catch (error) {
-            return purchase;
+      // Extract unique storybook IDs
+      const storybookIds = Array.from(new Set(purchases.map(p => p.storybookId)));
+      
+      // Chunk IDs into batches of 100 (server limit)
+      const chunkSize = 100;
+      const chunks: string[][] = [];
+      for (let i = 0; i < storybookIds.length; i += chunkSize) {
+        chunks.push(storybookIds.slice(i, i + chunkSize));
+      }
+      
+      // Fetch all chunks in parallel
+      const chunkResults = await Promise.all(
+        chunks.map(async (chunk) => {
+          const response = await fetch('/api/storybooks/batch', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ ids: chunk }),
+          });
+          
+          if (!response.ok) {
+            throw new Error('Failed to fetch storybooks');
           }
+          
+          return response.json() as Promise<Storybook[]>;
         })
       );
       
-      return purchasesWithDetails;
+      // Flatten all storybooks from chunks
+      const storybooks = chunkResults.flat();
+      
+      // Create a map for quick lookup
+      const storybookMap = new Map(storybooks.map(s => [s.id, s]));
+      
+      // Combine purchases with their storybooks
+      return purchases.map(purchase => ({
+        ...purchase,
+        storybook: storybookMap.get(purchase.storybookId),
+      }));
     },
     enabled: !!purchases && purchases.length > 0,
   });

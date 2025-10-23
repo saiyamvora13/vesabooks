@@ -1815,6 +1815,32 @@ Sitemap: ${baseUrl}/sitemap.xml`;
     }
   });
 
+  // Get multiple storybooks by IDs (batch fetch)
+  // IMPORTANT: Must be before wildcard route to prevent matching "batch" as an ID
+  app.post("/api/storybooks/batch", async (req, res) => {
+    try {
+      const { ids } = req.body;
+      
+      if (!Array.isArray(ids)) {
+        return res.status(400).json({ message: "ids must be an array" });
+      }
+      
+      if (ids.length === 0) {
+        return res.json([]);
+      }
+      
+      if (ids.length > 100) {
+        return res.status(400).json({ message: "Maximum 100 IDs allowed per request" });
+      }
+      
+      const storybooksResult = await storage.getStorybooksBatch(ids);
+      res.json(storybooksResult);
+    } catch (error) {
+      console.error("Batch get storybooks error:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
   // Get storybook by ID
   app.get("/api/storybooks/:id", async (req, res) => {
     try {
