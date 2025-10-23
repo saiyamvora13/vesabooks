@@ -128,6 +128,7 @@ export interface IStorage {
   unsaveStorybook(userId: string, storybookId: string): Promise<void>;
   getSavedStorybooks(userId: string): Promise<Storybook[]>;
   isSaved(userId: string, storybookId: string): Promise<boolean>;
+  claimStorybook(storybookId: string, userId: string): Promise<boolean>;
   
   // Print Order operations
   createPrintOrder(printOrder: InsertPrintOrder): Promise<PrintOrder>;
@@ -1174,6 +1175,21 @@ export class DatabaseStorage implements IStorage {
       .limit(1);
     
     return saved !== undefined;
+  }
+
+  async claimStorybook(storybookId: string, userId: string): Promise<boolean> {
+    const result = await db
+      .update(storybooks)
+      .set({ userId })
+      .where(
+        and(
+          eq(storybooks.id, storybookId),
+          isNull(storybooks.userId)
+        )
+      )
+      .returning({ id: storybooks.id });
+    
+    return result.length > 0;
   }
 
   // Print Order operations

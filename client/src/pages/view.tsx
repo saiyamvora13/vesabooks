@@ -126,6 +126,31 @@ export default function View() {
     }
   };
 
+  // Claim storybook mutation
+  const claimStorybookMutation = useMutation({
+    mutationFn: async () => {
+      if (!storybookId) throw new Error('No storybook ID');
+      const res = await apiRequest('POST', `/api/storybooks/${storybookId}/claim`, {});
+      return res.json();
+    },
+    onSuccess: () => {
+      // Invalidate and refetch the storybook
+      queryClient.invalidateQueries({ queryKey: ['/api/storybooks', storybookId] });
+      queryClient.invalidateQueries({ queryKey: ['/api/storybooks'] }); // Refresh library
+      toast({
+        title: "Storybook claimed!",
+        description: "This storybook has been added to your library.",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Failed to claim storybook",
+        description: error.message || "An error occurred while claiming the storybook.",
+        variant: "destructive",
+      });
+    },
+  });
+
   // Track view count and analytics when viewing public storybook
   useEffect(() => {
     if (!storybook || !storybookId) return;
@@ -466,6 +491,21 @@ export default function View() {
                 >
                   <Star className="h-4 md:h-4 w-4 md:w-4 mr-2" />
                   <span className="text-sm md:text-base">Rate</span>
+                </Button>
+              )}
+
+              {isAuthenticated && !storybook?.userId && (
+                <Button 
+                  variant="default" 
+                  className="rounded-xl flex-1 md:flex-initial min-h-[48px] md:min-h-0 bg-primary hover:bg-primary/90" 
+                  onClick={() => claimStorybookMutation.mutate()}
+                  disabled={claimStorybookMutation.isPending}
+                  data-testid="button-claim-storybook"
+                >
+                  <i className={`fas ${claimStorybookMutation.isPending ? 'fa-spinner fa-spin' : 'fa-heart'} mr-2`}></i>
+                  <span className="text-sm md:text-base">
+                    {claimStorybookMutation.isPending ? 'Claiming...' : 'Claim Book'}
+                  </span>
                 </Button>
               )}
               

@@ -1900,6 +1900,32 @@ Sitemap: ${baseUrl}/sitemap.xml`;
     }
   });
 
+  // Claim a guest-created storybook (requires authentication)
+  app.post("/api/storybooks/:id/claim", isAuthenticated, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const userId = req.user.id || req.user.claims?.sub;
+
+      // Get the storybook to verify it exists
+      const storybook = await storage.getStorybook(id);
+      if (!storybook) {
+        return res.status(404).json({ message: "Storybook not found" });
+      }
+
+      // Atomically claim the storybook (only succeeds if userId is NULL)
+      const claimed = await storage.claimStorybook(id, userId);
+
+      if (!claimed) {
+        return res.status(409).json({ message: "This storybook has already been claimed by another user" });
+      }
+
+      res.json({ message: "Storybook successfully claimed and added to your library" });
+    } catch (error) {
+      console.error("Claim storybook error:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
   // Get storybook by share URL
   app.get("/api/shared/:shareUrl", async (req, res) => {
     try {
