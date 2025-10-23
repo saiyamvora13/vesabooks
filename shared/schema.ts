@@ -103,6 +103,7 @@ export const purchases = pgTable("purchases", {
   storybookId: varchar("storybook_id").notNull().references(() => storybooks.id, { onDelete: 'cascade' }),
   type: text("type").notNull(),
   price: numeric("price").notNull(),
+  orderReference: text("order_reference"), // Clean order ID like ORDER-ABC12345
   stripePaymentIntentId: text("stripe_payment_intent_id").notNull(),
   status: text("status").notNull().default('pending'),
   bookSize: text("book_size").default('a5-portrait'),
@@ -113,6 +114,7 @@ export const purchases = pgTable("purchases", {
 }, (table) => [
   index("idx_purchases_user").on(table.userId),
   index("idx_purchases_storybook").on(table.storybookId),
+  index("idx_purchases_order_reference").on(table.orderReference),
   unique().on(table.stripePaymentIntentId, table.storybookId, table.type),
 ]);
 
