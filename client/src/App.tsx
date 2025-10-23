@@ -1,5 +1,5 @@
-import { lazy, Suspense } from "react";
-import { Switch, Route } from "wouter";
+import { lazy, Suspense, useEffect } from "react";
+import { Switch, Route, useLocation } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
@@ -44,6 +44,17 @@ function PageLoader() {
   );
 }
 
+// Redirect component
+function RedirectTo({ to }: { to: string }) {
+  const [, setLocation] = useLocation();
+  
+  useEffect(() => {
+    setLocation(to);
+  }, [to, setLocation]);
+  
+  return null;
+}
+
 function Router() {
   return (
     <Suspense fallback={<PageLoader />}>
@@ -65,6 +76,9 @@ function Router() {
         <Route path="/shared/:shareUrl" component={View} />
         
         {/* Admin Routes */}
+        <Route path="/admin">
+          {() => <RedirectTo to="/admin/dashboard" />}
+        </Route>
         <Route path="/admin/login" component={AdminLogin} />
         <Route path="/admin/dashboard" component={AdminDashboard} />
         <Route path="/admin/analytics" component={AdminAnalytics} />
