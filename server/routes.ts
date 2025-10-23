@@ -3151,10 +3151,12 @@ Sitemap: ${baseUrl}/sitemap.xml`;
     }
   });
 
-  // Cart checkout - Create payment intent for entire cart (requires authentication)
+  // Cart checkout - For two-phase order flow (requires authentication)
+  // Returns clientSecret for SetupIntent (new cards) or confirmation that saved method will be used
   app.post("/api/cart/checkout", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.id || req.user.claims?.sub;
+      const { paymentMethodId } = req.body; // Optional: use saved payment method
       
       // Get all cart items
       const cartItems = await storage.getCartItems(userId);
@@ -3202,23 +3204,42 @@ Sitemap: ${baseUrl}/sitemap.xml`;
         });
       }
 
-      // Create Stripe payment intent
-      const paymentIntent = await stripe.paymentIntents.create({
-        amount: total,
-        currency: 'usd',
-        automatic_payment_methods: {
-          enabled: true,
-        },
+      // If using a saved payment method, verify it belongs to user
+      if (paymentMethodId) {
+        const savedMethod = await storage.getPaymentMethod(paymentMethodId, userId);
+        if (!savedMethod) {
+          return res.status(400).json({ message: "Payment method not found or does not belong to you" });
+        }
+
+        // Return confirmation - no clientSecret needed
+        return res.json({
+          useSavedMethod: true,
+          paymentMethodId: savedMethod.id,
+          stripePaymentMethodId: savedMethod.stripePaymentMethodId,
+          amount: total,
+          items: processedItems,
+        });
+      }
+
+      // For new payment methods, create a SetupIntent (Amazon-style: capture card without charging)
+      const user = await storage.getUser(userId);
+      const setupIntent = await stripe.setupIntents.create({
+        payment_method_types: ['card'],
         metadata: {
           userId,
-          source: 'cart',
+          userEmail: user?.email || '',
+          source: 'cart_checkout',
+          amount: total.toString(),
           items: JSON.stringify(processedItems),
         },
       });
 
       res.json({ 
-        clientSecret: paymentIntent.client_secret,
+        clientSecret: setupIntent.client_secret,
+        setupIntentId: setupIntent.id,
         amount: total,
+        items: processedItems,
+        useSavedMethod: false,
       });
     } catch (error) {
       console.error("Cart checkout error:", error);
@@ -3240,14 +3261,17 @@ Sitemap: ${baseUrl}/sitemap.xml`;
     countryCode: z.string().min(2, "Country code is required"),
   }).optional();
 
-  // Finalize cart purchase after payment succeeds (requires authentication)
+  // Finalize cart purchase - TWO-PHASE ORDER FLOW (Amazon-style)
+  // Creates order in 'creating' status WITHOUT charging
+  // Prodigi webhook will trigger payment charge after confirmation
   app.post("/api/cart/finalize", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.id || req.user.claims?.sub;
-      const { paymentIntentId, shippingAddress } = req.body;
+      const { setupIntentId, paymentMethodId, shippingAddress, savePaymentMethod } = req.body;
 
-      if (!paymentIntentId) {
-        return res.status(400).json({ message: "Payment intent ID is required" });
+      // Must have either setupIntentId (new card) or paymentMethodId (saved card)
+      if (!setupIntentId && !paymentMethodId) {
+        return res.status(400).json({ message: "Either setupIntentId or paymentMethodId is required" });
       }
 
       // Validate shipping address if provided
@@ -3261,20 +3285,91 @@ Sitemap: ${baseUrl}/sitemap.xml`;
         }
       }
 
-      // Verify payment intent belongs to this user
-      const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
-      
-      if (paymentIntent.metadata.userId !== userId) {
-        return res.status(403).json({ message: "Unauthorized" });
+      let stripePaymentMethodId: string;
+
+      // Get or create payment method
+      if (setupIntentId) {
+        // New payment method - retrieve from SetupIntent
+        const setupIntent = await stripe.setupIntents.retrieve(setupIntentId);
+        
+        if (!setupIntent.metadata || setupIntent.metadata.userId !== userId) {
+          return res.status(403).json({ message: "Unauthorized" });
+        }
+
+        if (setupIntent.status !== 'succeeded') {
+          return res.status(400).json({ message: "Payment method setup has not succeeded" });
+        }
+
+        if (!setupIntent.payment_method) {
+          return res.status(400).json({ message: "No payment method attached to SetupIntent" });
+        }
+
+        stripePaymentMethodId = setupIntent.payment_method as string;
+
+        // Optionally save payment method to user's profile
+        if (savePaymentMethod) {
+          const paymentMethod = await stripe.paymentMethods.retrieve(stripePaymentMethodId);
+          
+          if (paymentMethod.type === 'card' && paymentMethod.card) {
+            try {
+              await storage.createPaymentMethod(userId, {
+                stripePaymentMethodId: paymentMethod.id,
+                cardBrand: paymentMethod.card.brand,
+                cardLast4: paymentMethod.card.last4,
+                cardExpMonth: paymentMethod.card.exp_month,
+                cardExpYear: paymentMethod.card.exp_year,
+                isDefault: false,
+              });
+              console.log(`[Cart Finalize] Saved payment method ${paymentMethod.card.brand} ****${paymentMethod.card.last4} for user ${userId}`);
+            } catch (error) {
+              console.error("[Cart Finalize] Failed to save payment method:", error);
+              // Don't fail the order if saving fails
+            }
+          }
+        }
+      } else {
+        // Using saved payment method
+        const savedMethod = await storage.getPaymentMethod(paymentMethodId!, userId);
+        if (!savedMethod) {
+          return res.status(404).json({ message: "Payment method not found" });
+        }
+        stripePaymentMethodId = savedMethod.stripePaymentMethodId;
       }
 
-      if (paymentIntent.status !== 'succeeded') {
-        return res.status(400).json({ message: "Payment has not succeeded" });
+      // Get cart items
+      const cartItems = await storage.getCartItems(userId);
+      
+      if (cartItems.length === 0) {
+        return res.status(400).json({ message: "Cart is empty" });
       }
 
-      // Get items from payment intent metadata
-      const items = JSON.parse(paymentIntent.metadata.items || '[]');
-      
+      // Calculate prices
+      const digitalPriceSetting = await storage.getSetting('digital_price');
+      const printPriceSetting = await storage.getSetting('print_price');
+      const digitalPrice = digitalPriceSetting ? parseInt(digitalPriceSetting.value) : 399;
+      const printPrice = printPriceSetting ? parseInt(printPriceSetting.value) : 2499;
+
+      const items = [];
+      for (const item of cartItems) {
+        let price = item.productType === 'digital' ? digitalPrice : printPrice;
+        
+        if (item.productType === 'print') {
+          const existingDigitalPurchase = await storage.getStorybookPurchase(userId, item.storybookId, 'digital');
+          const existingPrintPurchase = await storage.getStorybookPurchase(userId, item.storybookId, 'print');
+          if (existingDigitalPurchase && !existingPrintPurchase) {
+            price = Math.max(0, printPrice - digitalPrice);
+          }
+        }
+
+        items.push({
+          storybookId: item.storybookId,
+          type: item.productType,
+          price,
+          bookSize: item.bookSize || 'a5-portrait',
+          quantity: item.quantity,
+        });
+      }
+
       // Check if cart contains print items
       const hasPrintItems = items.some((item: any) => item.type === 'print');
       
@@ -3284,14 +3379,16 @@ Sitemap: ${baseUrl}/sitemap.xml`;
           message: "Shipping address is required for print orders" 
         });
       }
+
+      // Generate a unique order reference (NOT a PaymentIntent yet - we don't charge yet!)
+      const orderReference = `ORDER-${Date.now()}-${userId.substring(0, 8)}`;
       
       const createdPurchases = [];
 
-      // Create purchase records for each item
+      // Create purchase records in 'creating' status (NOT charged yet)
       for (const item of items) {
         const { storybookId, type, price, bookSize, quantity } = item;
         
-        // Create purchases for each quantity
         for (let i = 0; i < quantity; i++) {
           try {
             const purchaseData: any = {
@@ -3299,8 +3396,8 @@ Sitemap: ${baseUrl}/sitemap.xml`;
               storybookId,
               type,
               price: price.toString(),
-              stripePaymentIntentId: paymentIntentId,
-              status: 'completed',
+              stripePaymentIntentId: orderReference, // Placeholder - actual PaymentIntent created after Prodigi confirms
+              status: 'creating', // Order is being created, NOT completed
             };
             
             if (type === 'print') {
@@ -3310,9 +3407,8 @@ Sitemap: ${baseUrl}/sitemap.xml`;
             const purchase = await storage.createPurchase(purchaseData);
             createdPurchases.push(purchase);
           } catch (error: any) {
-            // Handle duplicate purchase (unique constraint violation)
             if (error.message?.includes('unique') || error.code === '23505') {
-              console.log(`Purchase already exists for payment intent ${paymentIntentId}, storybookId ${storybookId} - skipping`);
+              console.log(`[Cart Finalize] Purchase already exists for ${orderReference}, storybookId ${storybookId} - skipping`);
             } else {
               throw error;
             }
@@ -3320,7 +3416,9 @@ Sitemap: ${baseUrl}/sitemap.xml`;
         }
       }
 
-      // Process print orders with Prodigi - combine all items into ONE order
+      // Process print orders with Prodigi - TWO-PHASE FLOW
+      // Create orders in 'creating' status, submit to Prodigi WITHOUT charging
+      // Prodigi webhook will trigger payment charge after confirmation
       const printPurchases = createdPurchases.filter(p => p.type === 'print');
       
       if (printPurchases.length > 0) {
@@ -3339,7 +3437,7 @@ Sitemap: ${baseUrl}/sitemap.xml`;
           const printPurchase = printPurchases[i];
           
           try {
-            console.log(`[Prodigi] Processing print item ${i + 1}/${printPurchases.length} for purchase ${printPurchase.id}`);
+            console.log(`[Prodigi Two-Phase] Processing print item ${i + 1}/${printPurchases.length} for purchase ${printPurchase.id}`);
             
             // Get the storybook
             const storybook = await storage.getStorybook(printPurchase.storybookId);
@@ -3370,27 +3468,22 @@ Sitemap: ${baseUrl}/sitemap.xml`;
             // Clean up temporary file
             fs.unlinkSync(tempPdfPath);
             
-            console.log(`[Prodigi] PDF uploaded to ${pdfStoragePath}`);
+            console.log(`[Prodigi Two-Phase] PDF uploaded to ${pdfStoragePath}`);
             
-            // Get full PDF URL for Prodigi (use REPLIT_DOMAINS for correct dev/prod URL)
+            // Get full PDF URL for Prodigi
             const baseUrl = process.env.REPLIT_DOMAINS 
               ? `https://${process.env.REPLIT_DOMAINS.split(',')[0]}`
               : 'http://localhost:5000';
             const pdfUrl = `${baseUrl}${pdfStoragePath}`;
             
-            console.log(`[Prodigi] DEBUG - pdfUrl for item ${i + 1}: ${pdfUrl}`);
-            
             // Get product SKU
             const sku = prodigiService.getProductSKU(printPurchase.bookSize || 'a5-portrait', storybook.pages.length);
-            console.log(`[Prodigi] Book size: ${printPurchase.bookSize}, Generated SKU: ${sku}`);
             
             // All photobooks use printArea: "default" for the PDF asset
             const asset: any = { 
               printArea: 'default',
               url: pdfUrl 
             };
-            
-            console.log(`[Prodigi] Asset:`, JSON.stringify(asset));
             
             // Add item to Prodigi order
             prodigiItems.push({
@@ -3404,22 +3497,23 @@ Sitemap: ${baseUrl}/sitemap.xml`;
             // Map item index to purchase ID for later reference
             purchaseIdMapping[i] = printPurchase.id;
           } catch (error) {
-            console.error(`[Prodigi] Failed to prepare item for purchase ${printPurchase.id}:`, error);
+            console.error(`[Prodigi Two-Phase] Failed to prepare item for purchase ${printPurchase.id}:`, error);
             
             // Create print_orders record with error status
             try {
               await storage.createPrintOrder({
                 purchaseId: printPurchase.id,
+                stripePaymentMethodId, // Save payment method for potential retry
                 status: 'failed',
                 errorMessage: error instanceof Error ? error.message : 'Unknown error',
               });
             } catch (dbError) {
-              console.error(`[Prodigi] Failed to create print order record:`, dbError);
+              console.error(`[Prodigi Two-Phase] Failed to create print order record:`, dbError);
             }
           }
         }
         
-        // Step 2: Create ONE Prodigi order with all items (only if we have items)
+        // Step 2: Submit to Prodigi WITHOUT charging (orders in 'creating' status)
         if (prodigiItems.length > 0) {
           try {
             const recipient = {
@@ -3443,27 +3537,27 @@ Sitemap: ${baseUrl}/sitemap.xml`;
               : 'http://localhost:5000';
             const callbackUrl = `${baseCallbackUrl}/api/webhook/prodigi-${webhookSecret}`;
             
-            console.log(`[Prodigi] Creating single order with ${prodigiItems.length} items`);
-            console.log(`[Prodigi] Using callback URL: ${callbackUrl}`);
-            console.log(`[Prodigi] DEBUG - Final prodigiItems:`, JSON.stringify(prodigiItems, null, 2));
+            console.log(`[Prodigi Two-Phase] Submitting order with ${prodigiItems.length} items (NO CHARGE YET)`);
+            console.log(`[Prodigi Two-Phase] Using callback URL: ${callbackUrl}`);
 
-            // Use payment intent ID as merchant reference for the combined order
+            // Submit to Prodigi
             const prodigiOrder = await prodigiService.createOrder({
-              merchantReference: `ORDER-${paymentIntentId}`,
+              merchantReference: orderReference,
               shippingMethod: 'Standard',
               recipient,
               items: prodigiItems,
               callbackUrl,
               metadata: {
-                paymentIntentId,
+                orderReference,
                 userId,
                 purchaseCount: prodigiItems.length,
+                paymentPhase: 'deferred', // Indicates this is a two-phase order
               },
             });
             
-            console.log(`[Prodigi] Order created: ${prodigiOrder.id} with ${prodigiItems.length} items`);
+            console.log(`[Prodigi Two-Phase] Order submitted: ${prodigiOrder.id} - Payment will be charged after confirmation`);
             
-            // Step 3: Create print_orders records for each purchase, all linking to the same Prodigi order
+            // Step 3: Create print_orders records with 'creating' status and save payment method ID
             for (let i = 0; i < prodigiItems.length; i++) {
               const purchaseId = purchaseIdMapping[i];
               
@@ -3471,29 +3565,31 @@ Sitemap: ${baseUrl}/sitemap.xml`;
                 await storage.createPrintOrder({
                   purchaseId,
                   prodigiOrderId: prodigiOrder.id,
-                  status: 'submitted',
+                  stripePaymentMethodId, // CRITICAL: Save for deferred charging
+                  status: 'creating', // Order submitted to Prodigi, awaiting confirmation
                 });
                 
-                console.log(`[Prodigi] Print order record created for purchase ${purchaseId}`);
+                console.log(`[Prodigi Two-Phase] Print order created in 'creating' status for purchase ${purchaseId}`);
               } catch (error) {
-                console.error(`[Prodigi] Failed to create print order record for purchase ${purchaseId}:`, error);
+                console.error(`[Prodigi Two-Phase] Failed to create print order record for purchase ${purchaseId}:`, error);
               }
             }
           } catch (error) {
-            console.error(`[Prodigi] Failed to create combined Prodigi order:`, error);
+            console.error(`[Prodigi Two-Phase] Failed to submit Prodigi order:`, error);
             
-            // Create failed print_orders records for all purchases that were supposed to be in this order
+            // Create failed print_orders records
             for (let i = 0; i < prodigiItems.length; i++) {
               const purchaseId = purchaseIdMapping[i];
               
               try {
                 await storage.createPrintOrder({
                   purchaseId,
+                  stripePaymentMethodId,
                   status: 'failed',
                   errorMessage: error instanceof Error ? error.message : 'Unknown error',
                 });
               } catch (dbError) {
-                console.error(`[Prodigi] Failed to create print order record for purchase ${purchaseId}:`, dbError);
+                console.error(`[Prodigi Two-Phase] Failed to create print order record for purchase ${purchaseId}:`, dbError);
               }
             }
           }
@@ -3505,7 +3601,9 @@ Sitemap: ${baseUrl}/sitemap.xml`;
 
       res.json({ 
         purchases: createdPurchases,
-        message: "Cart purchase finalized successfully",
+        orderReference,
+        message: "Order created successfully. Payment will be charged after print confirmation.",
+        paymentStatus: 'deferred', // Indicates two-phase flow
       });
     } catch (error) {
       console.error("Cart finalize error:", error);
@@ -3862,6 +3960,183 @@ Sitemap: ${baseUrl}/sitemap.xml`;
       for (const printOrder of printOrders) {
         await storage.updatePrintOrderStatus(printOrder.id, updates);
         console.log(`[Prodigi Webhook] ✅ Updated print order ${printOrder.id}`);
+      }
+
+      // TWO-PHASE ORDER FLOW: Deferred Payment Charging
+      // If order status changed to 'InProgress' AND print orders need payment,
+      // charge the customer NOW
+      if (status?.stage === 'InProgress') {
+        // Process orders in BOTH 'creating' AND 'charging' status
+        // 'creating' = new orders awaiting first charge attempt
+        // 'charging' = orders that were interrupted mid-charge (retry them)
+        const ordersAwaitingCharge = printOrders.filter(po => 
+          (po.status === 'creating' || po.status === 'charging') && 
+          po.stripePaymentMethodId
+        );
+        
+        if (ordersAwaitingCharge.length > 0) {
+          console.log(`[Prodigi Two-Phase] 🔔 Order confirmed! Attempting to charge payment for ${ordersAwaitingCharge.length} order(s)`);
+          
+          try {
+            // CRITICAL RACE CONDITION FIX #1: Atomic status transition
+            // Update orders from 'creating' to 'charging' to prevent concurrent webhooks
+            // Orders already in 'charging' will be retried (resilience against crashes)
+            let updatedCount = 0;
+            const ordersToCharge: typeof ordersAwaitingCharge = [];
+            
+            for (const printOrder of ordersAwaitingCharge) {
+              if (printOrder.status === 'charging') {
+                // Already in charging state (previous attempt was interrupted) - retry it
+                ordersToCharge.push(printOrder);
+                updatedCount++;
+                console.log(`[Prodigi Two-Phase] Retrying interrupted charge for order ${printOrder.id}`);
+              } else {
+                // Atomic update: only update if current status is still 'creating'
+                const updated = await storage.atomicUpdatePrintOrderStatus(
+                  printOrder.id,
+                  'creating', // fromStatus
+                  'charging'  // toStatus
+                );
+                if (updated) {
+                  ordersToCharge.push(printOrder);
+                  updatedCount++;
+                }
+              }
+            }
+            
+            if (updatedCount === 0) {
+              // Another webhook already started processing - skip this one
+              console.log(`[Prodigi Two-Phase] ⏭️  Payment already being processed by another webhook - skipping`);
+              // Continue to final response without charging
+            } else {
+              console.log(`[Prodigi Two-Phase] ✅ Acquired payment lock for ${updatedCount} order(s)`);
+              
+              // Get the first order to extract payment details (all orders share same payment method)
+              const firstOrder = ordersToCharge[0];
+              const paymentMethodId = firstOrder.stripePaymentMethodId!;
+              
+              // Calculate total amount from all purchases associated with these print orders
+              let totalAmount = 0;
+              const purchaseIds: string[] = [];
+              
+              for (const printOrder of ordersToCharge) {
+                const purchase = await storage.getUserPurchases(printOrder.id);
+                const matchingPurchase = purchase.find(p => p.id === printOrder.purchaseId);
+                if (matchingPurchase) {
+                  totalAmount += parseInt(matchingPurchase.price);
+                  purchaseIds.push(matchingPurchase.id);
+                }
+              }
+              
+              if (totalAmount === 0 || purchaseIds.length === 0) {
+                throw new Error('No purchases found or total amount is zero');
+              }
+              
+              console.log(`[Prodigi Two-Phase] Charging $${(totalAmount / 100).toFixed(2)} USD for ${purchaseIds.length} purchase(s)`);
+              
+              // CRITICAL RACE CONDITION FIX #2: Stripe idempotency key
+              // Use prodigiOrderId as idempotency key to ensure only ONE charge even if this branch is re-entered
+              const idempotencyKey = `deferred-charge-${prodigiOrderId}`;
+              
+              // Create and immediately confirm PaymentIntent with saved payment method
+              const paymentIntent = await stripe.paymentIntents.create({
+                amount: totalAmount,
+                currency: 'usd',
+                payment_method: paymentMethodId,
+                confirm: true, // Charge immediately
+                automatic_payment_methods: {
+                  enabled: true,
+                  allow_redirects: 'never', // No 3D Secure redirects for saved cards
+                },
+                metadata: {
+                  orderReference: merchantReference || prodigiOrderId,
+                  prodigiOrderId,
+                  purchaseIds: purchaseIds.join(','),
+                  deferred: 'true',
+                },
+              }, {
+                idempotencyKey, // CRITICAL: Prevents duplicate charges even if API is called twice
+              });
+            
+              if (paymentIntent.status === 'succeeded') {
+                console.log(`[Prodigi Two-Phase] ✅ Payment succeeded: ${paymentIntent.id}`);
+                
+                // Update all purchases to 'pending' status (payment charged, awaiting fulfillment)
+                for (const purchaseId of purchaseIds) {
+                  await storage.updatePurchaseStatus(purchaseId, 'pending', paymentIntent.id);
+                }
+                
+                // Update print orders to 'pending' status
+                for (const printOrder of ordersToCharge) {
+                  await storage.updatePrintOrderStatus(printOrder.id, { 
+                    status: 'pending',
+                    updatedAt: new Date(),
+                  });
+                }
+                
+                console.log(`[Prodigi Two-Phase] ✅ Orders updated to 'pending' status`);
+                
+                // TODO: Send confirmation email to customer
+              } else {
+                throw new Error(`Payment failed with status: ${paymentIntent.status}`);
+              }
+            }
+          } catch (chargeError) {
+            console.error(`[Prodigi Two-Phase] ❌ Payment charge FAILED:`, chargeError);
+            
+            // Determine if this is a permanent failure or temporary error
+            const isPermanentFailure = chargeError instanceof Error && 
+              (chargeError.message.includes('card_declined') || 
+               chargeError.message.includes('insufficient_funds') ||
+               chargeError.message.includes('payment_method'));
+            
+            if (isPermanentFailure) {
+              // Permanent failure - cancel the Prodigi order
+              console.log(`[Prodigi Two-Phase] Permanent payment failure - cancelling Prodigi order`);
+              
+              try {
+                await prodigiService.cancelOrder(prodigiOrderId);
+                console.log(`[Prodigi Two-Phase] Prodigi order ${prodigiOrderId} cancelled`);
+              } catch (cancelError) {
+                console.error(`[Prodigi Two-Phase] Failed to cancel Prodigi order:`, cancelError);
+              }
+              
+              // Update all purchases and print orders to 'cancelled' status
+              for (const printOrder of ordersToCharge) {
+                try {
+                  await storage.updatePurchaseStatus(printOrder.purchaseId, 'cancelled');
+                  await storage.updatePrintOrderStatus(printOrder.id, {
+                    status: 'cancelled',
+                    errorMessage: `Payment failed: ${chargeError instanceof Error ? chargeError.message : 'Unknown error'}`,
+                    updatedAt: new Date(),
+                  });
+                } catch (updateError) {
+                  console.error(`[Prodigi Two-Phase] Failed to update order ${printOrder.id}:`, updateError);
+                }
+              }
+              
+              console.log(`[Prodigi Two-Phase] Orders cancelled due to permanent payment failure`);
+              // TODO: Send payment failed email to customer
+            } else {
+              // Temporary error (network, timeout, etc.) - revert to 'creating' for retry
+              console.log(`[Prodigi Two-Phase] Temporary error - reverting orders to 'creating' for retry`);
+              
+              for (const printOrder of ordersToCharge) {
+                try {
+                  await storage.updatePrintOrderStatus(printOrder.id, {
+                    status: 'creating', // Revert to allow retry
+                    errorMessage: `Temporary charge error (will retry): ${chargeError instanceof Error ? chargeError.message : 'Unknown error'}`,
+                    updatedAt: new Date(),
+                  });
+                } catch (updateError) {
+                  console.error(`[Prodigi Two-Phase] Failed to revert order ${printOrder.id}:`, updateError);
+                }
+              }
+              
+              console.log(`[Prodigi Two-Phase] Orders reverted to 'creating' - will retry on next webhook`);
+            }
+          }
+        }
       }
 
       console.log(`[Prodigi Webhook]    Prodigi Order: ${prodigiOrderId}`);

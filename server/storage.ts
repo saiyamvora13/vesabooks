@@ -140,6 +140,7 @@ export interface IStorage {
   getPrintOrderWithDetails(printOrderId: string): Promise<{ printOrder: PrintOrder; purchase: Purchase; storybook: Storybook; user: User } | null>;
   updatePrintOrder(id: string, data: Partial<PrintOrder>): Promise<PrintOrder>;
   updatePrintOrderStatus(printOrderId: string, updates: Partial<PrintOrder>): Promise<PrintOrder>;
+  atomicUpdatePrintOrderStatus(printOrderId: string, fromStatus: string, toStatus: string): Promise<boolean>;
   getAllPrintOrders(limit?: number): Promise<PrintOrder[]>;
   getUserPrintOrders(userId: string): Promise<Array<PrintOrder & { purchase: Purchase; storybook: Storybook }>>;
   
@@ -1320,6 +1321,22 @@ export class DatabaseStorage implements IStorage {
       .where(eq(printOrders.id, printOrderId))
       .returning();
     return updatedPrintOrder;
+  }
+
+  // Atomic status update - prevents race conditions by only updating if current status matches
+  // Returns true if update succeeded, false if status didn't match (another process already updated)
+  async atomicUpdatePrintOrderStatus(printOrderId: string, fromStatus: string, toStatus: string): Promise<boolean> {
+    const result = await db
+      .update(printOrders)
+      .set({ status: toStatus, updatedAt: new Date() })
+      .where(and(
+        eq(printOrders.id, printOrderId),
+        eq(printOrders.status, fromStatus) // CRITICAL: Only update if current status matches
+      ))
+      .returning();
+    
+    // Return true if exactly one row was updated
+    return result.length === 1;
   }
 
   async getAllPrintOrders(limit: number = 100): Promise<PrintOrder[]> {
