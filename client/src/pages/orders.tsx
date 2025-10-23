@@ -5,12 +5,11 @@ import { useTranslation } from "react-i18next";
 import { useAuth } from "@/hooks/useAuth";
 import Navigation from "@/components/navigation";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { Package, ShoppingBag, ExternalLink, Calendar, Truck, MapPin, DollarSign, PackageOpen, Copy, Check, ChevronDown, ChevronUp } from "lucide-react";
+import { Package, ShoppingBag, ExternalLink, Calendar, Truck, MapPin, Copy, Check, ChevronRight, FileText, Download } from "lucide-react";
 import { format } from "date-fns";
 import { SEO } from "@/components/SEO";
 
@@ -89,12 +88,12 @@ function formatStatus(status: string): string {
     case 'inprogress':
       return 'In Progress';
     case 'complete':
-      return 'Complete';
+      return 'Delivered';
     case 'cancelled':
       return 'Cancelled';
     case 'pending':
     default:
-      return 'Pending';
+      return 'Processing';
   }
 }
 
@@ -112,107 +111,15 @@ function formatPrice(priceStr: string): string {
   return (price / 100).toFixed(2);
 }
 
-function OrderItemCard({ item }: { item: OrderItem }) {
-  const coverImageUrl = item.storybook.coverImageUrl;
-  const hasTracking = item.trackingNumber || item.trackingUrl;
-
-  return (
-    <div className="border rounded-lg p-4 bg-muted/30 dark:bg-muted/10" data-testid={`order-item-${item.id}`}>
-      <div className="flex flex-col sm:flex-row gap-4">
-        {/* Cover Image */}
-        <div className="flex-shrink-0">
-          {coverImageUrl ? (
-            <img
-              src={coverImageUrl}
-              alt={`${item.storybook.title} cover`}
-              className="w-full sm:w-20 h-28 sm:h-30 object-cover rounded-lg"
-              data-testid={`item-cover-${item.id}`}
-              loading="lazy"
-            />
-          ) : (
-            <div className="w-full sm:w-20 h-28 sm:h-30 bg-muted rounded-lg flex items-center justify-center">
-              <Package className="h-8 w-8 text-muted-foreground" />
-            </div>
-          )}
-        </div>
-
-        {/* Item Details */}
-        <div className="flex-1 min-w-0 space-y-2">
-          <h4 className="font-semibold text-base" data-testid={`item-title-${item.id}`}>
-            {item.storybook.title}
-          </h4>
-          
-          <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
-            <span data-testid={`item-size-${item.id}`}>
-              {item.purchase.bookSize?.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
-            </span>
-            <span>•</span>
-            <span data-testid={`item-price-${item.id}`}>
-              ${formatPrice(item.purchase.price)}
-            </span>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <Badge 
-              variant={getStatusBadgeVariant(item.status)}
-              className={`${getStatusBadgeClasses(item.status)} text-xs`}
-              data-testid={`item-status-${item.id}`}
-            >
-              {formatStatus(item.status)}
-            </Badge>
-          </div>
-
-          {/* Tracking Information */}
-          {hasTracking && (
-            <div className="space-y-1.5 text-sm pt-2 border-t">
-              {item.carrier && item.carrierService && (
-                <div className="flex items-center gap-2">
-                  <Truck className="h-3.5 w-3.5 text-muted-foreground" />
-                  <span data-testid={`item-carrier-${item.id}`}>
-                    {item.carrier} {item.carrierService}
-                  </span>
-                </div>
-              )}
-
-              {item.trackingNumber && (
-                <div className="flex items-center gap-2">
-                  <Package className="h-3.5 w-3.5 text-muted-foreground" />
-                  {item.trackingUrl ? (
-                    <a
-                      href={item.trackingUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-primary hover:underline inline-flex items-center gap-1"
-                      data-testid={`item-tracking-link-${item.id}`}
-                    >
-                      <code className="text-xs bg-muted px-1.5 py-0.5 rounded">
-                        {item.trackingNumber}
-                      </code>
-                      <ExternalLink className="h-3 w-3" />
-                    </a>
-                  ) : (
-                    <code className="text-xs bg-muted px-1.5 py-0.5 rounded">
-                      {item.trackingNumber}
-                    </code>
-                  )}
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
-
 function OrderCard({ order }: { order: GroupedOrder }) {
   const { t } = useTranslation();
+  const [, setLocation] = useLocation();
   const [copied, setCopied] = useState(false);
-  const [isOpen, setIsOpen] = useState(false);
   
-  // Use Stripe Payment Intent ID as unified reference across app, Stripe, and Prodigi
   const fullOrderId = order.orderId;
   const shortOrderId = fullOrderId.slice(-8);
+  const hasTracking = order.items.some(item => item.trackingUrl || item.trackingNumber);
+  const primaryTracking = order.items.find(item => item.trackingUrl)?.trackingUrl;
 
   const copyFullId = () => {
     navigator.clipboard.writeText(fullOrderId);
@@ -220,132 +127,200 @@ function OrderCard({ order }: { order: GroupedOrder }) {
     setTimeout(() => setCopied(false), 2000);
   };
 
-  // Get first item's cover for preview (when collapsed)
-  const previewCover = order.items[0]?.storybook.coverImageUrl;
-
   return (
-    <Card className="overflow-hidden" data-testid={`order-card-${order.orderId}`}>
-      <Collapsible open={isOpen} onOpenChange={setIsOpen}>
-        <CardHeader className="pb-4">
-          <div className="flex flex-col sm:flex-row gap-4">
-            {/* Preview Cover (only when collapsed and single item) */}
-            {!isOpen && order.itemCount === 1 && previewCover && (
-              <div className="flex-shrink-0">
-                <img
-                  src={previewCover}
-                  alt="Order preview"
-                  className="w-full sm:w-24 h-32 sm:h-36 object-cover rounded-lg"
-                  loading="lazy"
-                />
-              </div>
+    <Card className="overflow-hidden hover:shadow-md transition-shadow" data-testid={`order-card-${order.orderId}`}>
+      <CardHeader className="bg-muted/30 dark:bg-muted/10 py-3 px-6">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-4 text-sm">
+            <div>
+              <span className="text-muted-foreground">ORDER PLACED</span>
+              <p className="font-medium">{formatDate(order.createdAt)}</p>
+            </div>
+            <Separator orientation="vertical" className="hidden sm:block h-8" />
+            <div>
+              <span className="text-muted-foreground">TOTAL</span>
+              <p className="font-medium" data-testid={`order-total-${order.orderId}`}>
+                ${formatPrice(order.totalAmount)}
+              </p>
+            </div>
+            <Separator orientation="vertical" className="hidden sm:block h-8" />
+            <div>
+              <span className="text-muted-foreground">SHIP TO</span>
+              <p className="font-medium">You</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="text-sm text-right">
+              <span className="text-muted-foreground block">ORDER # </span>
+              <button
+                onClick={copyFullId}
+                className="font-mono text-primary hover:underline inline-flex items-center gap-1"
+                data-testid={`order-id-${order.orderId}`}
+                title={`Copy full ID: ${fullOrderId}`}
+              >
+                {shortOrderId}
+                {copied ? (
+                  <Check className="h-3 w-3 text-green-600" />
+                ) : (
+                  <Copy className="h-3 w-3" />
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      </CardHeader>
+
+      <CardContent className="p-6">
+        <div className="flex items-start justify-between mb-4">
+          <div>
+            <div className="flex items-center gap-2 mb-2">
+              <Badge 
+                variant={getStatusBadgeVariant(order.status)}
+                className={getStatusBadgeClasses(order.status)}
+                data-testid={`order-status-${order.orderId}`}
+              >
+                {formatStatus(order.status)}
+              </Badge>
+              {order.status.toLowerCase() === 'complete' && (
+                <span className="text-sm text-muted-foreground">
+                  on {formatDate(order.items[0]?.dispatchDate || order.createdAt)}
+                </span>
+              )}
+            </div>
+            {order.itemCount > 1 && (
+              <p className="text-sm text-muted-foreground">
+                {order.itemCount} items in this order
+              </p>
             )}
+          </div>
+        </div>
 
-            {/* Order Summary */}
-            <div className="flex-1 min-w-0">
-              <div className="flex items-start justify-between gap-4 mb-2">
-                <CardTitle className="text-xl" data-testid={`order-title-${order.orderId}`}>
-                  Order {order.itemCount > 1 ? `(${order.itemCount} books)` : ''}
-                </CardTitle>
-                <CollapsibleTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-8 w-8 p-0"
-                    data-testid={`toggle-order-${order.orderId}`}
-                  >
-                    {isOpen ? (
-                      <ChevronUp className="h-4 w-4" />
-                    ) : (
-                      <ChevronDown className="h-4 w-4" />
-                    )}
-                  </Button>
-                </CollapsibleTrigger>
+        {/* Product Grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
+          {order.items.map((item) => (
+            <div key={item.id} className="flex gap-3" data-testid={`order-item-${item.id}`}>
+              <div className="flex-shrink-0">
+                {item.storybook.coverImageUrl ? (
+                  <img
+                    src={item.storybook.coverImageUrl}
+                    alt={item.storybook.title}
+                    className="w-20 h-28 object-cover rounded border"
+                    data-testid={`item-cover-${item.id}`}
+                    loading="lazy"
+                  />
+                ) : (
+                  <div className="w-20 h-28 bg-muted rounded border flex items-center justify-center">
+                    <Package className="h-8 w-8 text-muted-foreground" />
+                  </div>
+                )}
               </div>
-              
-              <div className="space-y-2">
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="text-sm text-muted-foreground">Order #:</span>
-                  <code className="text-sm font-mono bg-muted px-2 py-0.5 rounded" data-testid={`order-id-${order.orderId}`}>
-                    {shortOrderId}
-                  </code>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={copyFullId}
-                    className="h-7 px-2"
-                    data-testid={`copy-order-id-${order.orderId}`}
-                    title={`Copy full ID: ${fullOrderId}`}
-                  >
-                    {copied ? (
-                      <Check className="h-3.5 w-3.5 text-green-600" />
-                    ) : (
-                      <Copy className="h-3.5 w-3.5" />
-                    )}
-                  </Button>
-                </div>
+              <div className="flex-1 min-w-0">
+                <Link href={`/view/${item.storybook.id}`}>
+                  <h4 className="font-medium text-sm hover:text-primary cursor-pointer line-clamp-2" data-testid={`item-title-${item.id}`}>
+                    {item.storybook.title}
+                  </h4>
+                </Link>
+                <p className="text-xs text-muted-foreground mt-1" data-testid={`item-size-${item.id}`}>
+                  {item.purchase.bookSize?.replace(/-/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                </p>
+                <p className="text-xs text-muted-foreground" data-testid={`item-price-${item.id}`}>
+                  ${formatPrice(item.purchase.price)}
+                </p>
+              </div>
+            </div>
+          ))}
+        </div>
 
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="text-sm text-muted-foreground">Status:</span>
-                  <Badge 
-                    variant={getStatusBadgeVariant(order.status)}
-                    className={getStatusBadgeClasses(order.status)}
-                    data-testid={`order-status-${order.orderId}`}
-                  >
-                    {formatStatus(order.status)}
-                  </Badge>
-                </div>
+        {/* Action Buttons */}
+        <div className="flex flex-wrap gap-2 pt-4 border-t">
+          {hasTracking && primaryTracking && (
+            <Button
+              variant="default"
+              size="sm"
+              onClick={() => window.open(primaryTracking, '_blank')}
+              data-testid={`track-package-${order.orderId}`}
+            >
+              <Truck className="h-4 w-4 mr-2" />
+              Track Package
+            </Button>
+          )}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setLocation(`/orders/${order.orderId}`)}
+            data-testid={`view-details-${order.orderId}`}
+          >
+            <FileText className="h-4 w-4 mr-2" />
+            View Order Details
+            <ChevronRight className="h-4 w-4 ml-1" />
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            data-testid={`download-invoice-${order.orderId}`}
+          >
+            <Download className="h-4 w-4 mr-2" />
+            Download Invoice
+          </Button>
+        </div>
 
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <Calendar className="h-4 w-4" />
-                  <span>Ordered: {formatDate(order.createdAt)}</span>
-                </div>
-
-                <div className="flex items-center gap-2 text-sm">
-                  <DollarSign className="h-4 w-4 text-muted-foreground" />
-                  <span className="font-medium" data-testid={`order-total-${order.orderId}`}>
-                    ${formatPrice(order.totalAmount)}
-                  </span>
-                </div>
+        {/* Tracking Info (if available) */}
+        {hasTracking && (
+          <div className="mt-4 pt-4 border-t">
+            <div className="flex items-start gap-2 text-sm">
+              <Truck className="h-4 w-4 mt-0.5 text-muted-foreground flex-shrink-0" />
+              <div className="flex-1">
+                {order.items.map((item) => (
+                  item.trackingNumber && (
+                    <div key={item.id} className="mb-2 last:mb-0">
+                      <p className="font-medium">{item.storybook.title}</p>
+                      <div className="flex items-center gap-2 text-muted-foreground">
+                        {item.carrier && <span>{item.carrier} {item.carrierService}</span>}
+                        {item.trackingUrl ? (
+                          <a
+                            href={item.trackingUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-primary hover:underline inline-flex items-center gap-1"
+                            data-testid={`item-tracking-link-${item.id}`}
+                          >
+                            {item.trackingNumber}
+                            <ExternalLink className="h-3 w-3" />
+                          </a>
+                        ) : (
+                          <span>{item.trackingNumber}</span>
+                        )}
+                      </div>
+                    </div>
+                  )
+                ))}
               </div>
             </div>
           </div>
-        </CardHeader>
-
-        {/* Expandable Items Section */}
-        <CollapsibleContent>
-          <CardContent className="space-y-3 pt-0">
-            <Separator />
-            <div className="space-y-3">
-              <div className="flex items-center gap-2 text-sm font-medium">
-                <PackageOpen className="h-4 w-4" />
-                <span>Books in this order:</span>
-              </div>
-              {order.items.map((item) => (
-                <OrderItemCard key={item.id} item={item} />
-              ))}
-            </div>
-          </CardContent>
-        </CollapsibleContent>
-      </Collapsible>
+        )}
+      </CardContent>
     </Card>
   );
 }
 
 function OrdersSkeleton() {
   return (
-    <div className="space-y-6">
-      {[1, 2, 3].map((i) => (
+    <div className="space-y-4">
+      {[1, 2].map((i) => (
         <Card key={i} className="overflow-hidden">
-          <CardHeader className="pb-4">
-            <div className="flex gap-4">
-              <Skeleton className="w-24 h-36 rounded-lg" />
-              <div className="flex-1 space-y-3">
-                <Skeleton className="h-6 w-1/3" />
-                <Skeleton className="h-4 w-1/2" />
-                <Skeleton className="h-4 w-2/3" />
-              </div>
+          <CardHeader className="bg-muted/30 dark:bg-muted/10 py-3 px-6">
+            <div className="flex justify-between">
+              <Skeleton className="h-12 w-2/3" />
+              <Skeleton className="h-12 w-24" />
             </div>
           </CardHeader>
+          <CardContent className="p-6">
+            <Skeleton className="h-6 w-32 mb-4" />
+            <div className="grid grid-cols-3 gap-4">
+              <Skeleton className="h-28 w-full" />
+              <Skeleton className="h-28 w-full" />
+            </div>
+          </CardContent>
         </Card>
       ))}
     </div>
@@ -406,15 +381,12 @@ export default function Orders() {
       <Navigation />
       
       <main className="container mx-auto px-4 py-8">
-        <div className="max-w-4xl mx-auto">
+        <div className="max-w-6xl mx-auto">
           {/* Header */}
-          <div className="mb-8">
+          <div className="mb-6">
             <h1 className="text-3xl font-bold mb-2" data-testid="heading-orders">
-              {t('orders.title', 'My Orders')}
+              Your Orders
             </h1>
-            <p className="text-muted-foreground">
-              {t('orders.description', 'Track your print book orders and shipping status')}
-            </p>
           </div>
 
           {/* Orders List */}
@@ -423,7 +395,7 @@ export default function Orders() {
           ) : error ? (
             <Card>
               <CardContent className="py-12 text-center">
-                <PackageOpen className="h-12 w-12 mx-auto mb-4 text-destructive" />
+                <Package className="h-12 w-12 mx-auto mb-4 text-destructive" />
                 <p className="text-destructive font-medium mb-2">Failed to load orders</p>
                 <p className="text-sm text-muted-foreground">
                   {error instanceof Error ? error.message : 'An error occurred'}
@@ -445,7 +417,7 @@ export default function Orders() {
               </CardContent>
             </Card>
           ) : (
-            <div className="space-y-6" data-testid="orders-list">
+            <div className="space-y-4" data-testid="orders-list">
               {orders.map((order) => (
                 <OrderCard key={order.orderId} order={order} />
               ))}

@@ -17,6 +17,7 @@ const Cart = lazy(() => import("@/pages/cart"));
 const Checkout = lazy(() => import("@/pages/checkout"));
 const Purchases = lazy(() => import("@/pages/purchases"));
 const Orders = lazy(() => import("@/pages/orders"));
+const OrderDetails = lazy(() => import("@/pages/order-details"));
 const Signup = lazy(() => import("@/pages/signup"));
 const Login = lazy(() => import("@/pages/login"));
 const ForgotPassword = lazy(() => import("@/pages/forgot-password"));
@@ -59,6 +60,7 @@ function Router() {
         <Route path="/checkout" component={Checkout} />
         <Route path="/purchases" component={Purchases} />
         <Route path="/orders" component={Orders} />
+        <Route path="/orders/:orderId" component={OrderDetails} />
         <Route path="/view/:id" component={View} />
         <Route path="/shared/:shareUrl" component={View} />
         
