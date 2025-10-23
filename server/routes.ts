@@ -4902,13 +4902,16 @@ Sitemap: ${baseUrl}/sitemap.xml`;
   app.get("/api/print-orders/invoice/:orderId", isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.id || req.user.claims?.sub;
-      const { orderId } = req.params; // This is the Stripe Payment Intent ID
+      const { orderId } = req.params; // This is now the orderReference (ORDER-XXX format)
       
       // Get all orders for the user
       const orders = await storage.getUserPrintOrders(userId);
       
-      // Filter to orders matching this payment intent ID
-      const orderItems = orders.filter(order => order.purchase.stripePaymentIntentId === orderId);
+      // Filter to orders matching the orderReference (or fallback to stripePaymentIntentId for old orders)
+      const orderItems = orders.filter(order => 
+        order.purchase.orderReference === orderId || 
+        order.purchase.stripePaymentIntentId === orderId
+      );
       
       if (orderItems.length === 0) {
         return res.status(404).json({ message: "Order not found or unauthorized" });

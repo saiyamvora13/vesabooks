@@ -116,6 +116,7 @@ export const purchases = pgTable("purchases", {
   index("idx_purchases_storybook").on(table.storybookId),
   index("idx_purchases_order_reference").on(table.orderReference),
   unique().on(table.stripePaymentIntentId, table.storybookId, table.type),
+  unique("uq_purchases_order_reference").on(table.orderReference),
 ]);
 
 export const insertPurchaseSchema = createInsertSchema(purchases).omit({
