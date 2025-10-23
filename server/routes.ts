@@ -3846,8 +3846,17 @@ Sitemap: ${baseUrl}/sitemap.xml`;
       // Update print order in database
       await storage.updatePrintOrderStatus(printOrder.id, updates);
 
-      console.log(`[Prodigi Webhook] Updated print order ${printOrder.id} for Prodigi order ${prodigiOrderId}`);
-      console.log(`[Prodigi Webhook] Status: ${updates.status}, Tracking: ${updates.trackingNumber || 'N/A'}`);
+      console.log(`[Prodigi Webhook] ✅ Updated print order ${printOrder.id}`);
+      console.log(`[Prodigi Webhook]    Prodigi Order: ${prodigiOrderId}`);
+      console.log(`[Prodigi Webhook]    Status: ${updates.status || 'N/A'}`);
+      console.log(`[Prodigi Webhook]    Tracking: ${updates.trackingNumber || 'N/A'}`);
+      console.log(`[Prodigi Webhook]    Carrier: ${updates.carrier || 'N/A'}`);
+      if (updates.dispatchDate) {
+        console.log(`[Prodigi Webhook]    Dispatch Date: ${updates.dispatchDate}`);
+      }
+      if (updates.estimatedDelivery) {
+        console.log(`[Prodigi Webhook]    Est. Delivery: ${updates.estimatedDelivery}`);
+      }
 
       // Return 200 OK to acknowledge receipt
       res.status(200).json({ received: true });
@@ -4225,11 +4234,12 @@ Sitemap: ${baseUrl}/sitemap.xml`;
         const totalAmount = items.reduce((sum, item) => sum + parseFloat(item.purchase.price), 0).toString();
         
         // Determine overall status (prioritize: InProgress > Pending > Complete > Cancelled)
+        // Start with first item's status instead of 'Pending' to avoid incorrect defaults
         const statusPriority: Record<string, number> = { 'InProgress': 3, 'Pending': 2, 'Complete': 1, 'Cancelled': 0 };
         const overallStatus = items.reduce((prevStatus: string, item) => {
           const itemStatus = item.status || 'Pending';
           return (statusPriority[itemStatus] || 0) > (statusPriority[prevStatus] || 0) ? itemStatus : prevStatus;
-        }, 'Pending');
+        }, items[0]?.status || 'Pending');
         
         // Use earliest creation date for the order
         const orderDate = items.reduce((earliest, item) => {
