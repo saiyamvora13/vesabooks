@@ -2793,11 +2793,10 @@ Sitemap: ${baseUrl}/sitemap.xml`;
         let originalPrice = serverPrice;
 
         // Apply digital-to-print discount: if buying print and already owns digital, reduce price
-        // Only apply discount for first-time print purchases, not repurchases
+        // Discount applies to all print purchases when digital is owned
         if (type === 'print') {
           const existingDigitalPurchase = await storage.getStorybookPurchase(userId, storybookId, 'digital');
-          const existingPrintPurchase = await storage.getStorybookPurchase(userId, storybookId, 'print');
-          if (existingDigitalPurchase && !existingPrintPurchase) {
+          if (existingDigitalPurchase) {
             discount = digitalPrice;
             serverPrice = Math.max(0, printPrice - digitalPrice); // Ensure price doesn't go negative
           }
@@ -2890,11 +2889,10 @@ Sitemap: ${baseUrl}/sitemap.xml`;
         let originalPrice = serverPrice;
 
         // Apply digital-to-print discount: if buying print and already owns digital, reduce price
-        // Only apply discount for first-time print purchases, not repurchases
+        // Discount applies to all print purchases when digital is owned
         if (type === 'print') {
           const existingDigitalPurchase = await storage.getStorybookPurchase(userId, storybookId, 'digital');
-          const existingPrintPurchase = await storage.getStorybookPurchase(userId, storybookId, 'print');
-          if (existingDigitalPurchase && !existingPrintPurchase) {
+          if (existingDigitalPurchase) {
             discount = digitalPrice;
             serverPrice = Math.max(0, printPrice - digitalPrice); // Ensure price doesn't go negative
           }
@@ -3021,7 +3019,7 @@ Sitemap: ${baseUrl}/sitemap.xml`;
             
             // Apply digital-to-print discount
             if (item.productType === 'print') {
-              if (existingDigitalPurchase && !existingPrintPurchase) {
+              if (existingDigitalPurchase) {
                 discount = digitalPrice;
                 price = Math.max(0, printPrice - digitalPrice);
               }
@@ -3163,11 +3161,10 @@ Sitemap: ${baseUrl}/sitemap.xml`;
         let originalPrice = price;
 
         // Apply digital-to-print discount
-        // Only apply discount for first-time print purchases, not repurchases
+        // Discount applies to all print purchases when digital is owned
         if (type === 'print') {
           const existingDigitalPurchase = await storage.getStorybookPurchase(userId, storybookId, 'digital');
-          const existingPrintPurchase = await storage.getStorybookPurchase(userId, storybookId, 'print');
-          if (existingDigitalPurchase && !existingPrintPurchase) {
+          if (existingDigitalPurchase) {
             discount = digitalPrice;
             price = Math.max(0, printPrice - digitalPrice);
           }
@@ -3222,8 +3219,7 @@ Sitemap: ${baseUrl}/sitemap.xml`;
         // Apply digital-to-print discount
         if (productType === 'print') {
           const existingDigitalPurchase = await storage.getStorybookPurchase(userId, storybookId, 'digital');
-          const existingPrintPurchase = await storage.getStorybookPurchase(userId, storybookId, 'print');
-          if (existingDigitalPurchase && !existingPrintPurchase) {
+          if (existingDigitalPurchase) {
             discount = digitalPrice;
             price = Math.max(0, printPrice - digitalPrice);
           }
