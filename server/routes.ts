@@ -3660,8 +3660,25 @@ Sitemap: ${baseUrl}/sitemap.xml`;
       // Log webhook event for debugging
       console.log('[Prodigi Webhook] Received callback:', JSON.stringify(callback, null, 2));
 
+      // Support both CloudEvents format and simple Order format
+      // CloudEvents format: { specversion, type, data: { order: {...} } }
+      // Simple format: { id, status, shipments, ... }
+      let order;
+      if (callback.specversion && callback.data?.order) {
+        // CloudEvents format
+        console.log('[Prodigi Webhook] Detected CloudEvents format');
+        order = callback.data.order;
+      } else if (callback.id) {
+        // Simple Order format
+        console.log('[Prodigi Webhook] Detected simple Order format');
+        order = callback;
+      } else {
+        console.error('[Prodigi Webhook] Unrecognized webhook format');
+        return res.status(400).json({ message: "Unrecognized webhook format" });
+      }
+
       // Extract order information
-      const { id: prodigiOrderId, status, shipments = [], charges = [] } = callback;
+      const { id: prodigiOrderId, status, shipments = [], charges = [], merchantReference } = order;
 
       if (!prodigiOrderId) {
         console.error('[Prodigi Webhook] Missing order ID in callback');
@@ -3678,15 +3695,14 @@ Sitemap: ${baseUrl}/sitemap.xml`;
       }
       
       // Additional security: Validate merchant reference matches our format
-      const merchantRef = callback.merchantReference;
-      if (merchantRef && !merchantRef.startsWith('SB-')) {
-        console.warn(`[Prodigi Webhook] Invalid merchant reference format: ${merchantRef}`);
+      if (merchantReference && !merchantReference.startsWith('SB-')) {
+        console.warn(`[Prodigi Webhook] Invalid merchant reference format: ${merchantReference}`);
         return res.status(200).json({ received: true, message: "Invalid merchant reference" });
       }
 
-      // Prepare updates object
+      // Prepare updates object (store entire order object for debugging)
       const updates: any = {
-        webhookData: callback,
+        webhookData: order,
       };
 
       // Update status from callback

@@ -135,7 +135,31 @@ export class ObjectStorageService {
     
     // Determine content type based on file extension
     const ext = destinationPath.toLowerCase().split('.').pop();
-    const contentType = ext === 'jpg' || ext === 'jpeg' ? 'image/jpeg' : 'image/png';
+    let contentType = 'application/octet-stream'; // Default fallback
+    
+    switch (ext) {
+      case 'jpg':
+      case 'jpeg':
+        contentType = 'image/jpeg';
+        break;
+      case 'png':
+        contentType = 'image/png';
+        break;
+      case 'pdf':
+        contentType = 'application/pdf';
+        break;
+      case 'webp':
+        contentType = 'image/webp';
+        break;
+      case 'gif':
+        contentType = 'image/gif';
+        break;
+      case 'svg':
+        contentType = 'image/svg+xml';
+        break;
+      default:
+        console.warn(`Unknown file extension: ${ext}, using default content type`);
+    }
     
     // Upload the file
     await file.save(fs.readFileSync(localPath), {

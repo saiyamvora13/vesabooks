@@ -1,0 +1,80 @@
+{
+    "id": "ord_840796",
+    "created": "2021-03-11T14:31:23.41Z",
+    "lastUpdated": "2021-03-11T14:31:23.4931606Z",
+    "callbackUrl": null,
+    "merchantReference": "MyMerchantReference1",
+    "shippingMethod": "Overnight",
+    "idempotencyKey": null,
+    "status": {
+        "stage": "InProgress",
+        "issues": [],
+        "details": {
+            "downloadAssets": "NotStarted",
+            "printReadyAssetsPrepared": "NotStarted",
+            "allocateProductionLocation": "NotStarted",
+            "inProduction": "NotStarted",
+            "shipping": "NotStarted"
+        }
+    },
+    "charges": [],
+    "shipments": [],
+    "recipient": {
+        "name": "Mr test",
+        "email": null,
+        "phoneNumber": null,
+        "address": {
+            "line1": "14 test place",
+            "line2": "test",
+            "postalOrZipCode": "12345",
+            "countryCode": "US",
+            "townOrCity": "somewhere",
+            "stateOrCounty": null
+        }
+    },
+    "branding": {
+        "postcard": { "url" : "https://sample/postcard.jpg"},
+        "flyer": { "url" : "https://sample/flyer.pdf"},
+        "packing_slip_bw": { "url" : "https://sample/delivery_note_bw.jpg"},
+        "packing_slip_color" : { "url" : "https://sample/delivery_note_color.jpg"},
+        "sticker_exterior_round" : { "url" : "https://sample/sticker_round.jpg"},
+        "sticker_exterior_rectangle"  :{ "url" : "https://sample/sticker_rect.jpg"},
+        "sticker_interior_round" : { "url" : "https://sample/sticker_round.jpg"},
+        "sticker_interior_rectangle": { "url" : "https://sample/sticker_rect.jpg"}
+    },
+    "items": [
+        {
+            "id": "ori_926886",
+            "status": "NotYetDownloaded",
+            "merchantReference": "item #1",
+            "sku": "GLOBAL-CFPM-16X20",
+            "copies": 1,
+            "sizing": "fillPrintArea",
+            "attributes": {
+                "color": "black"
+            },
+            "assets": [
+                {
+                    "id": "ast_114059",
+                    "printArea": "default",
+                    "md5Hash": "daa1c811c6038e718a23f0d816914b7b",
+                    "url": "https://pwintyimages.blob.core.windows.net/samples/stars/test-sample-grey.png",
+                    "pageCount": 50,
+                    "status": "InProgress"
+                }
+            ],
+            "recipientCost": {
+                "amount": "10.74",
+                "currency": "GBP"
+            }
+        }
+    ],
+    "packingSlip": null,
+    "metadata": {
+        "mycustomkey": "some-guid",
+        "someCustomerPreference": {
+            "preference1": "something",
+            "preference2": "red"
+        },
+        "sourceId": 12345
+    }
