@@ -3345,9 +3345,9 @@ Sitemap: ${baseUrl}/sitemap.xml`;
           
           console.log(`[Prodigi] PDF uploaded to ${pdfStoragePath}`);
           
-          // Get full PDF URL for Prodigi
-          const baseUrl = process.env.REPL_SLUG 
-            ? `https://${process.env.REPL_SLUG}.${process.env.REPL_OWNER}.repl.co`
+          // Get full PDF URL for Prodigi (use REPLIT_DOMAINS for correct dev/prod URL)
+          const baseUrl = process.env.REPLIT_DOMAINS 
+            ? `https://${process.env.REPLIT_DOMAINS.split(',')[0]}`
             : 'http://localhost:5000';
           const pdfUrl = `${baseUrl}${pdfStoragePath}`;
           
