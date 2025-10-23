@@ -41,7 +41,7 @@ Key features include:
     - **Step 2 - Payment**: Stripe payment processing with payment intent creation using quoted price. Race condition protection ensures payment amount matches quote.
     - **Step 3 - Shipping Address**: After successful payment, collects recipient details (name, email, phone, full address). Submits print order to Prodigi with PDF generation, Object Storage upload, and `print_orders` record creation.
   - **Book Sizes**: Supports 6 hardcover sizes - A5 Portrait/Landscape, A4 Portrait/Landscape, Square 8.3"/11.6"
-  - **Security**: Zod validation for all Prodigi endpoints, webhook authentication using API key verification, ownership verification for order tracking
+  - **Security**: Zod validation for all Prodigi endpoints, webhook authentication using secret URL path (configurable via `PRODIGI_WEBHOOK_PATH_SECRET` environment variable), merchant reference validation, ownership verification for order tracking. Admin endpoint `/api/prodigi/webhook-url` provides the complete webhook URL for Prodigi dashboard configuration.
   - **PDF Upload**: Automatically generates and uploads print-ready PDFs to Replit Object Storage for Prodigi access
   - **Shipping Methods**: Budget, Standard, Express, and Overnight options with real-time quote calculation
   - **Order Tracking API**: Endpoint `/api/print-orders/purchase/:purchaseId` retrieves print order details by purchase ID with ownership verification

@@ -3632,7 +3632,17 @@ Sitemap: ${baseUrl}/sitemap.xml`;
 
   // Prodigi webhook handler with secret URL path
   // Generate webhook path secret (use environment variable or generate random)
-  const webhookPathSecret = process.env.PRODIGI_WEBHOOK_PATH_SECRET || 'prodigi-default-secret-change-me';
+  let webhookPathSecret = process.env.PRODIGI_WEBHOOK_PATH_SECRET;
+  
+  if (!webhookPathSecret) {
+    // Generate a cryptographically random secret if not configured
+    webhookPathSecret = randomBytes(32).toString('hex');
+    console.warn('⚠️  [SECURITY WARNING] PRODIGI_WEBHOOK_PATH_SECRET not set!');
+    console.warn('⚠️  Generated temporary random secret for this session.');
+    console.warn('⚠️  Set PRODIGI_WEBHOOK_PATH_SECRET environment variable for production!');
+    console.warn('⚠️  Use the /api/prodigi/webhook-url endpoint (admin) to get your webhook URL.');
+  }
+  
   const webhookPath = `/api/webhook/prodigi-${webhookPathSecret}`;
   
   // Log the webhook URL on server startup
@@ -3740,6 +3750,31 @@ Sitemap: ${baseUrl}/sitemap.xml`;
       res.json(purchases);
     } catch (error) {
       console.error("Get purchases error:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Helper endpoint to get Prodigi webhook URL (admin only)
+  app.get("/api/prodigi/webhook-url", isAdmin, async (req: any, res) => {
+    try {
+      // Get the base URL from environment or request
+      const baseUrl = process.env.REPLIT_DOMAINS 
+        ? `https://${process.env.REPLIT_DOMAINS.split(',')[0]}`
+        : `${req.protocol}://${req.get('host')}`;
+      
+      const fullWebhookUrl = `${baseUrl}${webhookPath}`;
+      
+      const isConfigured = !!process.env.PRODIGI_WEBHOOK_PATH_SECRET;
+      
+      res.json({ 
+        webhookUrl: fullWebhookUrl,
+        pathSecret: webhookPathSecret,
+        isConfigured,
+        warning: isConfigured ? null : "SECURITY WARNING: PRODIGI_WEBHOOK_PATH_SECRET environment variable is not set. Using a temporary random secret for this session. Set the environment variable for production deployments!",
+        instructions: "Configure this URL in your Prodigi dashboard webhook settings"
+      });
+    } catch (error) {
+      console.error("Get webhook URL error:", error);
       res.status(500).json({ message: "Internal server error" });
     }
   });
