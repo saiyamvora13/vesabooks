@@ -1005,38 +1005,18 @@ function DownloadCustomizationDialog({ open, onOpenChange, storybook }: Download
   );
 }
 
-function StorybookPurchaseButtons({ storybook }: { storybook: Storybook }) {
+function StorybookPurchaseButtons({ 
+  storybook, 
+  digitalOwned = false, 
+  printOwned = false 
+}: { 
+  storybook: Storybook;
+  digitalOwned?: boolean;
+  printOwned?: boolean;
+}) {
   const { t } = useTranslation();
   const { toast } = useToast();
   const [downloadDialog, setDownloadDialog] = useState(false);
-
-  const { data: digitalPurchase } = useQuery<{ owned: boolean }>({
-    queryKey: ['/api/purchases/check', storybook.id, 'digital'],
-    queryFn: async () => {
-      const response = await fetch('/api/purchases/check', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ storybookId: storybook.id, type: 'digital' }),
-        credentials: 'include',
-      });
-      if (!response.ok) throw new Error('Failed to check purchase');
-      return response.json();
-    },
-  });
-
-  const { data: printPurchase } = useQuery<{ owned: boolean }>({
-    queryKey: ['/api/purchases/check', storybook.id, 'print'],
-    queryFn: async () => {
-      const response = await fetch('/api/purchases/check', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ storybookId: storybook.id, type: 'print' }),
-        credentials: 'include',
-      });
-      if (!response.ok) throw new Error('Failed to check purchase');
-      return response.json();
-    },
-  });
 
   // Fetch cart to check if items are in cart
   const { data: cartResponse } = useQuery<{ items: Array<{ storybookId: string; productType: string }> }>({
@@ -1080,7 +1060,7 @@ function StorybookPurchaseButtons({ storybook }: { storybook: Storybook }) {
   return (
     <>
       <div className="space-y-2 mt-3">
-        {digitalPurchase?.owned ? (
+        {digitalOwned ? (
           <>
             <Badge variant="secondary" className="w-full justify-center py-1">
               <Check className="h-3 w-3 mr-1" />
@@ -1187,6 +1167,43 @@ export default function Library() {
   const totalCount = storybooks.length + saved.length;
   const isLoading = ownedLoading || savedLoading;
   const error = ownedError;
+
+  // Get all storybook IDs for batch ownership check
+  const allStorybookIds = [...storybooks, ...saved].map(sb => sb.id);
+
+  // Batch check digital ownership for all storybooks
+  const { data: digitalOwnership } = useQuery<Record<string, boolean>>({
+    queryKey: ['/api/purchases/check-batch', 'digital', allStorybookIds],
+    queryFn: async () => {
+      if (allStorybookIds.length === 0) return {};
+      const response = await fetch('/api/purchases/check-batch', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ storybookIds: allStorybookIds, type: 'digital' }),
+        credentials: 'include',
+      });
+      if (!response.ok) return {};
+      return response.json();
+    },
+    enabled: isAuthenticated && allStorybookIds.length > 0,
+  });
+
+  // Batch check print ownership for all storybooks
+  const { data: printOwnership } = useQuery<Record<string, boolean>>({
+    queryKey: ['/api/purchases/check-batch', 'print', allStorybookIds],
+    queryFn: async () => {
+      if (allStorybookIds.length === 0) return {};
+      const response = await fetch('/api/purchases/check-batch', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ storybookIds: allStorybookIds, type: 'print' }),
+        credentials: 'include',
+      });
+      if (!response.ok) return {};
+      return response.json();
+    },
+    enabled: isAuthenticated && allStorybookIds.length > 0,
+  });
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
@@ -1393,7 +1410,11 @@ export default function Library() {
                             {formatDistanceToNow(new Date(storybook.createdAt), { addSuffix: true })}
                           </span>
                         </div>
-                        <StorybookPurchaseButtons storybook={storybook} />
+                        <StorybookPurchaseButtons 
+                          storybook={storybook} 
+                          digitalOwned={digitalOwnership?.[storybook.id] || false}
+                          printOwned={printOwnership?.[storybook.id] || false}
+                        />
                       </CardContent>
                       
                       <CardFooter className="flex items-center justify-between gap-2 px-3 sm:px-6 pt-3 pb-3 sm:pb-6">
@@ -1480,7 +1501,11 @@ export default function Library() {
                             {formatDistanceToNow(new Date(storybook.createdAt), { addSuffix: true })}
                           </span>
                         </div>
-                        <StorybookPurchaseButtons storybook={storybook} />
+                        <StorybookPurchaseButtons 
+                          storybook={storybook} 
+                          digitalOwned={digitalOwnership?.[storybook.id] || false}
+                          printOwned={printOwnership?.[storybook.id] || false}
+                        />
                       </CardContent>
                       
                       <CardFooter className="flex items-center justify-between gap-2 px-3 sm:px-6 pt-3 pb-3 sm:pb-6">
