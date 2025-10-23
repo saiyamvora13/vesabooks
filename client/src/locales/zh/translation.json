@@ -503,7 +503,12 @@
     "status": {
       "completed": "已完成",
       "pending": "待处理",
-      "failed": "失败"
+      "failed": "失败",
+      "creating": "处理中",
+      "refunded": "已退款",
+      "Complete": "已完成",
+      "InProgress": "进行中",
+      "Cancelled": "已取消"
     },
     "toast": {
       "paymentSuccess": {

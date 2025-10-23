@@ -502,7 +502,12 @@
     "status": {
       "completed": "Completed",
       "pending": "Pending",
-      "failed": "Failed"
+      "failed": "Failed",
+      "creating": "Processing",
+      "refunded": "Refunded",
+      "Complete": "Completed",
+      "InProgress": "In Progress",
+      "Cancelled": "Cancelled"
     },
     "toast": {
       "paymentSuccess": {
