@@ -3630,26 +3630,19 @@ Sitemap: ${baseUrl}/sitemap.xml`;
     }
   });
 
-  // Prodigi webhook handler with shared secret authentication
-  app.post("/api/webhook/prodigi", async (req: any, res) => {
+  // Prodigi webhook handler with secret URL path
+  // Generate webhook path secret (use environment variable or generate random)
+  const webhookPathSecret = process.env.PRODIGI_WEBHOOK_PATH_SECRET || 'prodigi-default-secret-change-me';
+  const webhookPath = `/api/webhook/prodigi-${webhookPathSecret}`;
+  
+  // Log the webhook URL on server startup
+  console.log(`[Prodigi Webhook] Webhook endpoint: ${webhookPath}`);
+  
+  app.post(webhookPath, async (req: any, res) => {
     try {
       // Log source IP for monitoring
       const sourceIp = req.ip || req.headers['x-forwarded-for'] || req.connection.remoteAddress || 'unknown';
       console.log(`[Prodigi Webhook] Received webhook from IP: ${sourceIp}`);
-      
-      // Authenticate webhook using shared secret
-      // Configure this secret in Prodigi dashboard webhook settings
-      const webhookSecret = process.env.PRODIGI_WEBHOOK_SECRET;
-      const receivedSecret = req.headers['x-webhook-secret'] || req.headers['authorization']?.replace('Bearer ', '');
-      
-      if (webhookSecret && receivedSecret !== webhookSecret) {
-        console.warn(`[Prodigi Webhook] Invalid webhook secret from IP: ${sourceIp}`);
-        return res.status(401).json({ message: "Unauthorized - Invalid webhook secret" });
-      }
-      
-      if (!webhookSecret) {
-        console.warn('[Prodigi Webhook] PRODIGI_WEBHOOK_SECRET not configured - webhooks are unauthenticated!');
-      }
       
       const callback = req.body;
       
