@@ -3010,6 +3010,10 @@ Sitemap: ${baseUrl}/sitemap.xml`;
             // Fetch storybook data
             const storybook = await storage.getStorybook(item.storybookId);
             
+            // Check ownership for this storybook
+            const existingDigitalPurchase = await storage.getStorybookPurchase(userId, item.storybookId, 'digital');
+            const existingPrintPurchase = await storage.getStorybookPurchase(userId, item.storybookId, 'print');
+            
             // Calculate price with potential discount
             let price = item.productType === 'digital' ? digitalPrice : printPrice;
             let discount = 0;
@@ -3017,8 +3021,6 @@ Sitemap: ${baseUrl}/sitemap.xml`;
             
             // Apply digital-to-print discount
             if (item.productType === 'print') {
-              const existingDigitalPurchase = await storage.getStorybookPurchase(userId, item.storybookId, 'digital');
-              const existingPrintPurchase = await storage.getStorybookPurchase(userId, item.storybookId, 'print');
               if (existingDigitalPurchase && !existingPrintPurchase) {
                 discount = digitalPrice;
                 price = Math.max(0, printPrice - digitalPrice);
@@ -3031,6 +3033,8 @@ Sitemap: ${baseUrl}/sitemap.xml`;
               price,
               originalPrice,
               discount,
+              digitalOwned: !!existingDigitalPurchase,
+              printOwned: !!existingPrintPurchase,
             };
           } catch (error) {
             console.error(`Failed to enrich cart item ${item.id}:`, error);
@@ -3042,6 +3046,8 @@ Sitemap: ${baseUrl}/sitemap.xml`;
               price,
               originalPrice: price,
               discount: 0,
+              digitalOwned: false,
+              printOwned: false,
             };
           }
         })

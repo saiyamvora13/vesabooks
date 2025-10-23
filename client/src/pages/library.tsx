@@ -1062,47 +1062,52 @@ function StorybookPurchaseButtons({
   return (
     <>
       <div className="space-y-2 mt-3">
-        {digitalOwned ? (
+        {digitalOwned && (
           <>
-            <Badge variant="secondary" className="w-full justify-center py-1">
-              <Check className="h-3 w-3 mr-1" />
+            <Badge variant="secondary" className="w-full justify-center py-2 text-sm">
+              <Check className="h-4 w-4 mr-1" />
               Digital Owned
             </Badge>
             <Button
               size="sm"
               variant="outline"
-              className="w-full"
+              className="w-full h-10 text-sm font-medium"
               onClick={() => setDownloadDialog(true)}
               data-testid={`button-download-print-pdf-${storybook.id}`}
             >
-              <Download className="h-4 w-4 mr-1" />
+              <Download className="h-4 w-4 mr-2" />
               Download
             </Button>
           </>
-        ) : inCart ? (
+        )}
+        
+        {inCart ? (
           <Button
             size="sm"
             variant="secondary"
-            className="w-full"
+            className="w-full h-11 text-base font-semibold"
             disabled
             data-testid={`button-in-cart-${storybook.id}`}
           >
-            <Check className="h-4 w-4 mr-1" />
+            <Check className="h-5 w-5 mr-2" />
             In Cart
           </Button>
         ) : (
           <Button
             size="sm"
             variant="default"
-            className="w-full gradient-bg hover:opacity-90 !text-[hsl(258,90%,20%)]"
-            onClick={() => addToCartMutation.mutate({ productType: 'digital' })}
+            className="w-full h-11 text-base font-semibold gradient-bg hover:opacity-90 !text-[hsl(258,90%,20%)] shadow-md hover:shadow-lg transition-all"
+            onClick={() => addToCartMutation.mutate({ 
+              productType: digitalOwned ? 'print' : 'digital',
+              bookSize: digitalOwned ? 'a5-portrait' : undefined
+            })}
             disabled={addToCartMutation.isPending}
             data-testid={`button-add-to-cart-${storybook.id}`}
           >
             {addToCartMutation.isPending ? (
-              <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+              <Loader2 className="h-5 w-5 mr-2 animate-spin" />
             ) : (
-              <ShoppingCart className="h-4 w-4 mr-1" />
+              <ShoppingCart className="h-5 w-5 mr-2" />
             )}
             Add to Cart
           </Button>
@@ -1392,14 +1397,14 @@ export default function Library() {
                       
                       <CardFooter className="flex items-center justify-between gap-2 px-3 sm:px-6 pt-3 pb-3 sm:pb-6">
                         <Link href={`/view/${storybook.id}`} className="flex-1">
-                          <Button variant="outline" size="default" className="w-full h-10 sm:h-9" data-testid={`button-view-${storybook.id}`}>
+                          <Button variant="outline" size="default" className="w-full h-10 text-sm font-medium hover:bg-accent transition-colors" data-testid={`button-view-${storybook.id}`}>
                             {t('common.buttons.view')}
                           </Button>
                         </Link>
                         <Button
                           variant="destructive"
-                          size="default"
-                          className="h-10 sm:h-9 px-3"
+                          size="icon"
+                          className="h-10 w-10 shrink-0"
                           onClick={(e) => {
                             e.preventDefault();
                             setDeletingBookId(storybook.id);
@@ -1483,14 +1488,14 @@ export default function Library() {
                       
                       <CardFooter className="flex items-center justify-between gap-2 px-3 sm:px-6 pt-3 pb-3 sm:pb-6">
                         <Link href={`/view/${storybook.id}`} className="flex-1">
-                          <Button variant="outline" size="default" className="w-full h-10 sm:h-9" data-testid={`button-view-${storybook.id}`}>
+                          <Button variant="outline" size="default" className="w-full h-10 text-sm font-medium hover:bg-accent transition-colors" data-testid={`button-view-${storybook.id}`}>
                             {t('common.buttons.view')}
                           </Button>
                         </Link>
                         <Button
                           variant="outline"
-                          size="default"
-                          className="h-10 sm:h-9 px-3"
+                          size="icon"
+                          className="h-10 w-10 shrink-0"
                           onClick={(e) => {
                             e.preventDefault();
                             unsaveMutation.mutate(storybook.id);

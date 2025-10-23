@@ -14,7 +14,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import type { Storybook, CartItem } from "@shared/schema";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { SEO } from "@/components/SEO";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { BOOK_SIZES, getBookSizesByOrientation, type BookOrientation } from "@shared/bookSizes";
 import { NewCheckoutDialog } from "@/components/cart/NewCheckoutDialog";
 
@@ -24,6 +24,8 @@ interface EnrichedCartItem extends CartItem {
   price: number;
   originalPrice: number;
   discount: number;
+  digitalOwned: boolean;
+  printOwned: boolean;
 }
 
 function formatPrice(cents: number): string {
@@ -62,10 +64,21 @@ function CartItemCard({
     : safeAvailableBookSizes[0]?.id || 'a5-portrait';
   
   // Validate productType to ensure it's always valid
+  // If user owns digital and cart has digital selected, auto-switch to print
   const validProductType: 'digital' | 'print' = 
-    (item.productType === 'digital' || item.productType === 'print') 
-      ? item.productType 
-      : 'digital';
+    item.digitalOwned && item.productType === 'digital'
+      ? 'print'
+      : (item.productType === 'digital' || item.productType === 'print') 
+        ? item.productType 
+        : 'digital';
+
+  // Auto-update cart item from digital to print if user owns digital
+  useEffect(() => {
+    if (item.digitalOwned && item.productType === 'digital' && !isUpdating) {
+      // Update the cart item to print with default book size
+      onUpdateProductType('print');
+    }
+  }, [item.digitalOwned, item.productType, isUpdating, onUpdateProductType]);
 
   return (
     <Card data-testid={`card-item-${item.storybookId}-${item.productType}`}>
@@ -125,10 +138,16 @@ function CartItemCard({
                   <SelectValue placeholder="Select product type" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="digital">Digital (E-book)</SelectItem>
+                  <SelectItem value="digital" disabled={item.digitalOwned}>
+                    Digital (E-book)
+                    {item.digitalOwned && ' - Already Purchased'}
+                  </SelectItem>
                   <SelectItem value="print">Print (Hardcover)</SelectItem>
                 </SelectContent>
               </Select>
+              {validProductType === 'digital' && item.digitalOwned && (
+                <p className="text-xs text-amber-600 dark:text-amber-400 font-medium">⚠️ Already Purchased - Switch to Print to order hardcover</p>
+              )}
               {validProductType === 'print' && (
                 <p className="text-xs text-green-600 dark:text-green-400 font-medium">✓ Print Includes the E-book</p>
               )}
