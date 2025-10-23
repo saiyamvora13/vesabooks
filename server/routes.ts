@@ -3660,10 +3660,16 @@ Sitemap: ${baseUrl}/sitemap.xml`;
       const sourceIp = req.ip || req.headers['x-forwarded-for'] || req.connection.remoteAddress || 'unknown';
       console.log(`[Prodigi Webhook] Received webhook from IP: ${sourceIp}`);
       
+      // Log all request details for debugging
+      console.log('[Prodigi Webhook] Headers:', JSON.stringify(req.headers, null, 2));
+      console.log('[Prodigi Webhook] Content-Type:', req.headers['content-type']);
+      console.log('[Prodigi Webhook] Body length:', req.rawBody ? req.rawBody.length : 'undefined');
+      console.log('[Prodigi Webhook] Raw body:', req.rawBody ? req.rawBody.toString('utf8').substring(0, 500) : 'undefined');
+      
       const callback = req.body;
       
       // Log webhook event for debugging
-      console.log('[Prodigi Webhook] Received callback:', JSON.stringify(callback, null, 2));
+      console.log('[Prodigi Webhook] Parsed body:', JSON.stringify(callback, null, 2));
 
       // Support both CloudEvents format and simple Order format
       // CloudEvents format: { specversion, type, data: { order: {...} } }
