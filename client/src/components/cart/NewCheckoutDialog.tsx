@@ -11,6 +11,7 @@ import { Loader2, MapPin, CreditCard, Plus, Star } from "lucide-react";
 import { AddressForm } from "@/components/account/AddressForm";
 import { AddPaymentMethodDialog } from "@/components/account/AddPaymentMethodDialog";
 import { Separator } from "@/components/ui/separator";
+import { useAuth } from "@/hooks/useAuth";
 
 interface ShippingAddress {
   id: string;
@@ -48,6 +49,7 @@ function formatPrice(cents: number): string {
 
 export function NewCheckoutDialog({ open, onOpenChange, hasPrintItems, amount, onSuccess }: NewCheckoutDialogProps) {
   const { toast } = useToast();
+  const { user } = useAuth();
   const [selectedAddressId, setSelectedAddressId] = useState<string>('');
   const [selectedPaymentMethodId, setSelectedPaymentMethodId] = useState<string>('');
   const [showAddAddress, setShowAddAddress] = useState(false);
@@ -103,15 +105,17 @@ export function NewCheckoutDialog({ open, onOpenChange, hasPrintItems, amount, o
           throw new Error('Selected address not found');
         }
         
+        // Map saved address fields to cart shipping address format
         payload.shippingAddress = {
-          fullName: selectedAddress.fullName,
-          phoneNumber: selectedAddress.phoneNumber,
+          name: selectedAddress.fullName,
+          email: user?.email || '',
+          phoneNumber: selectedAddress.phoneNumber || '',
           addressLine1: selectedAddress.addressLine1,
-          addressLine2: selectedAddress.addressLine2,
+          addressLine2: selectedAddress.addressLine2 || '',
           city: selectedAddress.city,
-          stateProvince: selectedAddress.stateProvince,
+          state: selectedAddress.stateProvince,
           postalCode: selectedAddress.postalCode,
-          country: selectedAddress.country,
+          countryCode: selectedAddress.country,
         };
       }
 
