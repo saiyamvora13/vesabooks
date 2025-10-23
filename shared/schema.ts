@@ -405,12 +405,69 @@ export const insertDownloadVerificationSchema = createInsertSchema(downloadVerif
 export type DownloadVerification = typeof downloadVerifications.$inferSelect;
 export type InsertDownloadVerification = z.infer<typeof insertDownloadVerificationSchema>;
 
+// User Shipping Addresses - saved shipping addresses for quick checkout
+export const userShippingAddresses = pgTable("user_shipping_addresses", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
+  fullName: varchar("full_name").notNull(),
+  addressLine1: varchar("address_line_1").notNull(),
+  addressLine2: varchar("address_line_2"),
+  city: varchar("city").notNull(),
+  stateProvince: varchar("state_province").notNull(),
+  postalCode: varchar("postal_code").notNull(),
+  country: varchar("country").notNull().default('US'),
+  phoneNumber: varchar("phone_number"),
+  isDefault: boolean("is_default").notNull().default(false),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("idx_user_shipping_addresses_user").on(table.userId),
+  index("idx_user_shipping_addresses_default").on(table.userId, table.isDefault),
+]);
+
+export const insertUserShippingAddressSchema = createInsertSchema(userShippingAddresses).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type UserShippingAddress = typeof userShippingAddresses.$inferSelect;
+export type InsertUserShippingAddress = z.infer<typeof insertUserShippingAddressSchema>;
+
+// User Payment Methods - saved payment methods (Stripe) for quick checkout
+export const userPaymentMethods = pgTable("user_payment_methods", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
+  stripePaymentMethodId: varchar("stripe_payment_method_id").notNull().unique(),
+  cardBrand: varchar("card_brand").notNull(),
+  cardLast4: varchar("card_last4").notNull(),
+  cardExpMonth: integer("card_exp_month").notNull(),
+  cardExpYear: integer("card_exp_year").notNull(),
+  isDefault: boolean("is_default").notNull().default(false),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("idx_user_payment_methods_user").on(table.userId),
+  index("idx_user_payment_methods_default").on(table.userId, table.isDefault),
+]);
+
+export const insertUserPaymentMethodSchema = createInsertSchema(userPaymentMethods).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type UserPaymentMethod = typeof userPaymentMethods.$inferSelect;
+export type InsertUserPaymentMethod = z.infer<typeof insertUserPaymentMethodSchema>;
+
 // Print Orders - track Prodigi print order fulfillment
+// Status flow: creating -> pending -> in_progress -> shipped -> delivered | cancelled
 export const printOrders = pgTable("print_orders", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   purchaseId: varchar("purchase_id").notNull().references(() => purchases.id, { onDelete: 'cascade' }),
   prodigiOrderId: varchar("prodigi_order_id"),
-  status: varchar("status").notNull().default('pending'),
+  status: varchar("status").notNull().default('creating'),
+  stripePaymentMethodId: varchar("stripe_payment_method_id"),
   trackingNumber: varchar("tracking_number"),
   trackingUrl: varchar("tracking_url"),
   carrier: varchar("carrier"),
