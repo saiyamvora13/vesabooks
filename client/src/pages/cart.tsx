@@ -14,7 +14,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import type { Storybook, CartItem } from "@shared/schema";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { SEO } from "@/components/SEO";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { BOOK_SIZES, getBookSizesByOrientation, type BookOrientation } from "@shared/bookSizes";
 import { NewCheckoutDialog } from "@/components/cart/NewCheckoutDialog";
 
@@ -72,9 +72,13 @@ function CartItemCard({
         ? item.productType 
         : 'digital';
 
-  // Auto-update cart item from digital to print if user owns digital
+  // Track whether we've already auto-updated this item to prevent infinite loops
+  const hasAutoUpdated = useRef(false);
+
+  // Auto-update cart item from digital to print if user owns digital (one time only)
   useEffect(() => {
-    if (item.digitalOwned && item.productType === 'digital' && !isUpdating) {
+    if (item.digitalOwned && item.productType === 'digital' && !isUpdating && !hasAutoUpdated.current) {
+      hasAutoUpdated.current = true;
       // Update the cart item to print with default book size
       onUpdateProductType('print');
     }
