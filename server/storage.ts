@@ -613,13 +613,21 @@ export class DatabaseStorage implements IStorage {
 
   async updateSetting(key: string, value: string, updatedBy: string): Promise<void> {
     await db
-      .update(siteSettings)
-      .set({ 
-        value, 
-        updatedBy, 
-        updatedAt: new Date() 
+      .insert(siteSettings)
+      .values({
+        key,
+        value,
+        updatedBy,
+        updatedAt: new Date()
       })
-      .where(eq(siteSettings.key, key));
+      .onConflictDoUpdate({
+        target: siteSettings.key,
+        set: {
+          value,
+          updatedBy,
+          updatedAt: new Date()
+        }
+      });
   }
 
   async getAllSettings(): Promise<SiteSetting[]> {
