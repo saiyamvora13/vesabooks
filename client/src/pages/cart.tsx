@@ -7,41 +7,17 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
-import { ShoppingCart, Trash2, X, Minus, Plus, Loader2, MapPin } from "lucide-react";
+import { ShoppingCart, Trash2, Minus, Plus, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import type { Storybook, CartItem, Purchase } from "@shared/schema";
+import type { Storybook, CartItem } from "@shared/schema";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { SEO } from "@/components/SEO";
 import { useState } from "react";
-import { loadStripe } from "@stripe/stripe-js";
-import { Elements, PaymentElement, useStripe, useElements } from "@stripe/react-stripe-js";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { BOOK_SIZES, getBookSizesByOrientation, type BookOrientation } from "@shared/bookSizes";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { NewCheckoutDialog } from "@/components/cart/NewCheckoutDialog";
 
-// Initialize Stripe
-const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLIC_KEY || '');
-
-// Shipping address schema
-const shippingAddressSchema = z.object({
-  name: z.string().min(1, "Name is required"),
-  email: z.string().email("Valid email is required"),
-  phoneNumber: z.string().min(1, "Phone number is required"),
-  addressLine1: z.string().min(1, "Address line 1 is required"),
-  addressLine2: z.string().optional(),
-  city: z.string().min(1, "City is required"),
-  state: z.string().optional(),
-  postalCode: z.string().min(1, "Postal/ZIP code is required"),
-  countryCode: z.string().min(2, "Country code is required").default('US'),
-});
-
-type ShippingAddressFormValues = z.infer<typeof shippingAddressSchema>;
 
 interface EnrichedCartItem extends CartItem {
   storybook?: Storybook | null;
@@ -260,354 +236,12 @@ function CartItemCard({
   );
 }
 
-function ShippingAddressForm({ 
-  onSubmit, 
-  onCancel,
-  isProcessing,
-}: {
-  onSubmit: (address: ShippingAddressFormValues) => void;
-  onCancel: () => void;
-  isProcessing: boolean;
-}) {
-  const form = useForm<ShippingAddressFormValues>({
-    resolver: zodResolver(shippingAddressSchema),
-    defaultValues: {
-      name: '',
-      email: '',
-      phoneNumber: '',
-      addressLine1: '',
-      addressLine2: '',
-      city: '',
-      state: '',
-      postalCode: '',
-      countryCode: 'US',
-    },
-  });
-
-  return (
-    <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-        <div className="space-y-4">
-          <FormField
-            control={form.control}
-            name="name"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Full Name</FormLabel>
-                <FormControl>
-                  <Input {...field} placeholder="John Doe" data-testid="input-name" />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          <FormField
-            control={form.control}
-            name="email"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Email</FormLabel>
-                <FormControl>
-                  <Input {...field} type="email" placeholder="john@example.com" data-testid="input-email" />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          <FormField
-            control={form.control}
-            name="phoneNumber"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Phone Number</FormLabel>
-                <FormControl>
-                  <Input {...field} placeholder="+1 (555) 123-4567" data-testid="input-phone" />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          <FormField
-            control={form.control}
-            name="addressLine1"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Address Line 1</FormLabel>
-                <FormControl>
-                  <Input {...field} placeholder="123 Main St" data-testid="input-address-line1" />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          <FormField
-            control={form.control}
-            name="addressLine2"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Address Line 2 (Optional)</FormLabel>
-                <FormControl>
-                  <Input {...field} placeholder="Apt 4B" data-testid="input-address-line2" />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          <div className="grid grid-cols-2 gap-4">
-            <FormField
-              control={form.control}
-              name="city"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>City</FormLabel>
-                  <FormControl>
-                    <Input {...field} placeholder="New York" data-testid="input-city" />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="state"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>State/Province</FormLabel>
-                  <FormControl>
-                    <Input {...field} placeholder="NY" data-testid="input-state" />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <FormField
-              control={form.control}
-              name="postalCode"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Postal Code</FormLabel>
-                  <FormControl>
-                    <Input {...field} placeholder="10001" data-testid="input-postal-code" />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="countryCode"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Country</FormLabel>
-                  <FormControl>
-                    <Select value={field.value} onValueChange={field.onChange}>
-                      <SelectTrigger data-testid="select-country">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="US">United States</SelectItem>
-                        <SelectItem value="CA">Canada</SelectItem>
-                        <SelectItem value="GB">United Kingdom</SelectItem>
-                        <SelectItem value="AU">Australia</SelectItem>
-                        <SelectItem value="DE">Germany</SelectItem>
-                        <SelectItem value="FR">France</SelectItem>
-                        <SelectItem value="ES">Spain</SelectItem>
-                        <SelectItem value="IT">Italy</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </div>
-        </div>
-
-        <div className="flex gap-3 pt-4">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={onCancel}
-            disabled={isProcessing}
-            className="flex-1"
-            data-testid="button-cancel-shipping"
-          >
-            Cancel
-          </Button>
-          <Button
-            type="submit"
-            disabled={isProcessing}
-            className="flex-1 gradient-bg !text-[hsl(258,90%,20%)]"
-            data-testid="button-submit-shipping"
-          >
-            {isProcessing ? (
-              <>
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                Processing...
-              </>
-            ) : (
-              <>
-                <MapPin className="h-4 w-4 mr-2" />
-                Complete Order
-              </>
-            )}
-          </Button>
-        </div>
-      </form>
-    </Form>
-  );
-}
-
-function CheckoutDialog({ 
-  open, 
-  onOpenChange, 
-  clientSecret, 
-  amount,
-  hasPrintItems,
-  onSuccess,
-}: { 
-  open: boolean; 
-  onOpenChange: (open: boolean) => void; 
-  clientSecret: string;
-  amount: number;
-  hasPrintItems: boolean;
-  onSuccess: (paymentIntentId: string, shippingAddress?: ShippingAddressFormValues) => void;
-}) {
-  const [checkoutStep, setCheckoutStep] = useState<'payment' | 'shipping' | 'complete'>('payment');
-  const [paymentIntentId, setPaymentIntentId] = useState<string>('');
-
-  const handlePaymentSuccess = (intentId: string) => {
-    setPaymentIntentId(intentId);
-    
-    if (hasPrintItems) {
-      setCheckoutStep('shipping');
-    } else {
-      onSuccess(intentId);
-    }
-  };
-
-  const handleShippingSubmit = (address: ShippingAddressFormValues) => {
-    onSuccess(paymentIntentId, address);
-  };
-
-  const handleCancel = () => {
-    setCheckoutStep('payment');
-    onOpenChange(false);
-  };
-
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>
-            {checkoutStep === 'payment' ? 'Complete Your Purchase' : 'Shipping Address'}
-          </DialogTitle>
-        </DialogHeader>
-        
-        {checkoutStep === 'payment' ? (
-          <Elements stripe={stripePromise} options={{ clientSecret }}>
-            <CheckoutForm amount={amount} onSuccess={handlePaymentSuccess} />
-          </Elements>
-        ) : (
-          <ShippingAddressForm 
-            onSubmit={handleShippingSubmit} 
-            onCancel={handleCancel}
-            isProcessing={false}
-          />
-        )}
-      </DialogContent>
-    </Dialog>
-  );
-}
-
-function CheckoutForm({ amount, onSuccess }: { amount: number; onSuccess: (paymentIntentId: string) => void }) {
-  const stripe = useStripe();
-  const elements = useElements();
-  const { toast } = useToast();
-  const [isProcessing, setIsProcessing] = useState(false);
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-
-    if (!stripe || !elements) {
-      return;
-    }
-
-    setIsProcessing(true);
-
-    try {
-      const { error, paymentIntent } = await stripe.confirmPayment({
-        elements,
-        confirmParams: {
-          return_url: `${window.location.origin}/cart`,
-        },
-        redirect: 'if_required',
-      });
-
-      if (error) {
-        toast({
-          title: "Payment failed",
-          description: error.message,
-          variant: "destructive",
-        });
-      } else if (paymentIntent && paymentIntent.status === 'succeeded') {
-        onSuccess(paymentIntent.id);
-      }
-    } catch (error: any) {
-      toast({
-        title: "Payment failed",
-        description: error.message || "An error occurred during payment",
-        variant: "destructive",
-      });
-    } finally {
-      setIsProcessing(false);
-    }
-  };
-
-  return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      <PaymentElement />
-      <div className="flex flex-col gap-2">
-        <div className="flex items-center justify-between text-sm">
-          <span className="text-muted-foreground">Total Amount</span>
-          <span className="text-2xl font-bold">${formatPrice(amount)}</span>
-        </div>
-        <Button 
-          type="submit" 
-          disabled={!stripe || isProcessing}
-          className="w-full gradient-bg !text-[hsl(258,90%,20%)]"
-          data-testid="button-confirm-payment"
-        >
-          {isProcessing ? (
-            <>
-              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-              Processing...
-            </>
-          ) : (
-            `Pay $${formatPrice(amount)}`
-          )}
-        </Button>
-      </div>
-    </form>
-  );
-}
-
 export default function Cart() {
   const { t } = useTranslation();
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const { isAuthenticated } = useAuth();
-  const [checkoutDialog, setCheckoutDialog] = useState<{ open: boolean; clientSecret?: string; amount?: number }>({ open: false });
+  const [checkoutDialogOpen, setCheckoutDialogOpen] = useState(false);
 
   // Fetch cart items from database (now includes storybook data and pricing)
   const { data: cartResponse, isLoading, refetch } = useQuery<{ items: EnrichedCartItem[] }>({
@@ -686,84 +320,6 @@ export default function Cart() {
     },
   });
 
-  // Checkout mutation
-  const checkoutMutation = useMutation({
-    mutationFn: async () => {
-      const response = await apiRequest('POST', '/api/cart/checkout');
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || 'Failed to create checkout');
-      }
-      return response.json();
-    },
-    onSuccess: (data) => {
-      setCheckoutDialog({ 
-        open: true, 
-        clientSecret: data.clientSecret,
-        amount: data.amount,
-      });
-    },
-    onError: (error: Error) => {
-      toast({
-        title: "Checkout failed",
-        description: error.message,
-        variant: "destructive",
-      });
-    },
-  });
-
-  // Finalize purchase mutation
-  const finalizeMutation = useMutation({
-    mutationFn: async ({ paymentIntentId, shippingAddress }: { paymentIntentId: string; shippingAddress?: ShippingAddressFormValues }) => {
-      const response = await apiRequest('POST', '/api/cart/finalize', { 
-        paymentIntentId,
-        shippingAddress,
-      });
-      if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || 'Failed to finalize purchase');
-      }
-      return response.json();
-    },
-    onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ['/api/cart'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/purchases'] });
-      
-      const purchases = data.purchases || [];
-      const printPurchases = purchases.filter((p: Purchase) => p.type === 'print');
-      const digitalPurchases = purchases.filter((p: Purchase) => p.type === 'digital');
-      
-      setCheckoutDialog({ open: false });
-      
-      // Show enhanced success toast with order details
-      const itemCount = purchases.length;
-      let description = `${itemCount} ${itemCount === 1 ? 'item' : 'items'} purchased successfully. `;
-      
-      if (printPurchases.length > 0) {
-        description += `Your ${printPurchases.length} print ${printPurchases.length === 1 ? 'book' : 'books'} will be shipped soon. `;
-      }
-      
-      description += "Check your library to view your purchases.";
-      
-      toast({
-        title: "🎉 Order Confirmed!",
-        description: description,
-        duration: 5000,
-      });
-      
-      // Redirect to library after a short delay
-      setTimeout(() => {
-        setLocation('/library');
-      }, 2000);
-    },
-    onError: (error: Error) => {
-      toast({
-        title: "Failed to complete purchase",
-        description: error.message,
-        variant: "destructive",
-      });
-    },
-  });
 
   const handleRemoveItem = (itemId: string) => {
     removeItemMutation.mutate(itemId);
@@ -809,11 +365,14 @@ export default function Cart() {
       return;
     }
 
-    checkoutMutation.mutate();
+    setCheckoutDialogOpen(true);
   };
 
-  const handlePaymentSuccess = (paymentIntentId: string, shippingAddress?: ShippingAddressFormValues) => {
-    finalizeMutation.mutate({ paymentIntentId, shippingAddress });
+  const handleCheckoutSuccess = () => {
+    // Redirect to orders page to view the order
+    setTimeout(() => {
+      setLocation('/orders');
+    }, 2000);
   };
 
   if (!isAuthenticated) {
@@ -996,19 +555,10 @@ export default function Cart() {
                     size="lg"
                     className="w-full gradient-bg !text-[hsl(258,90%,20%)] shadow-lg text-lg transition-all duration-200 hover:scale-105 hover:shadow-2xl hover:brightness-110 hover:ring-2 hover:ring-[hsl(258,90%,40%)] hover:ring-offset-2"
                     data-testid="button-checkout"
-                    disabled={removeItemMutation.isPending || updateItemMutation.isPending || checkoutMutation.isPending}
+                    disabled={removeItemMutation.isPending || updateItemMutation.isPending}
                   >
-                    {checkoutMutation.isPending ? (
-                      <>
-                        <Loader2 className="h-5 w-5 mr-2 animate-spin" />
-                        Processing...
-                      </>
-                    ) : (
-                      <>
-                        <ShoppingCart className="h-5 w-5 mr-2" />
-                        Proceed to Checkout
-                      </>
-                    )}
+                    <ShoppingCart className="h-5 w-5 mr-2" />
+                    Proceed to Checkout
                   </Button>
                 </div>
               </CardContent>
@@ -1017,16 +567,13 @@ export default function Cart() {
         )}
       </div>
 
-      {checkoutDialog.open && checkoutDialog.clientSecret && checkoutDialog.amount && (
-        <CheckoutDialog
-          open={checkoutDialog.open}
-          onOpenChange={(open) => setCheckoutDialog({ open })}
-          clientSecret={checkoutDialog.clientSecret}
-          amount={checkoutDialog.amount}
-          hasPrintItems={hasPrintItems}
-          onSuccess={handlePaymentSuccess}
-        />
-      )}
+      <NewCheckoutDialog
+        open={checkoutDialogOpen}
+        onOpenChange={setCheckoutDialogOpen}
+        hasPrintItems={hasPrintItems}
+        amount={total}
+        onSuccess={handleCheckoutSuccess}
+      />
     </div>
   );
 }
