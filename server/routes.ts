@@ -3370,14 +3370,13 @@ Sitemap: ${baseUrl}/sitemap.xml`;
             const sku = prodigiService.getProductSKU(printPurchase.bookSize || 'a5-portrait', storybook.pages.length);
             console.log(`[Prodigi] Book size: ${printPurchase.bookSize}, Generated SKU: ${sku}`);
             
-            // Letter SKUs don't support printArea, others use "default"
-            const isLetterBook = sku.includes('LETTER');
-            const asset: any = { url: pdfUrl };
-            if (!isLetterBook) {
-              asset.printArea = 'default';
-            }
+            // All photobooks use printArea: "default" for the PDF asset
+            const asset: any = { 
+              printArea: 'default',
+              url: pdfUrl 
+            };
             
-            console.log(`[Prodigi] Is Letter Book: ${isLetterBook}, Asset:`, JSON.stringify(asset));
+            console.log(`[Prodigi] Asset:`, JSON.stringify(asset));
             
             // Add item to Prodigi order
             prodigiItems.push({
