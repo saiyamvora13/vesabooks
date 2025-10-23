@@ -236,7 +236,7 @@ export default function Purchases() {
     setLocation('/cart');
   };
 
-  if (authLoading || isLoading) {
+  if (authLoading || isLoading || purchasesWithStorybooks.isLoading) {
     return (
       <div className="min-h-screen bg-muted/30">
         <Navigation />
