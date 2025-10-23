@@ -14,6 +14,28 @@ The application features a minimalist design with a soft white and purple color 
 ### Technical Implementations
 The frontend is built with React 18, TypeScript, Vite, Wouter, TanStack Query, Shadcn/ui, Radix UI, and Tailwind CSS. The backend uses Node.js Express.js with TypeScript, Drizzle ORM for PostgreSQL, and a middleware-chain. Key features include an Admin Platform, email/password authentication with Passport.js, multilingual support (5 languages), a three-act story structure system, and a Progressive Visual Reference Chain for character consistency across illustrations. Image style consistency is maintained through user selection from 10 professional illustration styles. The platform includes an e-commerce system with Stripe payments, EPUB e-book download, and print-ready PDF generation. Integration with Prodigi Print API enables physical hardcover book production with margin-based pricing, a 3-step checkout flow, and secure webhook integration. Other features include error handling with retry logic, persistent image storage in Replit Object Storage, sample story prompts, analytics, social sharing, user feedback, and individual page regeneration. Enhanced admin analytics are provided via a dashboard, and professional sound effects are integrated with an AudioManager. Security measures include bcryptjs, rate limiting, secure session storage, and Zod validation. An Admin Bootstrap System facilitates initial admin user creation. Anonymous story creation is protected by IP rate limiting, reCAPTCHA v3, and email-gated downloads. Production monitoring leverages Replit Analytics, and the application includes SEO and accessibility features.
 
+### Prodigi Print API Integration
+
+#### Order Status & Shipment Stages
+Prodigi API tracks orders through multiple stages:
+
+**Top-Level Status (`status.stage`)**:
+- `InProgress` - Order submitted and in fulfillment
+- `Complete` - All shipments have been sent
+- `Cancelled` - Order production cancelled
+
+**Detailed Process Stages (`status.details`)**:
+1. `downloadAssets` - Asset download from URLs
+2. `printReadyAssetsPrepared` - Files prepared for printing
+3. `allocateProductionLocation` - Print facility assigned
+4. `inProduction` - Actively being produced
+5. `shipping` - Items shipped
+
+Each stage can have: `NotStarted`, `InProgress`, `Complete`, or `Error`.
+
+#### Webhook Batch Handling
+The webhook handler supports batch orders (multiple storybooks in one Prodigi order) using `getPrintOrdersByProdigiId()` to update ALL print order records sharing the same Prodigi order ID. This ensures that when multiple items are combined into a single Prodigi order, all database records are updated together when the webhook fires, preventing individual items from getting stuck at old statuses.
+
 ### System Design Choices
 Data is stored in PostgreSQL via Drizzle ORM, with file uploads using Replit Object Storage. The frontend utilizes React 18, TypeScript, Vite, Wouter, TanStack Query, Shadcn/ui, Radix UI, and Tailwind CSS. The backend employs Node.js, Express.js, TypeScript, and Drizzle ORM. Express routes follow strict ordering to prevent incorrect parameter matching.
 
