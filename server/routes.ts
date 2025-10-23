@@ -3784,10 +3784,10 @@ Sitemap: ${baseUrl}/sitemap.xml`;
         return res.status(400).json({ message: "Missing order ID" });
       }
 
-      // Find print order by Prodigi order ID
-      const printOrder = await storage.getPrintOrderByProdigiId(prodigiOrderId);
+      // Find ALL print orders by Prodigi order ID (for batch orders with multiple storybooks)
+      const printOrders = await storage.getPrintOrdersByProdigiId(prodigiOrderId);
 
-      if (!printOrder) {
+      if (printOrders.length === 0) {
         console.warn(`[Prodigi Webhook] Print order not found for Prodigi order ID: ${prodigiOrderId}`);
         // Still return 200 to acknowledge receipt (prevent retries for unknown orders)
         return res.status(200).json({ received: true, message: "Order not found in database" });
@@ -3843,10 +3843,14 @@ Sitemap: ${baseUrl}/sitemap.xml`;
         }
       }
 
-      // Update print order in database
-      await storage.updatePrintOrderStatus(printOrder.id, updates);
+      // Update ALL print orders in the batch with the same status
+      console.log(`[Prodigi Webhook] Found ${printOrders.length} print order(s) for Prodigi order ${prodigiOrderId}`);
+      
+      for (const printOrder of printOrders) {
+        await storage.updatePrintOrderStatus(printOrder.id, updates);
+        console.log(`[Prodigi Webhook] ✅ Updated print order ${printOrder.id}`);
+      }
 
-      console.log(`[Prodigi Webhook] ✅ Updated print order ${printOrder.id}`);
       console.log(`[Prodigi Webhook]    Prodigi Order: ${prodigiOrderId}`);
       console.log(`[Prodigi Webhook]    Status: ${updates.status || 'N/A'}`);
       console.log(`[Prodigi Webhook]    Tracking: ${updates.trackingNumber || 'N/A'}`);

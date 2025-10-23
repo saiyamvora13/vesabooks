@@ -136,6 +136,7 @@ export interface IStorage {
   getPrintOrder(id: string): Promise<PrintOrder | null>;
   getPrintOrderByPurchaseId(purchaseId: string): Promise<PrintOrder | null>;
   getPrintOrderByProdigiId(prodigiOrderId: string): Promise<PrintOrder | null>;
+  getPrintOrdersByProdigiId(prodigiOrderId: string): Promise<PrintOrder[]>;
   getPrintOrderWithDetails(printOrderId: string): Promise<{ printOrder: PrintOrder; purchase: Purchase; storybook: Storybook; user: User } | null>;
   updatePrintOrder(id: string, data: Partial<PrintOrder>): Promise<PrintOrder>;
   updatePrintOrderStatus(printOrderId: string, updates: Partial<PrintOrder>): Promise<PrintOrder>;
@@ -1257,6 +1258,14 @@ export class DatabaseStorage implements IStorage {
       .from(printOrders)
       .where(eq(printOrders.prodigiOrderId, prodigiOrderId));
     return printOrder || null;
+  }
+
+  async getPrintOrdersByProdigiId(prodigiOrderId: string): Promise<PrintOrder[]> {
+    const orders = await db
+      .select()
+      .from(printOrders)
+      .where(eq(printOrders.prodigiOrderId, prodigiOrderId));
+    return orders;
   }
 
   async getPrintOrderWithDetails(printOrderId: string): Promise<{ printOrder: PrintOrder; purchase: Purchase; storybook: Storybook; user: User } | null> {
