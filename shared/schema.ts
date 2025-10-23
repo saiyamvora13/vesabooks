@@ -498,3 +498,52 @@ export const insertPrintOrderSchema = createInsertSchema(printOrders).omit({
 
 export type PrintOrder = typeof printOrders.$inferSelect;
 export type InsertPrintOrder = z.infer<typeof insertPrintOrderSchema>;
+
+// Order Notes - internal notes for customer support and troubleshooting
+export const orderNotes = pgTable("order_notes", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  orderReference: text("order_reference").notNull(), // Links to purchase.orderReference
+  noteType: varchar("note_type").notNull().default('general'), // general, support, technical, refund
+  content: text("content").notNull(),
+  createdBy: varchar("created_by").references(() => adminUsers.id),
+  isInternal: boolean("is_internal").notNull().default(true), // If false, customer can see it
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("idx_order_notes_order_reference").on(table.orderReference),
+  index("idx_order_notes_created_by").on(table.createdBy),
+  index("idx_order_notes_created_at").on(table.createdAt),
+]);
+
+export const insertOrderNoteSchema = createInsertSchema(orderNotes).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type OrderNote = typeof orderNotes.$inferSelect;
+export type InsertOrderNote = z.infer<typeof insertOrderNoteSchema>;
+
+// Order Status History - track all status changes for orders
+export const orderStatusHistory = pgTable("order_status_history", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  orderReference: text("order_reference").notNull(), // Links to purchase.orderReference
+  entityType: varchar("entity_type").notNull(), // 'purchase' or 'print_order'
+  entityId: varchar("entity_id").notNull(), // ID of the purchase or print_order
+  previousStatus: varchar("previous_status"),
+  newStatus: varchar("new_status").notNull(),
+  changedBy: varchar("changed_by"), // Admin user ID if manual, null if automatic
+  changeReason: text("change_reason"), // Why status changed
+  metadata: jsonb("metadata"), // Additional context (error details, webhook data, etc.)
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("idx_order_status_history_order_reference").on(table.orderReference),
+  index("idx_order_status_history_entity").on(table.entityType, table.entityId),
+  index("idx_order_status_history_created_at").on(table.createdAt),
+]);
+
+export const insertOrderStatusHistorySchema = createInsertSchema(orderStatusHistory).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type OrderStatusHistory = typeof orderStatusHistory.$inferSelect;
+export type InsertOrderStatusHistory = z.infer<typeof insertOrderStatusHistorySchema>;
