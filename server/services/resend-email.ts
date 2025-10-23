@@ -590,3 +590,77 @@ export async function sendShippingNotification(params: {
   
   console.log(`✅ Shipping notification sent to ${recipientEmail} for order ${orderId}`);
 }
+
+export async function sendOrderCancelledEmail(
+  userEmail: string,
+  userName: string,
+  storybookTitle: string,
+  printOrderId: string,
+  paymentIntentId: string,
+  language: string = 'en'
+): Promise<void> {
+  const { client, fromEmail } = await getUncachableResendClient();
+  
+  const t = getEmailTranslations(language, 'orderCancelled');
+  
+  const htmlBody = `
+    <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 650px; margin: 0 auto; padding: 20px; background-color: #ffffff;">
+      <div style="background-color: #dc2626; color: #ffffff; padding: 30px; text-align: center; border-radius: 8px 8px 0 0;">
+        <h1 style="margin: 0; font-size: 32px; font-weight: 600;">⚠️ Order Cancelled</h1>
+      </div>
+      
+      <div style="background-color: #f9f7f3; padding: 30px; border-radius: 0 0 8px 8px;">
+        <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
+          ${replacePlaceholders(t.greeting || 'Hi {name},', { name: userName })}
+        </p>
+        
+        <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
+          ${replacePlaceholders(t.body1 || '', { title: storybookTitle })}
+        </p>
+        
+        <div style="background-color: #ffffff; border-left: 4px solid #dc2626; padding: 15px 20px; margin: 20px 0;">
+          <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 0;">
+            ${t.body2}
+          </p>
+        </div>
+        
+        <div style="background-color: #ffffff; border-left: 4px solid #10b981; padding: 15px 20px; margin: 20px 0;">
+          <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 0;">
+            ${t.body3}
+          </p>
+        </div>
+        
+        <div style="background-color: #f3f4f6; padding: 15px; border-radius: 6px; margin: 20px 0;">
+          <p style="color: #6b7280; font-size: 14px; margin: 0 0 8px 0;">
+            <strong>Order ID:</strong> ${printOrderId}
+          </p>
+          <p style="color: #6b7280; font-size: 14px; margin: 0;">
+            <strong>Payment ID:</strong> ${paymentIntentId}
+          </p>
+        </div>
+      </div>
+      
+      <div style="margin-top: 30px; padding: 20px; text-align: center; border-top: 1px solid #e5e7eb;">
+        <p style="margin: 0; color: #374151; font-size: 14px;">
+          ${t.closing}<br>
+          <strong>${t.team}</strong>
+        </p>
+      </div>
+      
+      <div style="margin-top: 20px; padding: 15px; text-align: center;">
+        <p style="margin: 0; color: #9ca3af; font-size: 12px;">
+          ${t.disclaimer}
+        </p>
+      </div>
+    </div>
+  `;
+
+  await client.emails.send({
+    from: fromEmail,
+    to: userEmail,
+    subject: replacePlaceholders(t.subject, { title: storybookTitle }),
+    html: htmlBody,
+  });
+  
+  console.log(`✅ Order cancellation email sent to ${userEmail} for order ${printOrderId}`);
+}

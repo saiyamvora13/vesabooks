@@ -44,6 +44,7 @@ interface AllEmailTranslations {
   passwordReset: EmailTypeTranslations;
   printPurchase: EmailTypeTranslations;
   invoice: EmailTypeTranslations;
+  orderCancelled: EmailTypeTranslations;
 }
 
 const translations: AllEmailTranslations = {
@@ -245,11 +246,64 @@ const translations: AllEmailTranslations = {
       printEdition: '印刷版',
     },
   },
+
+  orderCancelled: {
+    en: {
+      subject: 'Order Cancelled - {title}',
+      greeting: 'Hi {name},',
+      body1: 'We regret to inform you that your print order for <strong>"{title}"</strong> has been automatically cancelled due to a technical issue.',
+      body2: '<strong>Reason:</strong> Our printing partner was unable to download the print-ready files. This can happen when URLs expire or there are temporary connectivity issues.',
+      body3: '<strong>Refund:</strong> A full refund has been automatically processed to your original payment method. You should see it within 5-10 business days.',
+      closing: 'We apologize for the inconvenience,',
+      team: 'AI Storyteller Team',
+      disclaimer: 'If you have any questions, please contact support.',
+    },
+    es: {
+      subject: 'Pedido Cancelado - {title}',
+      greeting: 'Hola {name},',
+      body1: 'Lamentamos informarte que tu pedido de impresión de <strong>"{title}"</strong> ha sido cancelado automáticamente debido a un problema técnico.',
+      body2: '<strong>Motivo:</strong> Nuestro socio de impresión no pudo descargar los archivos listos para imprimir. Esto puede suceder cuando las URLs expiran o hay problemas temporales de conectividad.',
+      body3: '<strong>Reembolso:</strong> Se ha procesado automáticamente un reembolso completo a tu método de pago original. Deberías verlo dentro de 5-10 días hábiles.',
+      closing: 'Pedimos disculpas por las molestias,',
+      team: 'Equipo AI Storyteller',
+      disclaimer: 'Si tienes alguna pregunta, contáctanos.',
+    },
+    fr: {
+      subject: 'Commande Annulée - {title}',
+      greeting: 'Bonjour {name},',
+      body1: 'Nous regrettons de vous informer que votre commande d\'impression pour <strong>"{title}"</strong> a été automatiquement annulée en raison d\'un problème technique.',
+      body2: '<strong>Raison :</strong> Notre partenaire d\'impression n\'a pas pu télécharger les fichiers prêts à imprimer. Cela peut se produire lorsque les URLs expirent ou qu\'il y a des problèmes de connectivité temporaires.',
+      body3: '<strong>Remboursement :</strong> Un remboursement complet a été traité automatiquement vers votre méthode de paiement d\'origine. Vous devriez le voir dans les 5 à 10 jours ouvrables.',
+      closing: 'Nous nous excusons pour la gêne occasionnée,',
+      team: 'Équipe AI Storyteller',
+      disclaimer: 'Si vous avez des questions, veuillez contacter le support.',
+    },
+    de: {
+      subject: 'Bestellung Storniert - {title}',
+      greeting: 'Hallo {name},',
+      body1: 'Wir bedauern, Ihnen mitteilen zu müssen, dass Ihre Druckbestellung für <strong>"{title}"</strong> aufgrund eines technischen Problems automatisch storniert wurde.',
+      body2: '<strong>Grund:</strong> Unser Druckpartner konnte die druckfertigen Dateien nicht herunterladen. Dies kann passieren, wenn URLs ablaufen oder temporäre Verbindungsprobleme auftreten.',
+      body3: '<strong>Rückerstattung:</strong> Eine vollständige Rückerstattung wurde automatisch auf Ihre ursprüngliche Zahlungsmethode verarbeitet. Sie sollten sie innerhalb von 5-10 Werktagen sehen.',
+      closing: 'Wir entschuldigen uns für die Unannehmlichkeiten,',
+      team: 'AI Storyteller Team',
+      disclaimer: 'Wenn Sie Fragen haben, wenden Sie sich bitte an den Support.',
+    },
+    zh: {
+      subject: '订单已取消 - {title}',
+      greeting: '您好 {name}，',
+      body1: '很遗憾地通知您，您对<strong>"{title}"</strong>的印刷订单因技术问题已被自动取消。',
+      body2: '<strong>原因：</strong>我们的印刷合作伙伴无法下载打印文件。这可能发生在URL过期或存在临时连接问题时。',
+      body3: '<strong>退款：</strong>已自动处理全额退款至您原始的支付方式。您应该在5-10个工作日内看到退款。',
+      closing: '对于造成的不便，我们深表歉意，',
+      team: 'AI Storyteller 团队',
+      disclaimer: '如有任何问题，请联系客服。',
+    },
+  },
 };
 
 export function getEmailTranslations(
   language: string,
-  emailType: 'passwordReset' | 'printPurchase' | 'invoice'
+  emailType: 'passwordReset' | 'printPurchase' | 'invoice' | 'orderCancelled'
 ): EmailTranslations {
   // Normalize language code to 2-letter code
   const normalizedLang = language.toLowerCase().substring(0, 2);

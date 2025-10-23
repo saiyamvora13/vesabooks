@@ -3,6 +3,7 @@ import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { bootstrapAdminUser } from "./services/adminBootstrap";
+import { checkAndCancelStuckOrders } from "./services/stuck-orders";
 
 const app = express();
 
@@ -57,6 +58,31 @@ app.use((req, res, next) => {
 
   // Bootstrap first admin user from environment variables (if needed)
   await bootstrapAdminUser();
+
+  // Start hourly cron job to check for stuck print orders
+  // Runs every hour to detect orders where Prodigi hasn't started downloading files
+  const ONE_HOUR_MS = 60 * 60 * 1000;
+  
+  // Run initial check after 5 minutes (gives app time to start up)
+  setTimeout(async () => {
+    try {
+      log('[Stuck Orders] Running initial check...');
+      await checkAndCancelStuckOrders();
+    } catch (error) {
+      console.error('[Stuck Orders] Initial check failed:', error);
+    }
+  }, 5 * 60 * 1000);
+  
+  // Then run every hour
+  setInterval(async () => {
+    try {
+      await checkAndCancelStuckOrders();
+    } catch (error) {
+      console.error('[Stuck Orders] Hourly check failed:', error);
+    }
+  }, ONE_HOUR_MS);
+  
+  log('[Stuck Orders] Hourly checker initialized - will run every 60 minutes');
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;
