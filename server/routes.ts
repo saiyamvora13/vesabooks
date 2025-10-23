@@ -3351,6 +3351,10 @@ Sitemap: ${baseUrl}/sitemap.xml`;
             : 'http://localhost:5000';
           const pdfUrl = `${baseUrl}${pdfStoragePath}`;
           
+          console.log(`[Prodigi] DEBUG - baseUrl: ${baseUrl}`);
+          console.log(`[Prodigi] DEBUG - pdfStoragePath: ${pdfStoragePath}`);
+          console.log(`[Prodigi] DEBUG - Final pdfUrl being sent to Prodigi: ${pdfUrl}`);
+          
           // Get product SKU and dimensions
           const sku = prodigiService.getProductSKU(printPurchase.bookSize || 'a5-portrait', storybook.pages.length);
           console.log(`[Prodigi] Book size: ${printPurchase.bookSize}, Generated SKU: ${sku}`);
