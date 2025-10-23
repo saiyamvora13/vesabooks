@@ -5093,7 +5093,9 @@ async function generateStorybookAsync(
       message: `Generating ${pagesPerBook}-page story outline...`,
     });
 
+    console.time('📝 Story generation');
     const generatedStory = await generateStoryFromPrompt(prompt, imagePaths, pagesPerBook, illustrationStyle, age, author);
+    console.timeEnd('📝 Story generation');
 
     // Step 3: Generate illustrations
     await storage.setGenerationProgress(sessionId, {
@@ -5134,7 +5136,9 @@ async function generateStorybookAsync(
     
     // For cover image: use all uploaded inspiration images as references
     const coverReferences = imagePaths.length > 0 ? imagePaths : undefined;
+    console.time('🎨 Cover image generation');
     await generateIllustration(coverPromptWithCharacter, coverImagePath, coverReferences, illustrationStyle);
+    console.timeEnd('🎨 Cover image generation');
     
     // Upload cover image to Object Storage
     const coverImageUrl = await objectStorage.uploadFile(coverImagePath, coverImageFileName);
@@ -5159,28 +5163,39 @@ async function generateStorybookAsync(
     // KEEP cover image locally to use as reference for character consistency in all page illustrations
     // It will be cleaned up after all pages are generated
 
-    const pages = [];
-    for (let i = 0; i < generatedStory.pages.length; i++) {
-      const page = generatedStory.pages[i];
+    // Step 4: Generate all page illustrations AND back cover in PARALLEL for speed
+    console.time('⚡ Parallel image generation');
+    await storage.setGenerationProgress(sessionId, {
+      step: 'generating_illustrations',
+      progress: 50,
+      message: `Generating all ${generatedStory.pages.length} page illustrations in parallel...`,
+    });
+
+    // Progressive visual reference chain: use BOTH uploaded inspiration images AND cover image
+    const sharedReferences = [...imagePaths];
+    if (fs.existsSync(coverImagePath)) {
+      sharedReferences.push(coverImagePath);
+    }
+
+    // Create all page generation promises
+    const pageGenerationPromises = generatedStory.pages.map(async (page) => {
       const imageFileName = `${sessionId}_page_${page.pageNumber}.jpg`;
       const imagePath = path.join(generatedDir, imageFileName);
 
       // Build the page image prompt using the centralized utility function
-      // The utility handles clothing logic automatically (skips default clothing if scene specifies different clothing)
       const pagePromptWithCharacter = buildFinalImagePrompt({
         mainCharacterDescription: generatedStory.mainCharacterDescription,
         defaultClothing: generatedStory.defaultClothing,
         scenePrompt: page.imagePrompt,
         artStyle: illustrationStyle,
       });
-      
-      // Progressive visual reference chain: use BOTH uploaded inspiration images AND cover image
-      // This ensures each page sees both the original photo(s) and the established visual from the cover
-      const pageReferences = [...imagePaths];
-      if (fs.existsSync(coverImagePath)) {
-        pageReferences.push(coverImagePath);
-      }
-      await generateIllustration(pagePromptWithCharacter, imagePath, pageReferences.length > 0 ? pageReferences : undefined, illustrationStyle);
+
+      await generateIllustration(
+        pagePromptWithCharacter, 
+        imagePath, 
+        sharedReferences.length > 0 ? sharedReferences : undefined, 
+        illustrationStyle
+      );
 
       // Upload to Object Storage
       const imageUrl = await objectStorage.uploadFile(imagePath, imageFileName);
@@ -5190,58 +5205,62 @@ async function generateStorybookAsync(
         fs.unlinkSync(imagePath);
       }
 
-      pages.push({
+      return {
         pageNumber: page.pageNumber,
         text: page.text,
         imageUrl,
         imagePrompt: page.imagePrompt,
-      });
-
-      // Update progress
-      const progressPercent = 50 + (i + 1) * (40 / generatedStory.pages.length);
-      await storage.setGenerationProgress(sessionId, {
-        step: 'generating_illustrations',
-        progress: progressPercent,
-        message: `Generated illustration ${i + 1} of ${generatedStory.pages.length}`,
-      });
-    }
-
-    // Step 4: Generate back cover
-    await storage.setGenerationProgress(sessionId, {
-      step: 'finalizing',
-      progress: 92,
-      message: 'Creating back cover illustration...',
+      };
     });
 
-    // Generate back cover image
+    // Create back cover generation promise
     const backCoverImageFileName = `${sessionId}_back_cover.jpg`;
     const backCoverImagePath = path.join(generatedDir, backCoverImageFileName);
     
-    // Create back cover prompt that complements the front cover
-    const backCoverBasePrompt = `Create a back cover illustration that complements the front cover. Show the character in a different scene that hints at the adventure without spoiling it.`;
-    
-    // Build the back cover image prompt using the centralized utility function
-    const backCoverPromptWithCharacter = buildFinalImagePrompt({
-      mainCharacterDescription: generatedStory.mainCharacterDescription,
-      defaultClothing: generatedStory.defaultClothing,
-      scenePrompt: backCoverBasePrompt,
-      artStyle: illustrationStyle,
+    const backCoverGenerationPromise = (async () => {
+      // Create back cover prompt that complements the front cover
+      const backCoverBasePrompt = `Create a back cover illustration that complements the front cover. Show the character in a different scene that hints at the adventure without spoiling it.`;
+      
+      // Build the back cover image prompt using the centralized utility function
+      const backCoverPromptWithCharacter = buildFinalImagePrompt({
+        mainCharacterDescription: generatedStory.mainCharacterDescription,
+        defaultClothing: generatedStory.defaultClothing,
+        scenePrompt: backCoverBasePrompt,
+        artStyle: illustrationStyle,
+      });
+
+      await generateIllustration(
+        backCoverPromptWithCharacter, 
+        backCoverImagePath, 
+        sharedReferences.length > 0 ? sharedReferences : undefined, 
+        illustrationStyle
+      );
+      
+      // Upload back cover to Object Storage
+      const backCoverImageUrl = await objectStorage.uploadFile(backCoverImagePath, backCoverImageFileName);
+      
+      // Clean up local back cover image
+      if (fs.existsSync(backCoverImagePath)) {
+        fs.unlinkSync(backCoverImagePath);
+      }
+
+      return backCoverImageUrl;
+    })();
+
+    // Wait for ALL images to complete in parallel (pages + back cover)
+    const [pages, backCoverImageUrl] = await Promise.all([
+      Promise.all(pageGenerationPromises),
+      backCoverGenerationPromise,
+    ]);
+
+    console.timeEnd('⚡ Parallel image generation');
+
+    // Update progress after all images are done
+    await storage.setGenerationProgress(sessionId, {
+      step: 'finalizing',
+      progress: 92,
+      message: 'All illustrations generated! Finalizing...',
     });
-    
-    // Progressive visual reference chain: use BOTH uploaded inspiration images AND cover image for back cover
-    const backCoverReferences = [...imagePaths];
-    if (fs.existsSync(coverImagePath)) {
-      backCoverReferences.push(coverImagePath);
-    }
-    await generateIllustration(backCoverPromptWithCharacter, backCoverImagePath, backCoverReferences.length > 0 ? backCoverReferences : undefined, illustrationStyle);
-    
-    // Upload back cover to Object Storage
-    const backCoverImageUrl = await objectStorage.uploadFile(backCoverImagePath, backCoverImageFileName);
-    
-    // Clean up local back cover image
-    if (fs.existsSync(backCoverImagePath)) {
-      fs.unlinkSync(backCoverImagePath);
-    }
 
     // Step 5: Finalize
     await storage.setGenerationProgress(sessionId, {
