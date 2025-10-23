@@ -73,6 +73,7 @@ Key features include:
 - **Data Storage**: PostgreSQL via Drizzle ORM for users, storybooks, purchases, sessions, password_reset_tokens, and admin data. File uploads use Replit Object Storage.
 - **Frontend Frameworks**: React 18, TypeScript, Vite, Wouter, TanStack Query, Shadcn/ui, Radix UI, Tailwind CSS.
 - **Backend Frameworks**: Node.js, Express.js, TypeScript, Drizzle ORM.
+- **Route Ordering**: Express routes follow strict ordering - specific routes (e.g., `/api/storybooks/saved`, `/api/storybooks/examples`) must be defined before wildcard routes (e.g., `/api/storybooks/:id`) to prevent incorrect parameter matching.
 
 ## External Dependencies
 
