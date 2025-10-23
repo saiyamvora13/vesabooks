@@ -3988,6 +3988,17 @@ Sitemap: ${baseUrl}/sitemap.xml`;
         console.log(`[Prodigi Webhook] ✅ Updated print order ${printOrder.id}`);
       }
 
+      // Update purchase status when order is completed or cancelled
+      if (status?.stage === 'Complete' || status?.stage === 'Cancelled') {
+        const newPurchaseStatus = status.stage === 'Complete' ? 'completed' : 'cancelled';
+        console.log(`[Prodigi Webhook] Updating ${printOrders.length} purchase(s) to '${newPurchaseStatus}'`);
+        
+        for (const printOrder of printOrders) {
+          await storage.updatePurchaseStatus(printOrder.purchaseId, newPurchaseStatus);
+          console.log(`[Prodigi Webhook] ✅ Updated purchase ${printOrder.purchaseId} to '${newPurchaseStatus}'`);
+        }
+      }
+
       // TWO-PHASE ORDER FLOW: Deferred Payment Charging
       // If order status changed to 'InProgress' AND print orders need payment,
       // charge the customer NOW
