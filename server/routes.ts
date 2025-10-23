@@ -3377,6 +3377,8 @@ Sitemap: ${baseUrl}/sitemap.xml`;
               asset.printArea = 'default';
             }
             
+            console.log(`[Prodigi] Is Letter Book: ${isLetterBook}, Asset:`, JSON.stringify(asset));
+            
             // Add item to Prodigi order
             prodigiItems.push({
               sku,
@@ -3430,6 +3432,7 @@ Sitemap: ${baseUrl}/sitemap.xml`;
             
             console.log(`[Prodigi] Creating single order with ${prodigiItems.length} items`);
             console.log(`[Prodigi] Using callback URL: ${callbackUrl}`);
+            console.log(`[Prodigi] DEBUG - Final prodigiItems:`, JSON.stringify(prodigiItems, null, 2));
 
             // Use payment intent ID as merchant reference for the combined order
             const prodigiOrder = await prodigiService.createOrder({
