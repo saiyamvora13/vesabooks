@@ -1616,6 +1616,152 @@ Sitemap: ${baseUrl}/sitemap.xml`;
     }
   });
 
+  // Order Management Admin API Routes
+
+  // GET /api/admin/orders - Search and list orders
+  app.get('/api/admin/orders', isAdmin, async (req: any, res) => {
+    try {
+      const filters = {
+        orderReference: req.query.orderReference as string,
+        email: req.query.email as string,
+        storybookTitle: req.query.storybookTitle as string,
+        stripePaymentIntentId: req.query.stripePaymentIntentId as string,
+        prodigiOrderId: req.query.prodigiOrderId as string,
+        status: req.query.status as string,
+        productType: req.query.productType as 'digital' | 'print',
+        dateFrom: req.query.dateFrom ? new Date(req.query.dateFrom as string) : undefined,
+        dateTo: req.query.dateTo ? new Date(req.query.dateTo as string) : undefined,
+        limit: req.query.limit ? parseInt(req.query.limit as string) : undefined,
+        offset: req.query.offset ? parseInt(req.query.offset as string) : undefined,
+      };
+
+      const result = await storage.searchOrders(filters);
+      res.json(result);
+    } catch (error) {
+      console.error('Search orders error:', error);
+      res.status(500).json({ message: 'Failed to search orders' });
+    }
+  });
+
+  // GET /api/admin/orders/:orderReference - Get detailed order information
+  app.get('/api/admin/orders/:orderReference', isAdmin, async (req: any, res) => {
+    try {
+      const { orderReference } = req.params;
+
+      if (!orderReference) {
+        return res.status(400).json({ message: 'Order reference is required' });
+      }
+
+      const orderDetails = await storage.getOrderDetails(orderReference);
+
+      if (!orderDetails) {
+        return res.status(404).json({ message: 'Order not found' });
+      }
+
+      res.json(orderDetails);
+    } catch (error) {
+      console.error('Get order details error:', error);
+      res.status(500).json({ message: 'Failed to get order details' });
+    }
+  });
+
+  // POST /api/admin/orders/:orderReference/notes - Add a note to an order
+  app.post('/api/admin/orders/:orderReference/notes', isAdmin, async (req: any, res) => {
+    try {
+      const { orderReference } = req.params;
+      const { noteType, content, isInternal } = req.body;
+      const admin = req.user as AdminUser;
+
+      if (!orderReference) {
+        return res.status(400).json({ message: 'Order reference is required' });
+      }
+
+      if (!noteType || !content) {
+        return res.status(400).json({ message: 'Note type and content are required' });
+      }
+
+      // Verify order exists
+      const orderDetails = await storage.getOrderDetails(orderReference);
+      if (!orderDetails) {
+        return res.status(404).json({ message: 'Order not found' });
+      }
+
+      const note = await storage.addOrderNote({
+        orderReference,
+        noteType,
+        content,
+        isInternal: isInternal ?? false,
+        createdBy: admin.id,
+      });
+
+      // Log admin action
+      await logAdminAction(
+        admin.id,
+        'add_order_note',
+        'order_note',
+        note.id,
+        { orderReference, noteType, isInternal },
+        req
+      );
+
+      res.json(note);
+    } catch (error) {
+      console.error('Add order note error:', error);
+      res.status(500).json({ message: 'Failed to add order note' });
+    }
+  });
+
+  // GET /api/admin/orders/:orderReference/notes - Get all notes for an order
+  app.get('/api/admin/orders/:orderReference/notes', isAdmin, async (req: any, res) => {
+    try {
+      const { orderReference } = req.params;
+
+      if (!orderReference) {
+        return res.status(400).json({ message: 'Order reference is required' });
+      }
+
+      const notes = await storage.getOrderNotes(orderReference);
+      res.json(notes);
+    } catch (error) {
+      console.error('Get order notes error:', error);
+      res.status(500).json({ message: 'Failed to get order notes' });
+    }
+  });
+
+  // GET /api/admin/orders/:orderReference/history - Get status history
+  app.get('/api/admin/orders/:orderReference/history', isAdmin, async (req: any, res) => {
+    try {
+      const { orderReference } = req.params;
+
+      if (!orderReference) {
+        return res.status(400).json({ message: 'Order reference is required' });
+      }
+
+      const history = await storage.getOrderStatusHistory(orderReference);
+      res.json(history);
+    } catch (error) {
+      console.error('Get order status history error:', error);
+      res.status(500).json({ message: 'Failed to get order status history' });
+    }
+  });
+
+  // GET /api/admin/users/:userId/orders - Get order history for a user
+  app.get('/api/admin/users/:userId/orders', isAdmin, async (req: any, res) => {
+    try {
+      const { userId } = req.params;
+
+      if (!userId) {
+        return res.status(400).json({ message: 'User ID is required' });
+      }
+
+      const orders = await storage.getUserOrderHistory(userId);
+      res.json(orders);
+    } catch (error) {
+      console.error('Get user order history error:', error);
+      res.status(500).json({ message: 'Failed to get user order history' });
+    }
+  });
+
   // GET /api/metrics (public - no auth required)
   app.get('/api/metrics', async (req, res) => {
     try {
