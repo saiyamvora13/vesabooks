@@ -5140,6 +5140,27 @@ async function generateStorybookAsync(
     await generateIllustration(coverPromptWithCharacter, coverImagePath, coverReferences, illustrationStyle);
     console.timeEnd('🎨 Cover image generation');
     
+    // Add title and author text overlay to cover image
+    console.time('📝 Cover text overlay');
+    const coverImageBuffer = fs.readFileSync(coverImagePath);
+    const coverMetadata = await sharp(coverImageBuffer).metadata();
+    const coverWidth = coverMetadata.width || 800;
+    const coverHeight = coverMetadata.height || 1200;
+    
+    // Import text overlay helper function
+    const { addTextToCoverImage } = await import("./services/coverText");
+    const compositeCoverBuffer = await addTextToCoverImage(
+      coverImageBuffer,
+      generatedStory.title,
+      author,
+      coverWidth,
+      coverHeight
+    );
+    
+    // Write composite cover back to disk
+    fs.writeFileSync(coverImagePath, compositeCoverBuffer);
+    console.timeEnd('📝 Cover text overlay');
+    
     // Upload cover image to Object Storage
     const coverImageUrl = await objectStorage.uploadFile(coverImagePath, coverImageFileName);
     

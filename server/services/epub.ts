@@ -179,7 +179,8 @@ export async function generateEpub(storybook: Storybook): Promise<Buffer> {
 
 export async function generateCompositeCoverImage(
   coverImageUrl: string,
-  title: string
+  title: string,
+  author: string = "AI Storyteller"
 ): Promise<Buffer | null> {
   try {
     // Extract the path after /api/storage/ to handle both flat and date-based paths
@@ -302,7 +303,7 @@ export async function generateCompositeCoverImage(
       <!-- Bottom gradient for author -->
       <rect x="0" y="${height * 0.75}" width="${width}" height="${height * 0.25}" fill="url(#bottomGradient)"/>
       ${titleSvgElements}
-      <text x="50%" y="${authorY}" text-anchor="middle" font-family="Georgia, serif" font-size="${authorFontSize}" fill="white" filter="url(#textShadow)">By AI Storyteller</text>
+      <text x="50%" y="${authorY}" text-anchor="middle" font-family="Georgia, serif" font-size="${authorFontSize}" fill="white" filter="url(#textShadow)">By ${escapeXml(author)}</text>
     </svg>`;
 
     // Create composite image
