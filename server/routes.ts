@@ -2,7 +2,7 @@ import type { Express, Request } from "express";
 import express from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { generateStoryFromPrompt, generateStoryInBatches, generateIllustration, optimizeImageForWeb, detectMoodsForStorybook } from "./services/gemini";
+import { generateStoryFromPrompt, generateStoryInBatches, generateIllustration, optimizeImageForWeb } from "./services/gemini";
 import { createStorybookSchema, type StoryGenerationProgress, type Purchase, type InsertPurchase, type User, type AdminUser } from "@shared/schema";
 import { randomUUID, randomBytes } from "crypto";
 import * as fs from "fs";
@@ -5449,49 +5449,6 @@ Sitemap: ${baseUrl}/sitemap.xml`;
     }
   });
 
-  // Analyze mood for existing storybook pages (requires authentication and ownership)
-  app.post("/api/storybooks/:id/analyze-mood", isAuthenticated, async (req: any, res) => {
-    try {
-      const { id } = req.params;
-      const userId = req.user.id || req.user.claims?.sub;
-
-      // Get storybook and verify ownership
-      const storybook = await storage.getStorybook(id);
-      if (!storybook) {
-        return res.status(404).json({ message: 'Storybook not found' });
-      }
-
-      if (storybook.userId !== userId) {
-        return res.status(403).json({ message: 'Unauthorized' });
-      }
-
-      // Import mood detection function
-      const { detectPageMood } = await import("./services/gemini");
-
-      // Analyze mood for each page
-      const updatedPages = await Promise.all(
-        storybook.pages.map(async (page) => ({
-          ...page,
-          mood: await detectPageMood(page.text),
-        }))
-      );
-
-      // Update the storybook with moods
-      const { db } = await import('./db');
-      const { storybooks } = await import('@shared/schema');
-      const { eq } = await import('drizzle-orm');
-      
-      await db
-        .update(storybooks)
-        .set({ pages: updatedPages as any })
-        .where(eq(storybooks.id, id));
-
-      res.json({ message: 'Mood analysis completed', pages: updatedPages });
-    } catch (error) {
-      console.error("Analyze mood error:", error);
-      res.status(500).json({ message: "Failed to analyze mood" });
-    }
-  });
 
   const httpServer = createServer(app);
   return httpServer;
@@ -5738,14 +5695,6 @@ IMPORTANT: This is a book cover. Include the title "${generatedStory.title}" pro
     // Track story completion (non-blocking)
     analytics.trackStoryCompleted(userId, storybook.id, pages.length).catch(err => {
       console.error('Failed to track story_completed event:', err);
-    });
-
-    // Detect page moods in background (non-blocking for speed)
-    detectMoodsForStorybook(storybook.id, pages.map(p => ({
-      pageNumber: p.pageNumber,
-      text: p.text,
-    }))).catch(err => {
-      console.error('Failed to detect moods in background:', err);
     });
 
     // Complete - Store the storybook ID in progress for retrieval

@@ -34,98 +34,6 @@ function getMimeType(filePath: string): string {
 import { optimizeImageForWeb } from '../utils/imageOptimization';
 export { optimizeImageForWeb };
 
-// Detect the mood/emotion of a page's text for audio selection
-export async function detectPageMood(pageText: string): Promise<string> {
-  try {
-    const systemInstruction = `You are an emotion and mood analyzer. Analyze the given text and determine its overall mood/emotional tone. 
-    
-Choose ONLY ONE of these moods:
-- calm: Peaceful, serene, gentle, relaxing scenes
-- adventure: Exciting, energetic, action-filled, exploring
-- mystery: Curious, intriguing, puzzling, discovering
-- happy: Joyful, cheerful, fun, celebrating
-- suspense: Tense, uncertain, anticipating, nerve-wracking
-- dramatic: Intense, powerful, climactic, emotional
-
-Return ONLY the single mood word that best matches the text.`;
-
-    const response = await ai.models.generateContent({
-      model: "gemini-2.5-flash",
-      contents: {
-        parts: [{ text: `Analyze this text and return the mood: ${pageText}` }],
-      },
-      config: {
-        systemInstruction: systemInstruction,
-      },
-    });
-
-    const mood = response.text?.trim().toLowerCase();
-    
-    // Validate and default to calm if invalid
-    const validMoods = ['calm', 'adventure', 'mystery', 'happy', 'suspense', 'dramatic'];
-    if (mood && validMoods.includes(mood)) {
-      return mood;
-    }
-    
-    return 'calm'; // Default fallback
-  } catch (error) {
-    console.error('Failed to detect page mood:', error);
-    return 'calm'; // Default fallback on error
-  }
-}
-
-// Detect moods for all pages in a storybook (runs in background for performance)
-export async function detectMoodsForStorybook(storybookId: string, pages: Array<{ pageNumber: number; text: string }>): Promise<void> {
-  try {
-    console.log(`[Background] Detecting moods for storybook ${storybookId}...`);
-    
-    // Detect moods for all pages in parallel
-    const moodPromises = pages.map(async (page) => ({
-      pageNumber: page.pageNumber,
-      mood: await detectPageMood(page.text),
-    }));
-    
-    const moodResults = await Promise.all(moodPromises);
-    
-    // Update the storybook with detected moods
-    const { db } = await import('../db');
-    const { storybooks } = await import('@shared/schema');
-    const { eq } = await import('drizzle-orm');
-    
-    // Get current storybook to preserve other page data
-    const [currentStorybook] = await db
-      .select()
-      .from(storybooks)
-      .where(eq(storybooks.id, storybookId))
-      .limit(1);
-    
-    if (!currentStorybook) {
-      console.error(`[Background] Storybook ${storybookId} not found for mood detection`);
-      return;
-    }
-    
-    // Merge moods into existing pages
-    const updatedPages = currentStorybook.pages.map((page: any) => {
-      const moodResult = moodResults.find(m => m.pageNumber === page.pageNumber);
-      return {
-        ...page,
-        mood: moodResult?.mood || 'calm',
-      };
-    });
-    
-    // Update database
-    await db
-      .update(storybooks)
-      .set({ pages: updatedPages as any })
-      .where(eq(storybooks.id, storybookId));
-    
-    console.log(`[Background] ✅ Mood detection completed for storybook ${storybookId}`);
-  } catch (error) {
-    console.error(`[Background] Failed to detect moods for storybook ${storybookId}:`, error);
-    // Don't throw - this is a background task
-  }
-}
-
 // Generate story in batches for performance optimization
 // Returns partial story with metadata + first batch of pages, then remaining pages
 export async function* generateStoryInBatches(
@@ -399,16 +307,12 @@ Return JSON following the schema with exactly ${pagesPerBook} pages.`;
     // This ensures the AI generates the cover with the user's specified author name
     parsedJson.coverImagePrompt = `${parsedJson.coverImagePrompt}. IMPORTANT: Include the title "${parsedJson.title}" prominently at the top and the author name "${parsedJson.author}" at the bottom as decorative text integrated into the illustration.`;
 
-    // Analyze mood for each page and log structured scene details
-    // NOTE: Mood detection is SKIPPED during initial generation for speed
-    // Mood will be detected later in the background after images are generated
+    // Sanitize page imagePrompts to remove any title/author text mentions
     if (parsedJson.pages && Array.isArray(parsedJson.pages)) {
       console.log(`\n[Story Generation] Processing ${parsedJson.pages.length} pages with structured scene extraction:`);
       
       for (const page of parsedJson.pages) {
         if (page.text) {
-          // Skip mood detection for now - will be done in background
-          page.mood = 'calm'; // Default placeholder
           
           // CRITICAL: Sanitize page imagePrompts to remove any title/author text mentions
           // This prevents the AI from adding title/author overlays to interior pages
