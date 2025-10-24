@@ -4436,12 +4436,14 @@ Sitemap: ${baseUrl}/sitemap.xml`;
         if (ordersAwaitingCharge.length > 0) {
           console.log(`[Prodigi Two-Phase] 🔔 Order confirmed! Attempting to charge payment for ${ordersAwaitingCharge.length} order(s)`);
           
+          // Define ordersToCharge outside try block so it's accessible in catch block
+          let ordersToCharge: typeof ordersAwaitingCharge = [];
+          
           try {
             // CRITICAL RACE CONDITION FIX #1: Atomic status transition
             // Update orders from 'creating' to 'charging' to prevent concurrent webhooks
             // Orders already in 'charging' will be retried (resilience against crashes)
             let updatedCount = 0;
-            const ordersToCharge: typeof ordersAwaitingCharge = [];
             
             for (const printOrder of ordersAwaitingCharge) {
               if (printOrder.status === 'charging') {
