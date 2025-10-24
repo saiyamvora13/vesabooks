@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
-import { apiRequest } from "@/lib/queryClient";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Link } from "wouter";
 import { useTranslation } from 'react-i18next';
 import { SEO } from "@/components/SEO";
@@ -40,6 +40,9 @@ export default function Login() {
       return response.json();
     },
     onSuccess: () => {
+      // Invalidate auth query to update authentication state
+      queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+      
       toast({
         title: t('auth.login.toast.success.title'),
         description: t('auth.login.toast.success.description'),
