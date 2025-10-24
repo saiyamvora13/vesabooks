@@ -3530,6 +3530,12 @@ Sitemap: ${baseUrl}/sitemap.xml`;
         return res.status(400).json({ message: "Cart is empty" });
       }
 
+      console.log('[Cart Finalize] Cart items:', cartItems.map(item => ({ 
+        id: item.id, 
+        storybookId: item.storybookId, 
+        productType: item.productType 
+      })));
+
       // Calculate prices
       const digitalPriceSetting = await storage.getSetting('digital_price');
       const printPriceSetting = await storage.getSetting('print_price');
@@ -3559,6 +3565,13 @@ Sitemap: ${baseUrl}/sitemap.xml`;
 
       // Check if cart contains print items
       const hasPrintItems = items.some((item: any) => item.type === 'print');
+      
+      console.log('[Cart Finalize] Processed items:', items.map(item => ({ 
+        storybookId: item.storybookId, 
+        type: item.type,
+        price: item.price
+      })));
+      console.log('[Cart Finalize] Has print items:', hasPrintItems, 'Has shipping address:', !!shippingAddress);
       
       // Require shipping address for print items
       if (hasPrintItems && !shippingAddress) {
