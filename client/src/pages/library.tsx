@@ -1019,7 +1019,7 @@ function StorybookPurchaseButtons({
   const [downloadDialog, setDownloadDialog] = useState(false);
 
   // Fetch cart to check if items are in cart
-  const { data: cartResponse } = useQuery<{ items: Array<{ storybookId: string; productType: string }> }>({
+  const { data: cartResponse } = useQuery<{ items: Array<{ id: string; storybookId: string; productType: string }> }>({
     queryKey: ['/api/cart'],
   });
 
@@ -1057,6 +1057,40 @@ function StorybookPurchaseButtons({
     },
   });
 
+  // Remove from cart mutation
+  const removeFromCartMutation = useMutation({
+    mutationFn: async () => {
+      // Find cart item ID(s) for this storybook
+      const itemsToRemove = cartItems.filter(item => item.storybookId === storybook.id);
+      
+      // Remove all items for this storybook (both digital and print if present)
+      await Promise.all(
+        itemsToRemove.map(async (item) => {
+          const response = await apiRequest('DELETE', `/api/cart/${item.id}`);
+          if (!response.ok) {
+            throw new Error('Failed to remove from cart');
+          }
+        })
+      );
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/cart'] });
+      toast({
+        title: "Removed from Cart",
+        description: `${storybook.title} has been removed from your cart`,
+      });
+    },
+    onError: (error: Error) => {
+      // Refetch cart to sync UI even on error (handles partial failures)
+      queryClient.invalidateQueries({ queryKey: ['/api/cart'] });
+      toast({
+        title: "Error",
+        description: error.message || "Failed to remove from cart",
+        variant: "destructive",
+      });
+    },
+  });
+
   const inCart = inCartDigital || inCartPrint;
 
   return (
@@ -1085,12 +1119,25 @@ function StorybookPurchaseButtons({
           <Button
             size="sm"
             variant="secondary"
-            className="w-full h-11 text-base font-semibold"
-            disabled
+            className="w-full h-11 text-base font-semibold hover:bg-destructive/90 hover:text-destructive-foreground focus:bg-destructive/90 focus:text-destructive-foreground active:bg-destructive active:text-destructive-foreground transition-colors group"
+            onClick={() => removeFromCartMutation.mutate()}
+            disabled={removeFromCartMutation.isPending}
             data-testid={`button-in-cart-${storybook.id}`}
+            aria-label={`Remove ${storybook.title} from cart`}
           >
-            <Check className="h-5 w-5 mr-2" />
-            In Cart
+            {removeFromCartMutation.isPending ? (
+              <>
+                <Loader2 className="h-5 w-5 mr-2 animate-spin" />
+                Removing...
+              </>
+            ) : (
+              <>
+                <Check className="h-5 w-5 mr-2 group-hover:hidden group-focus:hidden group-active:hidden" />
+                <X className="h-5 w-5 mr-2 hidden group-hover:inline group-focus:inline group-active:inline" />
+                <span className="group-hover:hidden group-focus:hidden group-active:hidden">In Cart</span>
+                <span className="hidden group-hover:inline group-focus:inline group-active:inline">Remove</span>
+              </>
+            )}
           </Button>
         ) : (
           <Button
