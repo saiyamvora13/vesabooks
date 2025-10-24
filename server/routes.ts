@@ -2305,6 +2305,7 @@ Sitemap: ${baseUrl}/sitemap.xml`;
 
       // Check if user is an admin - admins can download any PDF
       const isUserAdmin = await storage.getAdminUser(userId);
+      console.log('[PDF Download] User ID:', userId, 'Is Admin:', !!isUserAdmin);
       
       // Get print purchase data for settings (if exists)
       const printPurchase = await storage.getStorybookPurchase(userId, id, 'print');
@@ -2313,6 +2314,8 @@ Sitemap: ${baseUrl}/sitemap.xml`;
         // Check if user owns the storybook or has purchased any version (digital or print)
         const ownedByUser = storybook.userId === userId;
         const digitalPurchase = await storage.getStorybookPurchase(userId, id, 'digital');
+        
+        console.log('[PDF Download] Ownership check:', { ownedByUser, hasPrintPurchase: !!printPurchase, hasDigitalPurchase: !!digitalPurchase });
         
         if (!ownedByUser && !printPurchase && !digitalPurchase) {
           return res.status(403).json({ message: 'You do not have access to download this print PDF' });
