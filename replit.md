@@ -22,6 +22,8 @@ The frontend is built with React 18, TypeScript, Vite, Wouter, TanStack Query, S
 
 The platform includes an e-commerce system with Stripe payments, EPUB e-book download, and print-ready PDF generation. Integration with Prodigi Print API enables physical hardcover book production with margin-based pricing, a 3-step checkout flow, and secure webhook integration. Other features include error handling with retry logic, persistent image storage in Replit Object Storage, sample story prompts, analytics, social sharing, user feedback, and individual page regeneration. Enhanced admin analytics are provided via a dashboard, and professional sound effects are integrated with an AudioManager. Security measures include bcryptjs, rate limiting, secure session storage, and Zod validation. An Admin Bootstrap System facilitates initial admin user creation. Anonymous story creation is protected by IP rate limiting, reCAPTCHA v3, and email-gated downloads. Production monitoring leverages Replit Analytics, and the application includes SEO and accessibility features.
 
+**Stripe Customer Management**: Each user has a linked Stripe customer ID stored in `stripeCustomerId` field. The `getOrCreateStripeCustomer()` helper function retrieves existing customer IDs or creates new Stripe customers on demand, enabling proper payment method reuse for direct purchases from the library. Payment methods are attached to customers before creating PaymentIntents with `off_session: true`, ensuring compliance with Stripe's requirements for saved payment method usage.
+
 ### Prodigi Print API Integration
 
 #### Order Status & Shipment Stages
