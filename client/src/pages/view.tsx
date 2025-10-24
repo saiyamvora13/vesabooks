@@ -491,119 +491,120 @@ export default function View() {
               </div>
             </div>
             
-            {/* Action Buttons - Mobile Optimized */}
-            <div className="flex flex-wrap gap-2 md:gap-3">
-              {storybookId && <AudioControls storybookId={storybookId} />}
-              
-              <Button 
-                variant="outline" 
-                className="rounded-xl flex-1 md:flex-initial min-h-[48px] md:min-h-0" 
-                onClick={() => setInfoDialogOpen(true)}
-                data-testid="button-info"
-              >
-                <Info className="h-4 md:h-4 w-4 md:w-4 mr-2" />
-                <span className="text-sm md:text-base">Details</span>
-              </Button>
-
-              <Button 
-                variant="outline" 
-                className="rounded-xl flex-1 md:flex-initial min-h-[48px] md:min-h-0" 
-                onClick={() => setShareDialogOpen(true)}
-                data-testid="button-share"
-              >
-                <Share2 className="h-4 md:h-4 w-4 md:w-4 mr-2" />
-                <span className="text-sm md:text-base">Share</span>
-              </Button>
-
-              {isAuthenticated && (
+            {/* Action Buttons - Mobile Optimized with horizontal scroll */}
+            <div className="overflow-x-auto -mx-2 px-2 md:mx-0 md:px-0">
+              <div className="flex gap-2 md:gap-3 md:flex-wrap min-w-max md:min-w-0">
+                {storybookId && <AudioControls storybookId={storybookId} />}
+                
                 <Button 
                   variant="outline" 
-                  className="rounded-xl flex-1 md:flex-initial min-h-[48px] md:min-h-0" 
-                  onClick={() => setRatingDialogOpen(true)}
-                  data-testid="button-rate-story"
+                  className="rounded-xl whitespace-nowrap min-h-[48px] md:min-h-0" 
+                  onClick={() => setInfoDialogOpen(true)}
+                  data-testid="button-info"
                 >
-                  <Star className="h-4 md:h-4 w-4 md:w-4 mr-2" />
-                  <span className="text-sm md:text-base">Rate</span>
+                  <Info className="h-4 w-4 mr-2" />
+                  <span className="text-sm md:text-base">Details</span>
                 </Button>
-              )}
 
-              {isAuthenticated && !storybook?.userId && (
-                <Button 
-                  variant="default" 
-                  className="rounded-xl flex-1 md:flex-initial min-h-[48px] md:min-h-0 bg-primary hover:bg-primary/90" 
-                  onClick={() => claimStorybookMutation.mutate()}
-                  disabled={claimStorybookMutation.isPending}
-                  data-testid="button-claim-storybook"
-                >
-                  <i className={`fas ${claimStorybookMutation.isPending ? 'fa-spinner fa-spin' : 'fa-heart'} mr-2`}></i>
-                  <span className="text-sm md:text-base">
-                    {claimStorybookMutation.isPending ? 'Claiming...' : 'Claim Book'}
-                  </span>
-                </Button>
-              )}
-              
-              {/* Download button - shown if user owns digital version */}
-              {digitalPurchase?.owned && (
                 <Button 
                   variant="outline" 
-                  className="rounded-xl flex-1 md:flex-initial min-h-[48px] md:min-h-0" 
-                  onClick={downloadEpub} 
-                  disabled={isDownloading}
-                  data-testid="button-download-epub"
+                  className="rounded-xl whitespace-nowrap min-h-[48px] md:min-h-0" 
+                  onClick={() => setShareDialogOpen(true)}
+                  data-testid="button-share"
                 >
-                  <i className={`fas ${isDownloading ? 'fa-spinner fa-spin' : 'fa-book'} mr-2`}></i>
-                  <span className="text-sm md:text-base">
-                    {isDownloading ? 'Preparing...' : 'Download'}
-                  </span>
+                  <Share2 className="h-4 w-4 mr-2" />
+                  <span className="text-sm md:text-base">Share</span>
                 </Button>
-              )}
 
-              {/* Buy E-book button - shown if user doesn't own digital version */}
-              {!digitalPurchase?.owned && (
-                <Button 
-                  variant="default" 
-                  className="rounded-xl gradient-bg !text-[hsl(258,90%,20%)] flex-1 md:flex-initial min-h-[48px] md:min-h-0" 
-                  onClick={handleDirectDigitalCheckout}
-                  disabled={!pricing}
-                  data-testid="button-buy-ebook-direct"
-                >
-                  <i className="fas fa-book mr-2"></i>
-                  <span className="text-sm md:text-base font-semibold">
-                    Buy E-book ${pricing ? (parseInt(pricing.digital_price) / 100).toFixed(2) : '3.99'}
-                  </span>
-                </Button>
-              )}
+                {isAuthenticated && (
+                  <Button 
+                    variant="outline" 
+                    className="rounded-xl whitespace-nowrap min-h-[48px] md:min-h-0" 
+                    onClick={() => setRatingDialogOpen(true)}
+                    data-testid="button-rate-story"
+                  >
+                    <Star className="h-4 w-4 mr-2" />
+                    <span className="text-sm md:text-base">Rate</span>
+                  </Button>
+                )}
 
-              {/* Buy Print button - shown if user doesn't own print version */}
-              {!printPurchase?.owned && (
-                <Button 
-                  variant="default" 
-                  className="rounded-xl gradient-bg !text-[hsl(258,90%,20%)] flex-1 md:flex-initial min-h-[48px] md:min-h-0" 
-                  onClick={handleDirectPrintCheckout}
-                  disabled={!pricing}
-                  data-testid="button-buy-print-direct"
-                >
-                  <i className="fas fa-print mr-2"></i>
-                  <span className="text-sm md:text-base font-semibold">
-                    Buy Print ${pricing ? (parseInt(pricing.print_price) / 100).toFixed(2) : '29.99'}
-                    {digitalPurchase?.owned && <span className="ml-1 text-xs">(Digital discount applied)</span>}
-                  </span>
-                </Button>
-              )}
+                {isAuthenticated && !storybook?.userId && (
+                  <Button 
+                    variant="default" 
+                    className="rounded-xl whitespace-nowrap min-h-[48px] md:min-h-0 bg-primary hover:bg-primary/90" 
+                    onClick={() => claimStorybookMutation.mutate()}
+                    disabled={claimStorybookMutation.isPending}
+                    data-testid="button-claim-storybook"
+                  >
+                    <i className={`fas ${claimStorybookMutation.isPending ? 'fa-spinner fa-spin' : 'fa-heart'} mr-2`}></i>
+                    <span className="text-sm md:text-base">
+                      {claimStorybookMutation.isPending ? 'Claiming...' : 'Claim Book'}
+                    </span>
+                  </Button>
+                )}
+                
+                {/* Download button - shown if user owns digital version */}
+                {digitalPurchase?.owned && (
+                  <Button 
+                    variant="outline" 
+                    className="rounded-xl whitespace-nowrap min-h-[48px] md:min-h-0" 
+                    onClick={downloadEpub} 
+                    disabled={isDownloading}
+                    data-testid="button-download-epub"
+                  >
+                    <i className={`fas ${isDownloading ? 'fa-spinner fa-spin' : 'fa-book'} mr-2`}></i>
+                    <span className="text-sm md:text-base">
+                      {isDownloading ? 'Preparing...' : 'Download'}
+                    </span>
+                  </Button>
+                )}
 
-              {/* Add to Cart button - shown if user doesn't own both versions */}
-              {!(digitalPurchase?.owned && printPurchase?.owned) && (
-                <Button 
-                  variant="outline" 
-                  className="rounded-xl flex-1 md:flex-initial min-h-[48px] md:min-h-0" 
-                  onClick={handleAddToCart}
-                  disabled={!pricing}
-                  data-testid="button-add-to-cart"
-                >
-                  <ShoppingCart className="h-4 md:h-4 w-4 md:w-4 mr-2" />
-                  <span className="text-sm md:text-base">Add to Cart</span>
-                </Button>
-              )}
+                {/* Buy E-book button - shown if user doesn't own digital version */}
+                {!digitalPurchase?.owned && (
+                  <Button 
+                    variant="default" 
+                    className="rounded-xl gradient-bg !text-[hsl(258,90%,20%)] whitespace-nowrap min-h-[48px] md:min-h-0" 
+                    onClick={handleDirectDigitalCheckout}
+                    disabled={!pricing}
+                    data-testid="button-buy-ebook-direct"
+                  >
+                    <i className="fas fa-book mr-2"></i>
+                    <span className="text-sm md:text-base font-semibold">
+                      Buy ${pricing ? (parseInt(pricing.digital_price) / 100).toFixed(2) : '3.99'}
+                    </span>
+                  </Button>
+                )}
+
+                {/* Buy Print button - shown if user doesn't own print version */}
+                {!printPurchase?.owned && (
+                  <Button 
+                    variant="default" 
+                    className="rounded-xl gradient-bg !text-[hsl(258,90%,20%)] whitespace-nowrap min-h-[48px] md:min-h-0" 
+                    onClick={handleDirectPrintCheckout}
+                    disabled={!pricing}
+                    data-testid="button-buy-print-direct"
+                  >
+                    <i className="fas fa-print mr-2"></i>
+                    <span className="text-sm md:text-base font-semibold">
+                      Print ${pricing ? (parseInt(pricing.print_price) / 100).toFixed(2) : '29.99'}
+                    </span>
+                  </Button>
+                )}
+
+                {/* Add to Cart button - shown if user doesn't own both versions */}
+                {!(digitalPurchase?.owned && printPurchase?.owned) && (
+                  <Button 
+                    variant="outline" 
+                    className="rounded-xl whitespace-nowrap min-h-[48px] md:min-h-0" 
+                    onClick={handleAddToCart}
+                    disabled={!pricing}
+                    data-testid="button-add-to-cart"
+                  >
+                    <ShoppingCart className="h-4 w-4 mr-2" />
+                    <span className="text-sm md:text-base">Add to Cart</span>
+                  </Button>
+                )}
+              </div>
             </div>
           </div>
 

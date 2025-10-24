@@ -323,12 +323,6 @@ export default function Navigation() {
                   {t('navigation.logOut')}
                 </Button>
               )}
-              
-              <Link href="/create" onClick={() => setMobileMenuOpen(false)}>
-                <Button className="w-full h-12 rounded-full gradient-bg !text-[hsl(258,90%,20%)] text-base font-medium">
-                  {t('navigation.getStarted')}
-                </Button>
-              </Link>
             </div>
           </div>
         </div>
