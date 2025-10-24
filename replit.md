@@ -9,7 +9,7 @@ Preferred communication style: Simple, everyday language.
 ## System Architecture
 
 ### UI/UX Decisions
-The application features a minimalist design with a soft white and purple color palette, supporting light/dark modes and a mobile-first approach. The storybook viewer provides a 3D flipbook experience on desktop and a single-page view with swipe gestures on mobile. User authentication supports traditional email/password and Replit Auth. A personal library manages created storybooks, and the homepage hero section dynamically showcases generated storybook covers. The flipbook viewer dynamically adapts container dimensions based on storybook orientation (portrait/landscape/square).
+The application features a minimalist design with a soft white and purple color palette, supporting light/dark modes and a mobile-first approach. The storybook viewer provides a 3D flipbook experience on desktop and a single-page view with swipe gestures on mobile. User authentication supports traditional email/password and Replit Auth. A personal library manages created storybooks, and the homepage hero section dynamically showcases generated storybook covers. The flipbook viewer dynamically adapts container dimensions based on storybook orientation using binary detection: images with aspect ratio ≥ 1.0 are landscape, otherwise portrait.
 
 **Accessibility & Contrast**: All UI components maintain proper color contrast in both light and dark modes. Dialog/Sheet close buttons explicitly use `text-gray-900 dark:text-gray-100` to ensure visibility on all backgrounds. Button variants (outline, ghost) include explicit `text-foreground` color classes to prevent white-on-white or invisible icon issues.
 
