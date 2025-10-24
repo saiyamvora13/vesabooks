@@ -69,37 +69,21 @@ export default function View() {
     enabled: !!(storybookId || sharedUrl),
   });
 
-  const { data: digitalPurchase } = useQuery<{ owned: boolean }>({
-    queryKey: ['/api/purchases/check', storybookId, 'digital'],
+  // Combined purchase check - optimized to reduce API calls from 2 to 1
+  const { data: purchaseStatus } = useQuery<{ digital: boolean; print: boolean }>({
+    queryKey: ['/api/purchases/check-combined', storybookId],
     queryFn: async () => {
-      if (!isAuthenticated || !storybookId) return { owned: false };
-      const response = await fetch('/api/purchases/check', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ storybookId, type: 'digital' }),
-        credentials: 'include',
-      });
-      if (!response.ok) return { owned: false };
+      if (!isAuthenticated || !storybookId) return { digital: false, print: false };
+      const response = await apiRequest('POST', '/api/purchases/check-combined', { storybookId });
+      if (!response.ok) return { digital: false, print: false };
       return response.json();
     },
     enabled: !!isAuthenticated && !!storybookId,
   });
 
-  const { data: printPurchase } = useQuery<{ owned: boolean }>({
-    queryKey: ['/api/purchases/check', storybookId, 'print'],
-    queryFn: async () => {
-      if (!isAuthenticated || !storybookId) return { owned: false };
-      const response = await fetch('/api/purchases/check', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ storybookId, type: 'print' }),
-        credentials: 'include',
-      });
-      if (!response.ok) return { owned: false };
-      return response.json();
-    },
-    enabled: !!isAuthenticated && !!storybookId,
-  });
+  // Extract digital and print status for easier usage
+  const digitalPurchase = { owned: purchaseStatus?.digital || false };
+  const printPurchase = { owned: purchaseStatus?.print || false };
 
   const { data: averageRatingData } = useQuery<{ averageRating: number | null; count: number }>({
     queryKey: ['/api/storybooks', storybookId, 'average-rating'],
@@ -108,6 +92,7 @@ export default function View() {
 
   const { data: pricing } = useQuery<{ digital_price: string; print_price: string }>({
     queryKey: ['/api/settings/pricing'],
+    staleTime: 5 * 60 * 1000, // Cache for 5 minutes - pricing rarely changes
   });
 
   // Regenerate page mutation
@@ -634,7 +619,7 @@ export default function View() {
               onRegeneratePage={handleRegeneratePage}
               regeneratingPageNumber={regeneratePageMutation.isPending ? pageToRegenerate : null}
               onPageChange={handlePageChange}
-              orientation={storybook.orientation || 'portrait'}
+              orientation={(storybook.orientation as 'portrait' | 'landscape') || 'portrait'}
             />
           </div>
 
@@ -844,12 +829,8 @@ export default function View() {
               : "Your print order has been placed successfully.",
           });
 
-          if (checkoutType === 'digital') {
-            queryClient.invalidateQueries({ queryKey: ['/api/purchases/check', storybookId, 'digital'] });
-          }
-          if (checkoutType === 'print') {
-            queryClient.invalidateQueries({ queryKey: ['/api/purchases/check', storybookId, 'print'] });
-          }
+          // Invalidate combined purchase check to refresh ownership status
+          queryClient.invalidateQueries({ queryKey: ['/api/purchases/check-combined', storybookId] });
         }}
       />
     </div>

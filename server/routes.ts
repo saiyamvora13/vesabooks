@@ -2793,6 +2793,33 @@ Sitemap: ${baseUrl}/sitemap.xml`;
     }
   });
 
+  // Combined check for both digital and print ownership of a single book (requires authentication)
+  // Optimization: Returns both types in one call to reduce API requests
+  app.post("/api/purchases/check-combined", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.id || req.user.claims?.sub;
+      const { storybookId } = req.body;
+
+      if (!storybookId) {
+        return res.status(400).json({ message: "storybookId is required" });
+      }
+
+      // Check both digital and print ownership in parallel
+      const [digitalPurchase, printPurchase] = await Promise.all([
+        storage.getStorybookPurchase(userId, storybookId, 'digital'),
+        storage.getStorybookPurchase(userId, storybookId, 'print')
+      ]);
+
+      res.json({
+        digital: !!digitalPurchase,
+        print: !!printPurchase
+      });
+    } catch (error) {
+      console.error("Combined check purchase error:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
   // Create purchase from payment intent (requires authentication)
   app.post("/api/purchases/create", isAuthenticated, async (req: any, res) => {
     try {

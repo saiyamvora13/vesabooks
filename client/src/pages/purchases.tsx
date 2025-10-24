@@ -82,6 +82,7 @@ export default function Purchases() {
   // Fetch pricing settings from public endpoint
   const { data: pricingSettings } = useQuery<{ digital_price: string; print_price: string }>({
     queryKey: ['/api/settings/pricing'],
+    staleTime: 5 * 60 * 1000, // Cache for 5 minutes - pricing rarely changes
   });
 
   // Get prices from settings with fallback defaults

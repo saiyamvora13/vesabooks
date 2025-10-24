@@ -19,7 +19,7 @@ interface FlipbookViewerProps {
   onRegeneratePage?: (pageNumber: number) => void;
   regeneratingPageNumber?: number | null;
   onPageChange?: (pageNumber: number) => void;
-  orientation?: 'portrait' | 'landscape' | 'square';
+  orientation?: 'portrait' | 'landscape';
 }
 
 const PageFace = ({ 
@@ -667,9 +667,6 @@ export function FlipbookViewer({ pages, title, author = "AI Author", coverImageU
     if (orientation === 'landscape') {
       // Landscape: wider, shorter book
       return "w-[90vw] h-[50vh] md:w-[900px] md:h-[450px] lg:w-[1100px] lg:h-[520px] relative";
-    } else if (orientation === 'square') {
-      // Square: equal width and height for all breakpoints
-      return "w-[70vmin] h-[70vmin] md:w-[600px] md:h-[600px] lg:w-[700px] lg:h-[700px] relative";
     } else {
       // Portrait: taller, narrower book (default)
       return "w-[90vw] h-[65vh] md:w-[700px] md:h-[550px] lg:w-[900px] lg:h-[650px] relative";
