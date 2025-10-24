@@ -13,6 +13,8 @@ The application features a minimalist design with a soft white and purple color 
 
 **Accessibility & Contrast**: All UI components maintain proper color contrast in both light and dark modes. Dialog/Sheet close buttons explicitly use `text-gray-900 dark:text-gray-100` to ensure visibility on all backgrounds. Button variants (outline, ghost) include explicit `text-foreground` color classes to prevent white-on-white or invisible icon issues.
 
+**iOS Safari Stability**: The flipbook viewer uses static viewport height (`vh`) instead of dynamic viewport height (`dvh`) on mobile to prevent container resizing when Safari's address bar hides/shows during page navigation. The fullscreen button is conditionally hidden on iOS devices as the Fullscreen API is not supported by Safari. Image and text pages use consistent vertical centering to prevent alignment shifts during page transitions.
+
 ### Technical Implementations
 The frontend is built with React 18, TypeScript, Vite, Wouter, TanStack Query, Shadcn/ui, Radix UI, and Tailwind CSS. The backend uses Node.js Express.js with TypeScript, Drizzle ORM for PostgreSQL, and a middleware-chain. Key features include an Admin Platform, email/password authentication with Passport.js, multilingual support (5 languages), a three-act story structure system, and a Progressive Visual Reference Chain for character consistency across illustrations. Image style consistency is maintained through user selection from 10 professional illustration styles.
 

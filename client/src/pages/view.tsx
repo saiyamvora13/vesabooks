@@ -609,7 +609,7 @@ export default function View() {
           </div>
 
           {/* Flipbook Container */}
-          <div className="bg-gradient-to-br from-slate-100 to-slate-200 dark:from-slate-800 dark:to-slate-900 rounded-lg md:rounded-3xl shadow-2xl p-1 md:p-8 max-h-[700px] h-[85dvh] md:h-auto md:min-h-[80vh] flex items-center justify-center">
+          <div className="bg-gradient-to-br from-slate-100 to-slate-200 dark:from-slate-800 dark:to-slate-900 rounded-lg md:rounded-3xl shadow-2xl p-1 md:p-8 max-h-[700px] h-[85vh] md:h-auto md:min-h-[80vh] flex items-center justify-center">
             <FlipbookViewer 
               pages={storybook.pages} 
               title={storybook.title}
