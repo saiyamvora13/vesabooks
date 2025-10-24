@@ -1339,7 +1339,7 @@ export default function Library() {
           </div>
           
           <Link href="/create">
-            <Button className="gradient-bg hover:opacity-90 !text-[hsl(258,90%,20%)] w-full sm:w-auto" data-testid="button-create-new">
+            <Button className="gradient-bg hover:opacity-90 active:opacity-80 !text-[hsl(258,90%,20%)] w-full sm:w-auto" data-testid="button-create-new">
               <Plus className="mr-2 h-4 w-4" />
               {t('storybook.library.createNew')}
             </Button>
@@ -1569,7 +1569,7 @@ export default function Library() {
               {t('storybook.library.empty.description')}
             </p>
             <Link href="/create">
-              <Button className="gradient-bg hover:opacity-90 !text-[hsl(258,90%,20%)]" data-testid="button-create-first">
+              <Button className="gradient-bg hover:opacity-90 active:opacity-80 !text-[hsl(258,90%,20%)]" data-testid="button-create-first">
                 <Plus className="mr-2 h-4 w-4" />
                 {t('storybook.library.createFirst')}
               </Button>
