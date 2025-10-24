@@ -5566,65 +5566,82 @@ async function generateStorybookAsync(
     // KEEP cover image locally to use as reference for character consistency in all page illustrations
     // It will be cleaned up after all pages are generated
 
-    // Step 4: Generate all page illustrations AND back cover in PARALLEL for speed
-    console.time('⚡ Parallel image generation');
-    await storage.setGenerationProgress(sessionId, {
-      step: 'generating_illustrations',
-      progress: 50,
-      message: `Generating all ${generatedStory.pages.length} page illustrations in parallel...`,
-    });
+    // Step 4: Generate page illustrations - SEQUENTIAL or PARALLEL based on env variable
+    const useSequential = process.env.USE_SEQUENTIAL_GENERATION === 'true';
+    console.log(`🔀 Generation mode: ${useSequential ? 'SEQUENTIAL (progressive chaining)' : 'PARALLEL (faster)'}`);
+    
+    let pages: Array<{ pageNumber: number; text: string; imageUrl: string; imagePrompt: string; }>;
+    let backCoverImageUrl: string;
 
-    // Progressive visual reference chain: use BOTH uploaded inspiration images AND cover image
-    const sharedReferences = [...imagePaths];
-    if (fs.existsSync(coverImagePath)) {
-      sharedReferences.push(coverImagePath);
-    }
-
-    // Create all page generation promises
-    const pageGenerationPromises = generatedStory.pages.map(async (page) => {
-      const imageFileName = `${sessionId}_page_${page.pageNumber}.jpg`;
-      const imagePath = path.join(generatedDir, imageFileName);
-
-      // Build the page image prompt using the centralized utility function
-      const pagePromptWithCharacter = buildFinalImagePrompt({
-        mainCharacterDescription: generatedStory.mainCharacterDescription,
-        defaultClothing: generatedStory.defaultClothing,
-        scenePrompt: page.imagePrompt,
-        artStyle: illustrationStyle,
+    if (useSequential) {
+      // SEQUENTIAL MODE: Progressive visual reference chain
+      console.time('🔗 Sequential progressive chaining');
+      await storage.setGenerationProgress(sessionId, {
+        step: 'generating_illustrations',
+        progress: 50,
+        message: `Generating ${generatedStory.pages.length} page illustrations sequentially for better consistency...`,
       });
 
-      await generateIllustration(
-        pagePromptWithCharacter, 
-        imagePath, 
-        sharedReferences.length > 0 ? sharedReferences : undefined, 
-        illustrationStyle
-      );
-
-      // Upload to Object Storage
-      const imageUrl = await objectStorage.uploadFile(imagePath, imageFileName);
-      
-      // Clean up local image
-      if (fs.existsSync(imagePath)) {
-        fs.unlinkSync(imagePath);
+      // Start with user uploads + cover as initial references
+      const progressiveReferences = [...imagePaths];
+      if (fs.existsSync(coverImagePath)) {
+        progressiveReferences.push(coverImagePath);
       }
 
-      return {
-        pageNumber: page.pageNumber,
-        text: page.text,
-        imageUrl,
-        imagePrompt: page.imagePrompt,
-      };
-    });
+      pages = [];
+      const generatedPagePaths: string[] = [];
 
-    // Create back cover generation promise
-    const backCoverImageFileName = `${sessionId}_back_cover.jpg`;
-    const backCoverImagePath = path.join(generatedDir, backCoverImageFileName);
-    
-    const backCoverGenerationPromise = (async () => {
-      // Create back cover prompt that complements the front cover
-      const backCoverBasePrompt = `Create a back cover illustration that complements the front cover. Show the character in a different scene that hints at the adventure without spoiling it.`;
+      // Generate pages sequentially, adding each to references for the next
+      for (const page of generatedStory.pages) {
+        const imageFileName = `${sessionId}_page_${page.pageNumber}.jpg`;
+        const imagePath = path.join(generatedDir, imageFileName);
+
+        console.log(`📖 Generating page ${page.pageNumber}/${generatedStory.pages.length} with ${progressiveReferences.length} reference images`);
+
+        const pagePromptWithCharacter = buildFinalImagePrompt({
+          mainCharacterDescription: generatedStory.mainCharacterDescription,
+          defaultClothing: generatedStory.defaultClothing,
+          scenePrompt: page.imagePrompt,
+          artStyle: illustrationStyle,
+        });
+
+        await generateIllustration(
+          pagePromptWithCharacter,
+          imagePath,
+          progressiveReferences.length > 0 ? progressiveReferences : undefined,
+          illustrationStyle
+        );
+
+        // Add this page to progressive references for next page
+        generatedPagePaths.push(imagePath);
+        progressiveReferences.push(imagePath);
+
+        // Upload to Object Storage
+        const imageUrl = await objectStorage.uploadFile(imagePath, imageFileName);
+
+        pages.push({
+          pageNumber: page.pageNumber,
+          text: page.text,
+          imageUrl,
+          imagePrompt: page.imagePrompt,
+        });
+
+        // Update progress
+        const progressPercent = 50 + (page.pageNumber / generatedStory.pages.length) * 30;
+        await storage.setGenerationProgress(sessionId, {
+          step: 'generating_illustrations',
+          progress: progressPercent,
+          message: `Generated page ${page.pageNumber}/${generatedStory.pages.length}...`,
+        });
+      }
+
+      // Generate back cover with ALL previous pages as references
+      const backCoverImageFileName = `${sessionId}_back_cover.jpg`;
+      const backCoverImagePath = path.join(generatedDir, backCoverImageFileName);
       
-      // Build the back cover image prompt using the centralized utility function
+      console.log(`📖 Generating back cover with ${progressiveReferences.length} reference images`);
+      
+      const backCoverBasePrompt = `Create a back cover illustration that complements the front cover. Show the character in a different scene that hints at the adventure without spoiling it.`;
       const backCoverPromptWithCharacter = buildFinalImagePrompt({
         mainCharacterDescription: generatedStory.mainCharacterDescription,
         defaultClothing: generatedStory.defaultClothing,
@@ -5633,30 +5650,112 @@ async function generateStorybookAsync(
       });
 
       await generateIllustration(
-        backCoverPromptWithCharacter, 
-        backCoverImagePath, 
-        sharedReferences.length > 0 ? sharedReferences : undefined, 
+        backCoverPromptWithCharacter,
+        backCoverImagePath,
+        progressiveReferences.length > 0 ? progressiveReferences : undefined,
         illustrationStyle
       );
-      
-      // Upload back cover to Object Storage
-      const backCoverImageUrl = await objectStorage.uploadFile(backCoverImagePath, backCoverImageFileName);
-      
-      // Clean up local back cover image
+
+      backCoverImageUrl = await objectStorage.uploadFile(backCoverImagePath, backCoverImageFileName);
+
+      // Clean up ALL local page images
+      for (const pagePath of generatedPagePaths) {
+        if (fs.existsSync(pagePath)) {
+          fs.unlinkSync(pagePath);
+        }
+      }
       if (fs.existsSync(backCoverImagePath)) {
         fs.unlinkSync(backCoverImagePath);
       }
 
-      return backCoverImageUrl;
-    })();
+      console.timeEnd('🔗 Sequential progressive chaining');
 
-    // Wait for ALL images to complete in parallel (pages + back cover)
-    const [pages, backCoverImageUrl] = await Promise.all([
-      Promise.all(pageGenerationPromises),
-      backCoverGenerationPromise,
-    ]);
+    } else {
+      // PARALLEL MODE: Fast generation (original behavior)
+      console.time('⚡ Parallel image generation');
+      await storage.setGenerationProgress(sessionId, {
+        step: 'generating_illustrations',
+        progress: 50,
+        message: `Generating all ${generatedStory.pages.length} page illustrations in parallel...`,
+      });
 
-    console.timeEnd('⚡ Parallel image generation');
+      // All pages use same references: user uploads + cover
+      const sharedReferences = [...imagePaths];
+      if (fs.existsSync(coverImagePath)) {
+        sharedReferences.push(coverImagePath);
+      }
+
+      // Create all page generation promises
+      const pageGenerationPromises = generatedStory.pages.map(async (page) => {
+        const imageFileName = `${sessionId}_page_${page.pageNumber}.jpg`;
+        const imagePath = path.join(generatedDir, imageFileName);
+
+        const pagePromptWithCharacter = buildFinalImagePrompt({
+          mainCharacterDescription: generatedStory.mainCharacterDescription,
+          defaultClothing: generatedStory.defaultClothing,
+          scenePrompt: page.imagePrompt,
+          artStyle: illustrationStyle,
+        });
+
+        await generateIllustration(
+          pagePromptWithCharacter,
+          imagePath,
+          sharedReferences.length > 0 ? sharedReferences : undefined,
+          illustrationStyle
+        );
+
+        const imageUrl = await objectStorage.uploadFile(imagePath, imageFileName);
+
+        if (fs.existsSync(imagePath)) {
+          fs.unlinkSync(imagePath);
+        }
+
+        return {
+          pageNumber: page.pageNumber,
+          text: page.text,
+          imageUrl,
+          imagePrompt: page.imagePrompt,
+        };
+      });
+
+      // Create back cover generation promise
+      const backCoverImageFileName = `${sessionId}_back_cover.jpg`;
+      const backCoverImagePath = path.join(generatedDir, backCoverImageFileName);
+
+      const backCoverGenerationPromise = (async () => {
+        const backCoverBasePrompt = `Create a back cover illustration that complements the front cover. Show the character in a different scene that hints at the adventure without spoiling it.`;
+
+        const backCoverPromptWithCharacter = buildFinalImagePrompt({
+          mainCharacterDescription: generatedStory.mainCharacterDescription,
+          defaultClothing: generatedStory.defaultClothing,
+          scenePrompt: backCoverBasePrompt,
+          artStyle: illustrationStyle,
+        });
+
+        await generateIllustration(
+          backCoverPromptWithCharacter,
+          backCoverImagePath,
+          sharedReferences.length > 0 ? sharedReferences : undefined,
+          illustrationStyle
+        );
+
+        const backCoverImageUrl = await objectStorage.uploadFile(backCoverImagePath, backCoverImageFileName);
+
+        if (fs.existsSync(backCoverImagePath)) {
+          fs.unlinkSync(backCoverImagePath);
+        }
+
+        return backCoverImageUrl;
+      })();
+
+      // Wait for ALL images to complete in parallel (pages + back cover)
+      [pages, backCoverImageUrl] = await Promise.all([
+        Promise.all(pageGenerationPromises),
+        backCoverGenerationPromise,
+      ]);
+
+      console.timeEnd('⚡ Parallel image generation');
+    }
 
     // Now regenerate the cover WITH title and author (AI-generated text)
     // This ensures the final cover has beautiful AI-generated typography

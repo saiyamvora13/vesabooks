@@ -426,22 +426,6 @@ export default function Create() {
                                   <p className="text-sm text-muted-foreground mt-2" dangerouslySetInnerHTML={{ __html: `Example: ${t('storybook.create.styleGuide.categories.artistic.example')}` }} />
                                 </div>
 
-                                {/* Mood & Lighting */}
-                                <div>
-                                  <h3 className="font-semibold text-lg mb-3 flex items-center gap-2">
-                                    <span className="text-2xl">🌓</span>
-                                    {t('storybook.create.styleGuide.categories.mood.title')}
-                                  </h3>
-                                  <div className="flex flex-wrap gap-2">
-                                    {(t('storybook.create.styleGuide.categories.mood.keywords', { returnObjects: true }) as string[]).map((style: string) => (
-                                      <span key={style} className="px-3 py-1 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-full text-sm">
-                                        {style}
-                                      </span>
-                                    ))}
-                                  </div>
-                                  <p className="text-sm text-muted-foreground mt-2" dangerouslySetInnerHTML={{ __html: `Example: ${t('storybook.create.styleGuide.categories.mood.example')}` }} />
-                                </div>
-
                                 {/* Tips */}
                                 <div className="bg-muted/50 p-4 rounded-lg">
                                   <h3 className="font-semibold text-lg mb-2 flex items-center gap-2">

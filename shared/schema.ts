@@ -47,7 +47,6 @@ export const storybooks = pgTable("storybooks", {
     text: string;
     imageUrl: string;
     imagePrompt: string;
-    mood?: string;
   }>>().notNull(),
   inspirationImages: json("inspiration_images").$type<string[]>().notNull().default([]),
   coverImageUrl: text("cover_image_url"),

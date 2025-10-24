@@ -61,7 +61,6 @@ export interface StoryPage {
   pageNumber: number;
   text: string;
   imagePrompt: string;
-  mood?: string;
 }
 
 export interface GeneratedStory {
@@ -432,7 +431,7 @@ Return JSON following the schema with exactly ${pagesPerBook} pages.`;
               console.warn(`    Sanitized: ${page.imagePrompt.substring(0, 150)}...`);
               
               // Fallback: Replace the entire prompt with a generic safe description from scene metadata
-              let fallbackPrompt = `${page.main_action} in ${page.setting}. ${page.key_objects.join(', ')}. ${page.emotional_tone} mood.`;
+              let fallbackPrompt = `${page.main_action} in ${page.setting}. ${page.key_objects.join(', ')}. ${page.emotional_tone} atmosphere.`;
               
               // CRITICAL: Sanitize the fallback too in case metadata contains title/author
               // Canonicalize punctuation first, then remove title/author
@@ -467,7 +466,6 @@ Return JSON following the schema with exactly ${pagesPerBook} pages.`;
           console.log(`  - Setting: ${page.setting}`);
           console.log(`  - Key Objects: ${page.key_objects ? page.key_objects.join(', ') : 'none'}`);
           console.log(`  - Emotional Tone: ${page.emotional_tone}`);
-          console.log(`  - Audio Mood: ${page.mood}`);
           console.log(`  - Final Image Prompt: ${page.imagePrompt.substring(0, 200)}...`);
         }
       }
