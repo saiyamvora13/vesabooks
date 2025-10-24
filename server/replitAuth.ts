@@ -65,7 +65,8 @@ export function getSession() {
     saveUninitialized: false,
     cookie: {
       httpOnly: true,
-      secure: true,
+      secure: 'auto', // Auto-detect HTTPS in production, works with Replit's proxy chain
+      sameSite: 'lax',
       maxAge: sessionTtl,
     },
   });
@@ -92,7 +93,8 @@ async function upsertUser(claims: any) {
 }
 
 export async function setupAuth(app: Express) {
-  app.set("trust proxy", 1);
+  // Don't override trust proxy here - it's already set in index.ts
+  // Replit deployments use multiple proxies, so we need to trust all of them
   app.use(getSession());
   app.use(passport.initialize());
   app.use(passport.session());
