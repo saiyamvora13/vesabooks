@@ -97,7 +97,12 @@ export default function AdminOrders() {
   const { data: ordersData, isLoading } = useQuery<OrderSearchResult>({
     queryKey: ["/api/admin/orders", queryString],
     queryFn: async () => {
-      const response = await fetch(`/api/admin/orders?${queryString}`);
+      const response = await fetch(`/api/admin/orders?${queryString}`, {
+        cache: 'no-store',
+        headers: {
+          'Cache-Control': 'no-cache',
+        },
+      });
       if (!response.ok) throw new Error("Failed to fetch orders");
       return response.json();
     },
