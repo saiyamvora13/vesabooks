@@ -112,7 +112,7 @@ function CartItemCard({
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-8 w-8 flex-shrink-0"
+                  className="flex-shrink-0"
                   onClick={onRemove}
                   data-testid={`button-remove-${item.storybookId}-${item.productType}`}
                 >
@@ -196,24 +196,22 @@ function CartItemCard({
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="h-8 w-8"
                     onClick={() => onUpdateQuantity(Math.max(1, item.quantity - 1))}
                     disabled={item.quantity <= 1}
                     data-testid={`button-decrease-${item.storybookId}-${item.productType}`}
                   >
-                    <Minus className="h-4 w-4" />
+                    <Minus className="h-5 w-5 md:h-4 md:w-4" />
                   </Button>
-                  <span className="w-8 text-center font-medium" data-testid={`text-quantity-${item.storybookId}-${item.productType}`}>
+                  <span className="min-w-[3rem] text-center font-medium text-lg md:text-base" data-testid={`text-quantity-${item.storybookId}-${item.productType}`}>
                     {item.quantity}
                   </span>
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="h-8 w-8"
                     onClick={() => onUpdateQuantity(item.quantity + 1)}
                     data-testid={`button-increase-${item.storybookId}-${item.productType}`}
                   >
-                    <Plus className="h-4 w-4" />
+                    <Plus className="h-5 w-5 md:h-4 md:w-4" />
                   </Button>
                 </div>
               </div>

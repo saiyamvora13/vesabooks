@@ -1444,21 +1444,21 @@ export default function Library() {
                       
                       <CardFooter className="flex items-center justify-between gap-2 px-3 sm:px-6 pt-3 pb-3 sm:pb-6">
                         <Link href={`/view/${storybook.id}`} className="flex-1">
-                          <Button variant="outline" size="default" className="w-full h-10 text-sm font-medium hover:bg-accent transition-colors" data-testid={`button-view-${storybook.id}`}>
+                          <Button variant="outline" size="default" className="w-full text-sm font-medium hover:bg-accent transition-colors" data-testid={`button-view-${storybook.id}`}>
                             {t('common.buttons.view')}
                           </Button>
                         </Link>
                         <Button
                           variant="destructive"
                           size="icon"
-                          className="h-10 w-10 shrink-0"
+                          className="shrink-0"
                           onClick={(e) => {
                             e.preventDefault();
                             setDeletingBookId(storybook.id);
                           }}
                           data-testid={`button-delete-${storybook.id}`}
                         >
-                          <Trash2 className="h-4 w-4" />
+                          <Trash2 className="h-5 w-5 md:h-4 md:w-4" />
                         </Button>
                       </CardFooter>
                     </Card>
@@ -1535,14 +1535,14 @@ export default function Library() {
                       
                       <CardFooter className="flex items-center justify-between gap-2 px-3 sm:px-6 pt-3 pb-3 sm:pb-6">
                         <Link href={`/view/${storybook.id}`} className="flex-1">
-                          <Button variant="outline" size="default" className="w-full h-10 text-sm font-medium hover:bg-accent transition-colors" data-testid={`button-view-${storybook.id}`}>
+                          <Button variant="outline" size="default" className="w-full text-sm font-medium hover:bg-accent transition-colors" data-testid={`button-view-${storybook.id}`}>
                             {t('common.buttons.view')}
                           </Button>
                         </Link>
                         <Button
                           variant="outline"
                           size="icon"
-                          className="h-10 w-10 shrink-0"
+                          className="shrink-0"
                           onClick={(e) => {
                             e.preventDefault();
                             unsaveMutation.mutate(storybook.id);
@@ -1550,7 +1550,7 @@ export default function Library() {
                           disabled={unsaveMutation.isPending}
                           data-testid={`button-unsave-${storybook.id}`}
                         >
-                          <BookmarkX className="h-4 w-4" />
+                          <BookmarkX className="h-5 w-5 md:h-4 md:w-4" />
                         </Button>
                       </CardFooter>
                     </Card>

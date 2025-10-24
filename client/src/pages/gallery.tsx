@@ -186,7 +186,7 @@ export default function Gallery() {
                         <Button
                           size="icon"
                           variant="secondary"
-                          className="absolute top-2 right-2 h-9 w-9 rounded-full shadow-lg hover:scale-110 transition-all z-10 bg-white/90 dark:bg-black/80 hover:bg-white dark:hover:bg-black"
+                          className="absolute top-2 right-2 rounded-full shadow-lg hover:scale-110 active:scale-95 transition-all z-10 bg-white/90 dark:bg-black/80 hover:bg-white dark:hover:bg-black"
                           onClick={(e) => handleToggleSave(e, storybook.id, storybook.isSaved)}
                           disabled={saveMutation.isPending || unsaveMutation.isPending}
                           data-testid={`button-save-${storybook.id}`}
