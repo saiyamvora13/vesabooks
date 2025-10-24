@@ -112,7 +112,7 @@ export const purchases = pgTable("purchases", {
   spineBackgroundColor: text("spine_background_color").default('#FFFFFF'),
   createdAt: timestamp("created_at").defaultNow(),
 }, (table) => [
-  index("idx_purchases_user").on(table.userId),
+  index("idx_purchases_user_created").on(table.userId, table.createdAt),
   index("idx_purchases_storybook").on(table.storybookId),
   index("idx_purchases_order_reference").on(table.orderReference),
   unique().on(table.stripePaymentIntentId, table.storybookId, table.type),
@@ -487,7 +487,7 @@ export const printOrders = pgTable("print_orders", {
 }, (table) => [
   index("idx_print_orders_purchase").on(table.purchaseId),
   index("idx_print_orders_prodigi").on(table.prodigiOrderId),
-  index("idx_print_orders_status").on(table.status),
+  index("idx_print_orders_status_created").on(table.status, table.createdAt),
 ]);
 
 export const insertPrintOrderSchema = createInsertSchema(printOrders).omit({
