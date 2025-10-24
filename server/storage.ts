@@ -53,6 +53,26 @@ export interface OrderDetails {
     storybook: Storybook | null;
     printOrder: PrintOrder | null;
   }>;
+  customerStats: {
+    totalOrders: number;
+    totalSpent: number;
+  } | null;
+  shippingAddress: {
+    fullName: string;
+    addressLine1: string;
+    addressLine2: string | null;
+    city: string;
+    stateProvince: string;
+    postalCode: string;
+    country: string;
+    phoneNumber: string | null;
+  } | null;
+  paymentMethod: {
+    cardBrand: string;
+    cardLast4: string;
+    cardExpMonth: number;
+    cardExpYear: number;
+  } | null;
   notes: OrderNote[];
   statusHistory: OrderStatusHistory[];
 }
@@ -1698,6 +1718,97 @@ export class DatabaseStorage implements IStorage {
       return null;
     }
 
+    // Get userId from first purchase
+    const userId = purchasesData[0].purchase.userId;
+    
+    let customerStats = null;
+    let shippingAddress = null;
+    let paymentMethod = null;
+
+    if (userId) {
+      // Calculate customer statistics (exclude 'creating' status)
+      const [statsResult] = await db
+        .select({
+          totalOrders: count(),
+          totalSpent: sql<string>`COALESCE(SUM(CAST(${purchases.price} AS DECIMAL)), 0)`,
+        })
+        .from(purchases)
+        .where(
+          and(
+            eq(purchases.userId, userId),
+            sql`${purchases.status} != 'creating'`
+          )
+        );
+      
+      if (statsResult) {
+        customerStats = {
+          totalOrders: Number(statsResult.totalOrders),
+          totalSpent: Number(statsResult.totalSpent),
+        };
+      }
+
+      // Get shipping address - prioritize default address, fall back to most recent
+      const [addressResult] = await db
+        .select()
+        .from(userShippingAddresses)
+        .where(eq(userShippingAddresses.userId, userId))
+        .orderBy(desc(userShippingAddresses.isDefault), desc(userShippingAddresses.createdAt))
+        .limit(1);
+      
+      if (addressResult) {
+        shippingAddress = {
+          fullName: addressResult.fullName,
+          addressLine1: addressResult.addressLine1,
+          addressLine2: addressResult.addressLine2,
+          city: addressResult.city,
+          stateProvince: addressResult.stateProvince,
+          postalCode: addressResult.postalCode,
+          country: addressResult.country,
+          phoneNumber: addressResult.phoneNumber,
+        };
+      }
+
+      // Get payment method - first try to match by stripePaymentMethodId from print order
+      const printOrder = purchasesData.find(p => p.printOrder)?.printOrder;
+      const stripePaymentMethodId = printOrder?.stripePaymentMethodId;
+      
+      if (stripePaymentMethodId) {
+        const [paymentResult] = await db
+          .select()
+          .from(userPaymentMethods)
+          .where(eq(userPaymentMethods.stripePaymentMethodId, stripePaymentMethodId))
+          .limit(1);
+        
+        if (paymentResult) {
+          paymentMethod = {
+            cardBrand: paymentResult.cardBrand,
+            cardLast4: paymentResult.cardLast4,
+            cardExpMonth: paymentResult.cardExpMonth,
+            cardExpYear: paymentResult.cardExpYear,
+          };
+        }
+      }
+      
+      // If no payment method found via stripe payment method id, get default or most recent
+      if (!paymentMethod) {
+        const [paymentResult] = await db
+          .select()
+          .from(userPaymentMethods)
+          .where(eq(userPaymentMethods.userId, userId))
+          .orderBy(desc(userPaymentMethods.isDefault), desc(userPaymentMethods.createdAt))
+          .limit(1);
+        
+        if (paymentResult) {
+          paymentMethod = {
+            cardBrand: paymentResult.cardBrand,
+            cardLast4: paymentResult.cardLast4,
+            cardExpMonth: paymentResult.cardExpMonth,
+            cardExpYear: paymentResult.cardExpYear,
+          };
+        }
+      }
+    }
+
     // Fetch notes
     const notes = await this.getOrderNotes(orderReference);
 
@@ -1713,6 +1824,9 @@ export class DatabaseStorage implements IStorage {
 
     return {
       purchases: purchasesList,
+      customerStats,
+      shippingAddress,
+      paymentMethod,
       notes,
       statusHistory,
     };
