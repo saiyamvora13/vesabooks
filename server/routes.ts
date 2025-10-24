@@ -3448,6 +3448,228 @@ Sitemap: ${baseUrl}/sitemap.xml`;
     countryCode: z.string().min(2, "Country code is required"),
   }).optional();
 
+  // Direct purchase - Buy a single item without using cart
+  // Allows users to buy one item directly while keeping cart intact
+  app.post("/api/purchases/direct", isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user.id || req.user.claims?.sub;
+      const { storybookId, productType, bookSize, paymentMethodId, shippingAddress } = req.body;
+
+      // Validate inputs
+      if (!storybookId || !productType || !paymentMethodId) {
+        return res.status(400).json({ 
+          message: "storybookId, productType, and paymentMethodId are required" 
+        });
+      }
+
+      if (productType !== 'digital' && productType !== 'print') {
+        return res.status(400).json({ message: "productType must be 'digital' or 'print'" });
+      }
+
+      // Validate shipping address for print items
+      if (productType === 'print') {
+        if (!shippingAddress) {
+          return res.status(400).json({ message: "Shipping address is required for print orders" });
+        }
+        const validation = cartShippingAddressSchema.safeParse(shippingAddress);
+        if (!validation.success) {
+          return res.status(400).json({ 
+            message: "Invalid shipping address", 
+            errors: validation.error.errors 
+          });
+        }
+      }
+
+      // Verify storybook exists
+      const storybook = await storage.getStorybook(storybookId);
+      if (!storybook) {
+        return res.status(404).json({ message: "Storybook not found" });
+      }
+
+      // Get payment method
+      const savedMethod = await storage.getPaymentMethod(paymentMethodId, userId);
+      if (!savedMethod) {
+        return res.status(404).json({ message: "Payment method not found" });
+      }
+
+      // Calculate price
+      const digitalPriceSetting = await storage.getSetting('digital_price');
+      const printPriceSetting = await storage.getSetting('print_price');
+      const digitalPrice = digitalPriceSetting ? parseInt(digitalPriceSetting.value) : 399;
+      const printPrice = printPriceSetting ? parseInt(printPriceSetting.value) : 2499;
+
+      let price = productType === 'digital' ? digitalPrice : printPrice;
+      
+      // Apply digital-to-print discount if applicable
+      if (productType === 'print') {
+        const existingDigitalPurchase = await storage.getStorybookPurchase(userId, storybookId, 'digital');
+        const existingPrintPurchase = await storage.getStorybookPurchase(userId, storybookId, 'print');
+        if (existingDigitalPurchase && !existingPrintPurchase) {
+          price = Math.max(0, printPrice - digitalPrice);
+        }
+      }
+
+      // Generate order reference
+      const orderReference = generateOrderReference();
+      
+      console.log(`[Direct Purchase] User ${userId} buying ${productType} storybook ${storybookId}, price: ${price}`);
+
+      // Create purchase record in 'creating' status
+      const purchaseData: any = {
+        userId,
+        storybookId,
+        type: productType,
+        price: price.toString(),
+        orderReference,
+        stripePaymentIntentId: orderReference,
+        status: 'creating',
+      };
+      
+      if (productType === 'print') {
+        purchaseData.bookSize = bookSize || 'a5-portrait';
+      }
+      
+      const purchase = await storage.createPurchase(purchaseData);
+
+      // Process print order with Prodigi if applicable
+      if (productType === 'print' && shippingAddress) {
+        const objectStorage = new ObjectStorageService();
+        
+        try {
+          // Generate PDF
+          const pdfBuffer = await generatePrintReadyPDF(storybook, bookSize || 'a5-portrait');
+          
+          // Save to temp file
+          const tempPdfPath = path.join(process.cwd(), 'uploads', `direct-print-${purchase.id}-${Date.now()}.pdf`);
+          fs.writeFileSync(tempPdfPath, pdfBuffer);
+          
+          // Upload to object storage
+          const pdfStoragePath = await objectStorage.uploadFile(
+            tempPdfPath,
+            `print-pdfs/${purchase.id}.pdf`,
+            true
+          );
+          
+          // Clean up temp file
+          fs.unlinkSync(tempPdfPath);
+          
+          console.log(`[Direct Purchase] PDF uploaded to ${pdfStoragePath}`);
+          
+          // Get full PDF URL for Prodigi
+          const baseUrl = process.env.REPLIT_DOMAINS 
+            ? `https://${process.env.REPLIT_DOMAINS.split(',')[0]}`
+            : 'http://localhost:5000';
+          const pdfUrl = `${baseUrl}${pdfStoragePath}`;
+          
+          // Get product SKU
+          const sku = prodigiService.getProductSKU(bookSize || 'a5-portrait', storybook.pages.length);
+          
+          // Prepare Prodigi order
+          const recipient = {
+            name: shippingAddress.name,
+            email: shippingAddress.email,
+            phoneNumber: shippingAddress.phoneNumber,
+            address: {
+              line1: shippingAddress.addressLine1,
+              line2: shippingAddress.addressLine2 || '',
+              postalOrZipCode: shippingAddress.postalCode,
+              countryCode: shippingAddress.countryCode,
+              townOrCity: shippingAddress.city,
+              stateOrCounty: shippingAddress.state || '',
+            },
+          };
+
+          const webhookSecret = process.env.PRODIGI_WEBHOOK_PATH_SECRET || 'vesa12345';
+          const baseCallbackUrl = process.env.REPLIT_DOMAINS 
+            ? `https://${process.env.REPLIT_DOMAINS.split(',')[0]}`
+            : 'http://localhost:5000';
+          const callbackUrl = `${baseCallbackUrl}/api/webhook/prodigi-${webhookSecret}`;
+
+          // Create Prodigi order
+          const prodigiOrder = await prodigiService.createOrder({
+            merchantReference: orderReference,
+            shippingMethod: 'Standard',
+            recipient,
+            items: [{
+              sku,
+              copies: 1,
+              sizing: 'fillPrintArea',
+              assets: [{ 
+                printArea: 'default',
+                url: pdfUrl 
+              }],
+            }],
+            callbackUrl,
+            metadata: {
+              orderReference,
+              userId,
+              purchaseId: purchase.id,
+              purchaseCount: 1,
+              paymentPhase: 'deferred',
+            },
+          });
+
+          console.log(`[Direct Purchase] Prodigi order created: ${prodigiOrder.id}`);
+
+          // Create print_orders record
+          await storage.createPrintOrder({
+            purchaseId: purchase.id,
+            prodigiOrderId: prodigiOrder.id,
+            stripePaymentMethodId: savedMethod.stripePaymentMethodId,
+            status: 'creating',
+          });
+
+          console.log(`[Direct Purchase] Print order created in 'creating' status for purchase ${purchase.id}`);
+        } catch (error) {
+          console.error(`[Direct Purchase] Failed to create print order:`, error);
+          
+          // Create failed print_orders record
+          await storage.createPrintOrder({
+            purchaseId: purchase.id,
+            stripePaymentMethodId: savedMethod.stripePaymentMethodId,
+            status: 'failed',
+            errorMessage: error instanceof Error ? error.message : 'Unknown error',
+          });
+          
+          throw error;
+        }
+      } else if (productType === 'digital') {
+        // For digital purchases, complete immediately
+        // Create payment intent and charge
+        const paymentIntent = await stripe.paymentIntents.create({
+          amount: price,
+          currency: 'usd',
+          payment_method: savedMethod.stripePaymentMethodId,
+          confirm: true,
+          off_session: true,
+          metadata: {
+            userId,
+            orderReference,
+            storybookId,
+            productType: 'digital',
+          },
+        });
+
+        // Update purchase status
+        await storage.updatePurchaseStatus(purchase.id, 'completed', paymentIntent.id);
+
+        console.log(`[Direct Purchase] Completed digital purchase ${purchase.id}, charged ${price} cents`);
+      }
+
+      res.json({ 
+        purchase,
+        orderReference,
+        message: productType === 'digital' 
+          ? "Digital purchase completed successfully" 
+          : "Print order created successfully. Payment will be charged after print confirmation.",
+      });
+    } catch (error) {
+      console.error("Direct purchase error:", error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      res.status(500).json({ message: `Failed to complete purchase: ${errorMessage}` });
+    }
+  });
+
   // Finalize cart purchase - TWO-PHASE ORDER FLOW (Amazon-style)
   // Creates order in 'creating' status WITHOUT charging
   // Prodigi webhook will trigger payment charge after confirmation

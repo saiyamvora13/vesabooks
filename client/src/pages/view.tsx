@@ -372,50 +372,16 @@ export default function View() {
     setTimeout(() => downloadEpub(), 100);
   };
 
-  const handleDirectDigitalCheckout = async () => {
+  const handleDirectDigitalCheckout = () => {
     if (!storybook || !pricing) return;
-    
-    try {
-      // Add to backend cart (database)
-      await apiRequest('POST', '/api/cart', {
-        storybookId: storybook.id,
-        productType: 'digital',
-        quantity: 1,
-      });
-      
-      window.dispatchEvent(new Event('cartUpdated'));
-      setCheckoutType('digital');
-      setCheckoutDialogOpen(true);
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to add item to cart. Please try again.",
-        variant: "destructive",
-      });
-    }
+    setCheckoutType('digital');
+    setCheckoutDialogOpen(true);
   };
 
-  const handleDirectPrintCheckout = async () => {
+  const handleDirectPrintCheckout = () => {
     if (!storybook || !pricing) return;
-    
-    try {
-      // Add to backend cart (database)
-      await apiRequest('POST', '/api/cart', {
-        storybookId: storybook.id,
-        productType: 'print',
-        quantity: 1,
-      });
-      
-      window.dispatchEvent(new Event('cartUpdated'));
-      setCheckoutType('print');
-      setCheckoutDialogOpen(true);
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to add item to cart. Please try again.",
-        variant: "destructive",
-      });
-    }
+    setCheckoutType('print');
+    setCheckoutDialogOpen(true);
   };
 
   const handleAddToCart = async () => {
@@ -859,10 +825,15 @@ export default function View() {
       <NewCheckoutDialog
         open={checkoutDialogOpen}
         onOpenChange={setCheckoutDialogOpen}
+        mode="direct"
+        directItem={{
+          storybookId: storybook?.id || '',
+          productType: checkoutType,
+          bookSize: 'a5-portrait',
+        }}
         hasPrintItems={checkoutType === 'print'}
         amount={pricing ? (checkoutType === 'digital' ? parseInt(pricing.digital_price) : parseInt(pricing.print_price)) : 0}
         onSuccess={() => {
-          queryClient.invalidateQueries({ queryKey: ['/api/cart'] });
           queryClient.invalidateQueries({ queryKey: ['/api/purchases'] });
           setCheckoutDialogOpen(false);
           
@@ -875,6 +846,9 @@ export default function View() {
 
           if (checkoutType === 'digital') {
             queryClient.invalidateQueries({ queryKey: ['/api/purchases/check', storybookId, 'digital'] });
+          }
+          if (checkoutType === 'print') {
+            queryClient.invalidateQueries({ queryKey: ['/api/purchases/check', storybookId, 'print'] });
           }
         }}
       />

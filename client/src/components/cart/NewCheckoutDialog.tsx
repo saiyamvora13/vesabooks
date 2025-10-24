@@ -35,19 +35,27 @@ interface PaymentMethod {
   isDefault: boolean;
 }
 
+interface DirectItem {
+  storybookId: string;
+  productType: 'digital' | 'print';
+  bookSize?: string;
+}
+
 interface NewCheckoutDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   hasPrintItems: boolean;
   amount: number;
   onSuccess: () => void;
+  mode?: 'cart' | 'direct';
+  directItem?: DirectItem;
 }
 
 function formatPrice(cents: number): string {
   return (cents / 100).toFixed(2);
 }
 
-export function NewCheckoutDialog({ open, onOpenChange, hasPrintItems, amount, onSuccess }: NewCheckoutDialogProps) {
+export function NewCheckoutDialog({ open, onOpenChange, hasPrintItems, amount, onSuccess, mode = 'cart', directItem }: NewCheckoutDialogProps) {
   const { toast } = useToast();
   const { user } = useAuth();
   const [selectedAddressId, setSelectedAddressId] = useState<string>('');
@@ -90,6 +98,11 @@ export function NewCheckoutDialog({ open, onOpenChange, hasPrintItems, amount, o
   // Finalize purchase mutation
   const finalizeMutation = useMutation({
     mutationFn: async () => {
+      // Defensive check: direct mode requires directItem
+      if (mode === 'direct' && !directItem) {
+        throw new Error('Configuration error: directItem is required for direct purchase mode');
+      }
+
       const payload: any = {
         paymentMethodId: selectedPaymentMethodId,
       };
@@ -119,7 +132,17 @@ export function NewCheckoutDialog({ open, onOpenChange, hasPrintItems, amount, o
         };
       }
 
-      const response = await apiRequest('POST', '/api/cart/finalize', payload);
+      // Use different endpoints based on mode
+      const endpoint = mode === 'direct' ? '/api/purchases/direct' : '/api/cart/finalize';
+      
+      // For direct mode, add item details
+      if (mode === 'direct' && directItem) {
+        payload.storybookId = directItem.storybookId;
+        payload.productType = directItem.productType;
+        payload.bookSize = directItem.bookSize;
+      }
+
+      const response = await apiRequest('POST', endpoint, payload);
       if (!response.ok) {
         const error = await response.json();
         throw new Error(error.message || 'Failed to complete purchase');
