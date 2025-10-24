@@ -186,7 +186,7 @@ export default function Gallery() {
                         <Button
                           size="icon"
                           variant="secondary"
-                          className="absolute top-2 right-2 rounded-full shadow-lg hover:scale-110 active:scale-95 transition-all z-10 bg-white/90 dark:bg-black/80 hover:bg-white dark:hover:bg-black"
+                          className="absolute top-2 right-2 rounded-full shadow-lg hover:scale-110 active:scale-95 transition-all z-10 bg-white/90 dark:bg-black/80 hover:bg-white dark:hover:bg-black min-h-[48px] min-w-[48px]"
                           onClick={(e) => handleToggleSave(e, storybook.id, storybook.isSaved)}
                           disabled={saveMutation.isPending || unsaveMutation.isPending}
                           data-testid={`button-save-${storybook.id}`}
@@ -236,6 +236,7 @@ export default function Gallery() {
                   <Button
                     variant="outline"
                     size="icon"
+                    className="min-h-[48px] min-w-[48px]"
                     onClick={() => handlePageChange(page - 1)}
                     disabled={page === 1}
                     data-testid="button-prev-page"
@@ -267,6 +268,7 @@ export default function Gallery() {
                           key={pageNum}
                           variant={page === pageNum ? "default" : "outline"}
                           size="icon"
+                          className="min-h-[48px] min-w-[48px]"
                           onClick={() => handlePageChange(pageNum)}
                           data-testid={`button-page-${pageNum}`}
                         >
@@ -279,6 +281,7 @@ export default function Gallery() {
                   <Button
                     variant="outline"
                     size="icon"
+                    className="min-h-[48px] min-w-[48px]"
                     onClick={() => handlePageChange(page + 1)}
                     disabled={page === data.totalPages}
                     data-testid="button-next-page"

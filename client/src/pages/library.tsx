@@ -1542,7 +1542,7 @@ export default function Library() {
                         <Button
                           variant="outline"
                           size="icon"
-                          className="shrink-0"
+                          className="shrink-0 min-h-[48px] min-w-[48px]"
                           onClick={(e) => {
                             e.preventDefault();
                             unsaveMutation.mutate(storybook.id);

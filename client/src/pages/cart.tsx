@@ -112,7 +112,7 @@ function CartItemCard({
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="flex-shrink-0"
+                  className="flex-shrink-0 min-h-[48px] min-w-[48px]"
                   onClick={onRemove}
                   data-testid={`button-remove-${item.storybookId}-${item.productType}`}
                 >
@@ -196,6 +196,7 @@ function CartItemCard({
                   <Button
                     variant="ghost"
                     size="icon"
+                    className="min-h-[48px] min-w-[48px]"
                     onClick={() => onUpdateQuantity(Math.max(1, item.quantity - 1))}
                     disabled={item.quantity <= 1}
                     data-testid={`button-decrease-${item.storybookId}-${item.productType}`}
@@ -208,6 +209,7 @@ function CartItemCard({
                   <Button
                     variant="ghost"
                     size="icon"
+                    className="min-h-[48px] min-w-[48px]"
                     onClick={() => onUpdateQuantity(item.quantity + 1)}
                     data-testid={`button-increase-${item.storybookId}-${item.productType}`}
                   >
