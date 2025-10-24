@@ -43,7 +43,8 @@ import {
   CheckCircle2,
   XCircle,
   Truck,
-  Send
+  Send,
+  Download
 } from "lucide-react";
 import { Link } from "wouter";
 
@@ -62,7 +63,29 @@ interface OrderDetails {
     email: string;
     firstName: string;
     lastName: string;
+    createdAt: string;
+    authProvider: string;
   };
+  customerStats: {
+    totalOrders: number;
+    totalSpent: number;
+  } | null;
+  shippingAddress: {
+    fullName: string;
+    addressLine1: string;
+    addressLine2?: string;
+    city: string;
+    stateProvince: string;
+    postalCode: string;
+    country: string;
+    phoneNumber?: string;
+  } | null;
+  paymentMethod: {
+    cardBrand: string;
+    cardLast4: string;
+    cardExpMonth: number;
+    cardExpYear: number;
+  } | null;
   storybook: {
     id: string;
     title: string;
@@ -267,6 +290,48 @@ export default function OrderDetailsDialog({ orderReference, open, onOpenChange 
                 </CardContent>
               </Card>
 
+              {/* Downloads */}
+              <Card className="bg-slate-800 border-slate-700">
+                <CardHeader>
+                  <CardTitle className="text-lg text-slate-100 flex items-center gap-2">
+                    <Download className="w-5 h-5" />
+                    Downloads
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <a
+                    href={`/api/storybooks/${orderDetails.storybook.id}/epub`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    <Button
+                      variant="outline"
+                      className="w-full border-slate-700 text-slate-200 hover:bg-slate-700"
+                      data-testid="button-download-epub"
+                    >
+                      <Download className="w-4 h-4 mr-2" />
+                      Download EPUB (E-book)
+                      <ExternalLink className="w-4 h-4 ml-auto" />
+                    </Button>
+                  </a>
+                  <a
+                    href={`/api/storybooks/${orderDetails.storybook.id}/download-print-pdf`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    <Button
+                      variant="outline"
+                      className="w-full border-slate-700 text-slate-200 hover:bg-slate-700"
+                      data-testid="button-download-print-pdf"
+                    >
+                      <Download className="w-4 h-4 mr-2" />
+                      Download Print PDF
+                      <ExternalLink className="w-4 h-4 ml-auto" />
+                    </Button>
+                  </a>
+                </CardContent>
+              </Card>
+
               {/* Customer Information */}
               <Card className="bg-slate-800 border-slate-700">
                 <CardHeader>
@@ -275,15 +340,109 @@ export default function OrderDetailsDialog({ orderReference, open, onOpenChange 
                     Customer Information
                   </CardTitle>
                 </CardHeader>
-                <CardContent className="space-y-3">
-                  <div>
-                    <p className="text-xs text-slate-500 mb-1">Name</p>
-                    <p className="text-sm text-slate-200">{orderDetails.customer.firstName} {orderDetails.customer.lastName}</p>
+                <CardContent className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <p className="text-xs text-slate-500 mb-1">Name</p>
+                      <p className="text-sm text-slate-200">{orderDetails.customer.firstName} {orderDetails.customer.lastName}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-slate-500 mb-1">Email</p>
+                      <p className="text-sm text-slate-200">{orderDetails.customer.email}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-slate-500 mb-1">Account Created</p>
+                      <p className="text-sm text-slate-200">{formatDate(orderDetails.customer.createdAt)}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-slate-500 mb-1">Authentication</p>
+                      <p className="text-sm text-slate-200">
+                        {orderDetails.customer.authProvider.charAt(0).toUpperCase() + orderDetails.customer.authProvider.slice(1)}
+                      </p>
+                    </div>
+                    {orderDetails.shippingAddress?.phoneNumber && (
+                      <div>
+                        <p className="text-xs text-slate-500 mb-1">Phone Number</p>
+                        <p className="text-sm text-slate-200">{orderDetails.shippingAddress.phoneNumber}</p>
+                      </div>
+                    )}
                   </div>
-                  <div>
-                    <p className="text-xs text-slate-500 mb-1">Email</p>
-                    <p className="text-sm text-slate-200">{orderDetails.customer.email}</p>
-                  </div>
+
+                  {orderDetails.customerStats && (
+                    <>
+                      <Separator className="bg-slate-700" />
+                      <div>
+                        <h4 className="text-sm font-semibold text-slate-300 mb-3">Customer Statistics</h4>
+                        <div className="grid grid-cols-2 gap-4">
+                          <div>
+                            <p className="text-xs text-slate-500 mb-1">Total Orders</p>
+                            <p className="text-sm text-slate-200">{orderDetails.customerStats.totalOrders}</p>
+                          </div>
+                          <div>
+                            <p className="text-xs text-slate-500 mb-1">Total Spent</p>
+                            <p className="text-sm text-green-400 font-semibold">
+                              {formatCurrency(orderDetails.customerStats.totalSpent || 0)}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    </>
+                  )}
+
+                  {orderDetails.shippingAddress && (
+                    <>
+                      <Separator className="bg-slate-700" />
+                      <div>
+                        <h4 className="text-sm font-semibold text-slate-300 mb-3">Shipping Address</h4>
+                        <div className="space-y-2">
+                          <div>
+                            <p className="text-xs text-slate-500 mb-1">Full Name</p>
+                            <p className="text-sm text-slate-200">{orderDetails.shippingAddress.fullName}</p>
+                          </div>
+                          <div>
+                            <p className="text-xs text-slate-500 mb-1">Address</p>
+                            <p className="text-sm text-slate-200">{orderDetails.shippingAddress.addressLine1}</p>
+                            {orderDetails.shippingAddress.addressLine2 && (
+                              <p className="text-sm text-slate-200">{orderDetails.shippingAddress.addressLine2}</p>
+                            )}
+                            <p className="text-sm text-slate-200">
+                              {orderDetails.shippingAddress.city}, {orderDetails.shippingAddress.stateProvince} {orderDetails.shippingAddress.postalCode}
+                            </p>
+                            <p className="text-sm text-slate-200">{orderDetails.shippingAddress.country}</p>
+                          </div>
+                        </div>
+                      </div>
+                    </>
+                  )}
+
+                  {orderDetails.paymentMethod && (
+                    <>
+                      <Separator className="bg-slate-700" />
+                      <div>
+                        <h4 className="text-sm font-semibold text-slate-300 mb-3">Payment Method</h4>
+                        <div className="space-y-2">
+                          <div>
+                            <p className="text-xs text-slate-500 mb-1">Card Brand</p>
+                            <p className="text-sm text-slate-200">
+                              {orderDetails.paymentMethod.cardBrand.charAt(0).toUpperCase() + orderDetails.paymentMethod.cardBrand.slice(1)}
+                            </p>
+                          </div>
+                          <div>
+                            <p className="text-xs text-slate-500 mb-1">Card Number</p>
+                            <p className="text-sm text-slate-200 font-mono">•••• {orderDetails.paymentMethod.cardLast4}</p>
+                          </div>
+                          <div>
+                            <p className="text-xs text-slate-500 mb-1">Expiry</p>
+                            <p className="text-sm text-slate-200">
+                              {String(orderDetails.paymentMethod.cardExpMonth).padStart(2, '0')}/{orderDetails.paymentMethod.cardExpYear}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    </>
+                  )}
+
+                  <Separator className="bg-slate-700" />
                   <Link href={`/orders?userId=${orderDetails.customer.id}`}>
                     <a className="inline-flex items-center gap-2 text-sm text-purple-400 hover:text-purple-300">
                       View Customer's Order History
