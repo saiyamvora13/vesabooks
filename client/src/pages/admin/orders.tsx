@@ -208,7 +208,7 @@ export default function AdminOrders() {
                   placeholder="Search by order ID, email, or storybook title..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-10 bg-slate-800 border-slate-600 text-white placeholder:text-slate-400"
+                  className="pl-11 bg-slate-800 border-slate-600 text-white placeholder:text-slate-400"
                   data-testid="input-search"
                 />
               </div>
