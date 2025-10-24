@@ -141,7 +141,7 @@ const ImagePage = ({
   zoom?: number;
   position?: { x: number; y: number };
 }) => (
-  <div className="w-full h-full relative group overflow-hidden">
+  <div className={`w-full h-full relative group overflow-hidden ${isMobile ? 'flex items-center justify-center' : ''}`}>
     {page.imageUrl ? (
       <img 
         src={page.imageUrl} 
@@ -314,6 +314,7 @@ export function FlipbookViewer({ pages, title, author = "AI Author", coverImageU
   const [imageZoom, setImageZoom] = useState(1);
   const [imagePosition, setImagePosition] = useState({ x: 0, y: 0 });
   const [isPinching, setIsPinching] = useState(false);
+  const [supportsFullscreen, setSupportsFullscreen] = useState(false);
   const touchStartX = useRef<number>(0);
   const touchEndX = useRef<number>(0);
   const touchStartY = useRef<number>(0);
@@ -325,6 +326,13 @@ export function FlipbookViewer({ pages, title, author = "AI Author", coverImageU
     const checkMobile = () => setIsMobile(window.innerWidth < 768);
     checkMobile();
     window.addEventListener('resize', checkMobile);
+    
+    // Check if fullscreen API is supported (not supported on iOS Safari)
+    const hasFullscreenSupport = document.fullscreenEnabled || 
+                                  (document as any).webkitFullscreenEnabled || 
+                                  false;
+    setSupportsFullscreen(hasFullscreenSupport);
+    
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
@@ -572,18 +580,20 @@ export function FlipbookViewer({ pages, title, author = "AI Author", coverImageU
               {currentPage === 0 ? 'Cover' : currentPage >= totalMobilePages ? 'The End' : `${actualPageNum} of ${totalPageCount}`}
             </span>
           </div>
-          <button
-            onClick={toggleFullscreen}
-            className="p-2 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
-            aria-label={isFullscreen ? "Exit Fullscreen" : "Enter Fullscreen"}
-            data-testid="button-fullscreen-toggle"
-          >
-            {isFullscreen ? (
-              <Minimize2 className="w-5 h-5 text-slate-700 dark:text-slate-200" />
-            ) : (
-              <Maximize2 className="w-5 h-5 text-slate-700 dark:text-slate-200" />
-            )}
-          </button>
+          {supportsFullscreen && (
+            <button
+              onClick={toggleFullscreen}
+              className="p-2 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors min-h-[48px] min-w-[48px] flex items-center justify-center"
+              aria-label={isFullscreen ? "Exit Fullscreen" : "Enter Fullscreen"}
+              data-testid="button-fullscreen-toggle"
+            >
+              {isFullscreen ? (
+                <Minimize2 className="w-5 h-5 text-slate-700 dark:text-slate-200" />
+              ) : (
+                <Maximize2 className="w-5 h-5 text-slate-700 dark:text-slate-200" />
+              )}
+            </button>
+          )}
         </div>
 
         {/* Main Content Area */}
