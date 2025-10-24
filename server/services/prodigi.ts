@@ -181,10 +181,6 @@ export class ProdigiService {
       return 'BOOK-FE-A4-P-HARD-G';
     } else if (normalizedSize.includes('a4') && normalizedSize.includes('landscape')) {
       return 'BOOK-FE-A4-L-HARD-G';
-    } else if (normalizedSize.includes('square-small')) {
-      return 'BOOK-FE-8_3-SQ-HARD-G';
-    } else if (normalizedSize.includes('square-large')) {
-      return 'BOOK-FE-11_7-SQ-HARD-G';
     }
     
     // Default to A5 Portrait hardcover
@@ -202,10 +198,6 @@ export class ProdigiService {
       return { width: 210, height: 297 };
     } else if (normalizedSize.includes('a4-landscape')) {
       return { width: 297, height: 210 };
-    } else if (normalizedSize.includes('square-small')) {
-      return { width: 210, height: 210 };
-    } else if (normalizedSize.includes('square-large')) {
-      return { width: 294, height: 294 };
     }
     
     return { width: 148, height: 210 };

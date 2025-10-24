@@ -71,7 +71,7 @@ interface Storybook {
   pages: Array<{ pageNumber: number; text: string; imageUrl: string }>;
   createdAt: string;
   shareUrl: string | null;
-  orientation?: 'portrait' | 'landscape' | 'square';
+  orientation?: 'portrait' | 'landscape';
   coverImageUrl?: string;
 }
 
@@ -214,7 +214,7 @@ function CheckoutDialog({ open, onOpenChange, storybook, type, price }: Checkout
   const [purchaseId, setPurchaseId] = useState<string | null>(null);
   
   // Get orientation-appropriate book sizes
-  const availableBookSizes = getBookSizesByOrientation(storybook.orientation as 'portrait' | 'landscape' | 'square' || 'portrait');
+  const availableBookSizes = getBookSizesByOrientation(storybook.orientation || 'portrait');
   const defaultBookSize = availableBookSizes.length > 0 ? availableBookSizes[0].id : 'a5-portrait';
   
   // Book options state
@@ -524,7 +524,7 @@ function CheckoutDialog({ open, onOpenChange, storybook, type, price }: Checkout
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          {getBookSizesByOrientation((storybook.orientation || 'portrait') as 'portrait' | 'landscape' | 'square').map((size) => (
+                          {getBookSizesByOrientation(storybook.orientation || 'portrait').map((size) => (
                             <SelectItem key={size.id} value={size.id} data-testid={`option-book-size-${size.id}`}>
                               {size.name} ({size.widthInches}" × {size.heightInches}")
                             </SelectItem>
@@ -899,7 +899,7 @@ interface DownloadCustomizationDialogProps {
 function DownloadCustomizationDialog({ open, onOpenChange, storybook }: DownloadCustomizationDialogProps) {
   const { t } = useTranslation();
   const { toast } = useToast();
-  const bookSizes = getBookSizesByOrientation(storybook.orientation as 'portrait' | 'landscape' | 'square' || 'portrait');
+  const bookSizes = getBookSizesByOrientation(storybook.orientation || 'portrait');
   const defaultBookSize = bookSizes.length > 0 ? bookSizes[0].id : 'a5-portrait';
   
   const form = useForm<BookOptionsFormValues>({
@@ -1372,7 +1372,7 @@ export default function Library() {
                           </CardTitle>
                           {storybook.orientation && (
                             <Badge variant="outline" className="text-xs shrink-0" data-testid={`badge-orientation-${storybook.id}`}>
-                              {storybook.orientation === 'portrait' ? '📱 Portrait' : storybook.orientation === 'landscape' ? '🖼️ Landscape' : '⬛ Square'}
+                              {storybook.orientation === 'portrait' ? '📱 Portrait' : '🖼️ Landscape'}
                             </Badge>
                           )}
                         </div>
@@ -1463,7 +1463,7 @@ export default function Library() {
                           </CardTitle>
                           {storybook.orientation && (
                             <Badge variant="outline" className="text-xs shrink-0" data-testid={`badge-orientation-${storybook.id}`}>
-                              {storybook.orientation === 'portrait' ? '📱 Portrait' : storybook.orientation === 'landscape' ? '🖼️ Landscape' : '⬛ Square'}
+                              {storybook.orientation === 'portrait' ? '📱 Portrait' : '🖼️ Landscape'}
                             </Badge>
                           )}
                         </div>

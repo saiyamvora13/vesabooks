@@ -1,7 +1,7 @@
 // Professional hardcover book size specifications
 // Based on Prodigi hardcover photo book specifications
 
-export type BookOrientation = 'portrait' | 'landscape' | 'square';
+export type BookOrientation = 'portrait' | 'landscape';
 
 export interface BookSize {
   id: string;
@@ -52,24 +52,6 @@ export const BOOK_SIZES: Record<string, BookSize> = {
     heightMM: 297,
     widthInches: 8.3,
     heightInches: 11.7,
-  },
-  'square-small': {
-    id: 'square-small',
-    name: '8.3" × 8.3" Square',
-    orientation: 'square',
-    widthMM: 210,
-    heightMM: 210,
-    widthInches: 8.3,
-    heightInches: 8.3,
-  },
-  'square-large': {
-    id: 'square-large',
-    name: '11.6" × 11.6" Square',
-    orientation: 'square',
-    widthMM: 294,
-    heightMM: 294,
-    widthInches: 11.6,
-    heightInches: 11.6,
   },
 };
 

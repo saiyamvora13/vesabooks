@@ -4940,7 +4940,7 @@ Sitemap: ${baseUrl}/sitemap.xml`;
 
   // Validation schemas for Prodigi endpoints
   const quoteRequestSchema = z.object({
-    bookSize: z.string().regex(/^(a5-portrait|a5-landscape|a4-portrait|a4-landscape|square-8|square-11)$/),
+    bookSize: z.string().regex(/^(a5-portrait|a5-landscape|a4-portrait|a4-landscape)$/),
     destinationCountryCode: z.string().length(2).regex(/^[A-Z]{2}$/),
     shippingMethod: z.enum(['Budget', 'Standard', 'Express', 'Overnight']).optional(),
   });
@@ -4988,8 +4988,6 @@ Sitemap: ${baseUrl}/sitemap.xml`;
         'a5-landscape': 15.00,
         'a4-portrait': 20.00,
         'a4-landscape': 20.00,
-        'square-8': 18.00,
-        'square-11': 25.00,
       };
 
       // Shipping costs by method
@@ -5552,10 +5550,9 @@ async function generateStorybookAsync(
     const height = metadata.height || 1;
     const aspectRatio = width / height;
     
-    let orientation: 'portrait' | 'landscape' | 'square';
-    if (Math.abs(aspectRatio - 1) < 0.1) {
-      orientation = 'square'; // Within 10% of 1:1
-    } else if (aspectRatio > 1) {
+    // Binary classification: landscape (width >= height) or portrait (width < height)
+    let orientation: 'portrait' | 'landscape';
+    if (aspectRatio >= 1.0) {
       orientation = 'landscape';
     } else {
       orientation = 'portrait';
