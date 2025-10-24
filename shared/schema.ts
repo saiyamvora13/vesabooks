@@ -28,6 +28,7 @@ export const users = pgTable("users", {
   googleId: varchar("google_id").unique(),
   facebookId: varchar("facebook_id").unique(),
   appleId: varchar("apple_id").unique(),
+  stripeCustomerId: varchar("stripe_customer_id").unique(),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });

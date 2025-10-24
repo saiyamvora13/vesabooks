@@ -30,6 +30,29 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', {
   apiVersion: "2025-09-30.clover",
 });
 
+// Helper function to get or create a Stripe customer for a user
+async function getOrCreateStripeCustomer(user: User): Promise<string> {
+  // If user already has a Stripe customer ID, return it
+  if (user.stripeCustomerId) {
+    return user.stripeCustomerId;
+  }
+
+  // Create a new Stripe customer
+  const customer = await stripe.customers.create({
+    email: user.email || undefined,
+    metadata: {
+      userId: user.id,
+    },
+  });
+
+  // Save the Stripe customer ID to the user record
+  await storage.updateUserStripeCustomerId(user.id, customer.id);
+
+  console.log(`[Stripe] Created new customer ${customer.id} for user ${user.id}`);
+  
+  return customer.id;
+}
+
 // Rate limiting configurations for authentication endpoints
 const authRateLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
@@ -3681,10 +3704,32 @@ Sitemap: ${baseUrl}/sitemap.xml`;
         }
       } else if (productType === 'digital') {
         // For digital purchases, complete immediately
+        // Get user details for Stripe customer creation
+        const user = await storage.getUser(userId);
+        if (!user) {
+          throw new Error('User not found');
+        }
+
+        // Get or create Stripe customer
+        const customerId = await getOrCreateStripeCustomer(user);
+
+        // Attach payment method to customer if not already attached
+        try {
+          await stripe.paymentMethods.attach(savedMethod.stripePaymentMethodId, {
+            customer: customerId,
+          });
+        } catch (error: any) {
+          // If payment method is already attached, that's fine
+          if (error.code !== 'resource_already_exists') {
+            throw error;
+          }
+        }
+
         // Create payment intent and charge
         const paymentIntent = await stripe.paymentIntents.create({
           amount: price,
           currency: 'usd',
+          customer: customerId,
           payment_method: savedMethod.stripePaymentMethodId,
           confirm: true,
           off_session: true,

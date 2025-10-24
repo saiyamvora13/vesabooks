@@ -133,6 +133,7 @@ export interface IStorage {
   deletePasswordResetToken(token: string): Promise<void>;
   deleteExpiredPasswordResetTokens(): Promise<void>;
   updateUserPassword(userId: string, hashedPassword: string): Promise<void>;
+  updateUserStripeCustomerId(userId: string, stripeCustomerId: string): Promise<void>;
   
   // Admin user operations
   getAdminUser(id: string): Promise<AdminUser | undefined>;
@@ -717,6 +718,13 @@ export class DatabaseStorage implements IStorage {
     await db
       .update(users)
       .set({ password: hashedPassword, updatedAt: new Date() })
+      .where(eq(users.id, userId));
+  }
+
+  async updateUserStripeCustomerId(userId: string, stripeCustomerId: string): Promise<void> {
+    await db
+      .update(users)
+      .set({ stripeCustomerId, updatedAt: new Date() })
       .where(eq(users.id, userId));
   }
 
