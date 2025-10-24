@@ -39,17 +39,18 @@ export default function Login() {
       const response = await apiRequest("POST", "/api/auth/login", data);
       return response.json();
     },
-    onSuccess: () => {
-      // Invalidate auth query to update authentication state
-      queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
-      
+    onSuccess: async () => {
       toast({
         title: t('auth.login.toast.success.title'),
         description: t('auth.login.toast.success.description'),
       });
+      
+      // Refetch auth state and wait for it to complete before redirecting
+      await queryClient.refetchQueries({ queryKey: ["/api/auth/user"] });
+      
       setTimeout(() => {
         setLocation("/library");
-      }, 500);
+      }, 100);
     },
     onError: (error: Error) => {
       toast({
