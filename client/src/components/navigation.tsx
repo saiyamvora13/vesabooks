@@ -206,12 +206,12 @@ export default function Navigation() {
             )}
             <Button
               variant="ghost"
-              className="h-11 w-11 p-0 flex items-center justify-center text-foreground hover:bg-accent/10 transition-colors"
+              className="h-11 w-11 p-0 flex items-center justify-center text-gray-900 dark:text-gray-100 hover:bg-accent/10 transition-colors"
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
               data-testid="button-mobile-menu"
               aria-label={mobileMenuOpen ? "Close menu" : "Open menu"}
             >
-              {mobileMenuOpen ? <X className="h-7 w-7" /> : <Menu className="h-7 w-7" />}
+              {mobileMenuOpen ? <X className="h-7 w-7 text-gray-900 dark:text-gray-100" /> : <Menu className="h-7 w-7 text-gray-900 dark:text-gray-100" />}
             </Button>
           </div>
         </div>

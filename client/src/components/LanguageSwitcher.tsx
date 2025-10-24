@@ -1,4 +1,11 @@
 import { useTranslation } from 'react-i18next';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 const languages = [
   { code: 'en', name: 'English' },
@@ -16,25 +23,25 @@ export default function LanguageSwitcher({ testId = "language-switcher" }: { tes
                           languages.find(l => i18n.language.startsWith(l.code))?.code || 
                           'en';
 
-  const handleLanguageChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    i18n.changeLanguage(e.target.value);
+  const handleLanguageChange = (value: string) => {
+    i18n.changeLanguage(value);
   };
 
   return (
     <div className="flex items-center gap-2">
       <span className="text-foreground/70">🌐</span>
-      <select 
-        value={currentLangCode} 
-        onChange={handleLanguageChange}
-        className="h-9 w-[130px] px-3 py-1 text-sm rounded-md border border-border/50 hover:border-border bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 cursor-pointer transition-colors"
-        data-testid={testId}
-      >
-        {languages.map((lang) => (
-          <option key={lang.code} value={lang.code}>
-            {lang.name}
-          </option>
-        ))}
-      </select>
+      <Select value={currentLangCode} onValueChange={handleLanguageChange}>
+        <SelectTrigger className="h-9 w-[130px] text-sm" data-testid={testId}>
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          {languages.map((lang) => (
+            <SelectItem key={lang.code} value={lang.code}>
+              {lang.name}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
     </div>
   );
 }
