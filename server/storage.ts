@@ -20,31 +20,12 @@ export interface OrderSearchFilters {
 export interface OrderSearchResult {
   id: string;
   orderReference: string | null;
-  userId: string | null;
-  storybookId: string;
-  type: string;
-  price: string;
+  customerEmail: string;
+  storybookTitle: string;
+  productType: string;
+  amount: string;
   status: string;
-  bookSize: string | null;
-  stripePaymentIntentId: string;
   createdAt: Date | null;
-  user: {
-    id: string;
-    email: string | null;
-    firstName: string | null;
-    lastName: string | null;
-  } | null;
-  storybook: {
-    id: string;
-    title: string;
-    coverImageUrl: string | null;
-  } | null;
-  printOrder: {
-    id: string;
-    prodigiOrderId: string | null;
-    status: string;
-    trackingNumber: string | null;
-  } | null;
 }
 
 export interface OrderDetails {
@@ -1694,31 +1675,12 @@ export class DatabaseStorage implements IStorage {
     const orders: OrderSearchResult[] = results.map(row => ({
       id: row.purchase.id,
       orderReference: row.purchase.orderReference,
-      userId: row.purchase.userId,
-      storybookId: row.purchase.storybookId,
-      type: row.purchase.type,
-      price: row.purchase.price,
+      customerEmail: row.user?.email || 'N/A',
+      storybookTitle: row.storybook?.title || 'N/A',
+      productType: row.purchase.type,
+      amount: row.purchase.price,
       status: row.purchase.status,
-      bookSize: row.purchase.bookSize,
-      stripePaymentIntentId: row.purchase.stripePaymentIntentId,
       createdAt: row.purchase.createdAt,
-      user: row.user ? {
-        id: row.user.id,
-        email: row.user.email,
-        firstName: row.user.firstName,
-        lastName: row.user.lastName,
-      } : null,
-      storybook: row.storybook ? {
-        id: row.storybook.id,
-        title: row.storybook.title,
-        coverImageUrl: row.storybook.coverImageUrl,
-      } : null,
-      printOrder: row.printOrder ? {
-        id: row.printOrder.id,
-        prodigiOrderId: row.printOrder.prodigiOrderId,
-        status: row.printOrder.status,
-        trackingNumber: row.printOrder.trackingNumber,
-      } : null,
     }));
 
     return { orders, total };
