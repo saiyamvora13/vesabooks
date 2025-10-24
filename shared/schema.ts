@@ -1,5 +1,6 @@
 import { sql } from "drizzle-orm";
 import { pgTable, text, varchar, json, timestamp, index, jsonb, numeric, unique, boolean, integer } from "drizzle-orm/pg-core";
+import { desc } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
@@ -112,7 +113,7 @@ export const purchases = pgTable("purchases", {
   spineBackgroundColor: text("spine_background_color").default('#FFFFFF'),
   createdAt: timestamp("created_at").defaultNow(),
 }, (table) => [
-  index("idx_purchases_user_created").on(table.userId, table.createdAt),
+  index("idx_purchases_user_created").on(table.userId, desc(table.createdAt)),
   index("idx_purchases_storybook").on(table.storybookId),
   index("idx_purchases_order_reference").on(table.orderReference),
   unique().on(table.stripePaymentIntentId, table.storybookId, table.type),
@@ -487,7 +488,7 @@ export const printOrders = pgTable("print_orders", {
 }, (table) => [
   index("idx_print_orders_purchase").on(table.purchaseId),
   index("idx_print_orders_prodigi").on(table.prodigiOrderId),
-  index("idx_print_orders_status_created").on(table.status, table.createdAt),
+  index("idx_print_orders_status_created").on(table.status, desc(table.createdAt)),
 ]);
 
 export const insertPrintOrderSchema = createInsertSchema(printOrders).omit({
