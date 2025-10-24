@@ -214,14 +214,14 @@ export default function OrderDetailsDialog({ orderReference, open, onOpenChange 
   if (isLoading) {
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-4xl max-h-[90vh] bg-slate-900 border-slate-800">
+        <DialogContent className="max-w-4xl max-h-[90vh] bg-slate-800 border-slate-700">
           <DialogHeader>
             <DialogTitle className="text-slate-100">Loading Order Details...</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
-            <Skeleton className="h-32 w-full bg-slate-800" />
-            <Skeleton className="h-32 w-full bg-slate-800" />
-            <Skeleton className="h-32 w-full bg-slate-800" />
+            <Skeleton className="h-32 w-full bg-slate-700" />
+            <Skeleton className="h-32 w-full bg-slate-700" />
+            <Skeleton className="h-32 w-full bg-slate-700" />
           </div>
         </DialogContent>
       </Dialog>
@@ -231,11 +231,11 @@ export default function OrderDetailsDialog({ orderReference, open, onOpenChange 
   if (error || !orderDetails) {
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-4xl max-h-[90vh] bg-slate-900 border-slate-800">
+        <DialogContent className="max-w-4xl max-h-[90vh] bg-slate-800 border-slate-700">
           <DialogHeader>
             <DialogTitle className="text-slate-100">Error</DialogTitle>
           </DialogHeader>
-          <div className="flex flex-col items-center justify-center py-8 text-slate-400">
+          <div className="flex flex-col items-center justify-center py-8 text-slate-200">
             <AlertCircle className="w-12 h-12 mb-4" />
             <p>Order not found or failed to load.</p>
           </div>
@@ -249,7 +249,7 @@ export default function OrderDetailsDialog({ orderReference, open, onOpenChange 
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-4xl max-h-[90vh] bg-slate-900 border-slate-800 overflow-hidden flex flex-col">
+        <DialogContent className="max-w-4xl max-h-[90vh] bg-slate-800 border-slate-700 overflow-hidden flex flex-col">
           <DialogHeader>
             <DialogTitle className="text-xl text-slate-100">Order Details: {orderDetails.orderReference}</DialogTitle>
           </DialogHeader>
@@ -257,7 +257,7 @@ export default function OrderDetailsDialog({ orderReference, open, onOpenChange 
           <ScrollArea className="flex-1 pr-4">
             <div className="space-y-6">
               {/* Order Information */}
-              <Card className="bg-slate-800 border-slate-700">
+              <Card className="bg-slate-700 border-slate-600">
                 <CardHeader>
                   <CardTitle className="text-lg text-slate-100 flex items-center gap-2">
                     <Package className="w-5 h-5" />
@@ -267,19 +267,19 @@ export default function OrderDetailsDialog({ orderReference, open, onOpenChange 
                 <CardContent className="space-y-3">
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <p className="text-xs text-slate-500 mb-1">Order Reference</p>
-                      <p className="text-sm text-slate-200 font-mono">{orderDetails.orderReference}</p>
+                      <p className="text-xs text-slate-300 mb-1">Order Reference</p>
+                      <p className="text-sm text-white font-mono">{orderDetails.orderReference}</p>
                     </div>
                     <div>
-                      <p className="text-xs text-slate-500 mb-1">Order Date</p>
-                      <p className="text-sm text-slate-200">{formatDate(orderDetails.createdAt)}</p>
+                      <p className="text-xs text-slate-300 mb-1">Order Date</p>
+                      <p className="text-sm text-white">{formatDate(orderDetails.createdAt)}</p>
                     </div>
                     <div>
-                      <p className="text-xs text-slate-500 mb-1">Total Amount</p>
+                      <p className="text-xs text-slate-300 mb-1">Total Amount</p>
                       <p className="text-lg font-semibold text-green-400">{formatCurrency(orderDetails.totalAmount)}</p>
                     </div>
                     <div>
-                      <p className="text-xs text-slate-500 mb-1">Status</p>
+                      <p className="text-xs text-slate-300 mb-1">Status</p>
                       {orderDetails.items.map((item, idx) => (
                         <div key={idx} className="mb-1">
                           {getStatusBadge(item.status)}
@@ -291,7 +291,7 @@ export default function OrderDetailsDialog({ orderReference, open, onOpenChange 
               </Card>
 
               {/* Downloads */}
-              <Card className="bg-slate-800 border-slate-700">
+              <Card className="bg-slate-700 border-slate-600">
                 <CardHeader>
                   <CardTitle className="text-lg text-slate-100 flex items-center gap-2">
                     <Download className="w-5 h-5" />
@@ -306,7 +306,7 @@ export default function OrderDetailsDialog({ orderReference, open, onOpenChange 
                   >
                     <Button
                       variant="outline"
-                      className="w-full border-slate-700 text-slate-200 hover:bg-slate-700"
+                      className="w-full border-slate-600 text-white hover:bg-slate-600"
                       data-testid="button-download-epub"
                     >
                       <Download className="w-4 h-4 mr-2" />
@@ -321,7 +321,7 @@ export default function OrderDetailsDialog({ orderReference, open, onOpenChange 
                   >
                     <Button
                       variant="outline"
-                      className="w-full border-slate-700 text-slate-200 hover:bg-slate-700"
+                      className="w-full border-slate-600 text-white hover:bg-slate-600"
                       data-testid="button-download-print-pdf"
                     >
                       <Download className="w-4 h-4 mr-2" />
@@ -333,7 +333,7 @@ export default function OrderDetailsDialog({ orderReference, open, onOpenChange 
               </Card>
 
               {/* Customer Information */}
-              <Card className="bg-slate-800 border-slate-700">
+              <Card className="bg-slate-700 border-slate-600">
                 <CardHeader>
                   <CardTitle className="text-lg text-slate-100 flex items-center gap-2">
                     <User className="w-5 h-5" />
@@ -343,43 +343,43 @@ export default function OrderDetailsDialog({ orderReference, open, onOpenChange 
                 <CardContent className="space-y-4">
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <p className="text-xs text-slate-500 mb-1">Name</p>
-                      <p className="text-sm text-slate-200">{orderDetails.customer.firstName} {orderDetails.customer.lastName}</p>
+                      <p className="text-xs text-slate-300 mb-1">Name</p>
+                      <p className="text-sm text-white">{orderDetails.customer.firstName} {orderDetails.customer.lastName}</p>
                     </div>
                     <div>
-                      <p className="text-xs text-slate-500 mb-1">Email</p>
-                      <p className="text-sm text-slate-200">{orderDetails.customer.email}</p>
+                      <p className="text-xs text-slate-300 mb-1">Email</p>
+                      <p className="text-sm text-white">{orderDetails.customer.email}</p>
                     </div>
                     <div>
-                      <p className="text-xs text-slate-500 mb-1">Account Created</p>
-                      <p className="text-sm text-slate-200">{formatDate(orderDetails.customer.createdAt)}</p>
+                      <p className="text-xs text-slate-300 mb-1">Account Created</p>
+                      <p className="text-sm text-white">{formatDate(orderDetails.customer.createdAt)}</p>
                     </div>
                     <div>
-                      <p className="text-xs text-slate-500 mb-1">Authentication</p>
-                      <p className="text-sm text-slate-200">
+                      <p className="text-xs text-slate-300 mb-1">Authentication</p>
+                      <p className="text-sm text-white">
                         {orderDetails.customer.authProvider.charAt(0).toUpperCase() + orderDetails.customer.authProvider.slice(1)}
                       </p>
                     </div>
                     {orderDetails.shippingAddress?.phoneNumber && (
                       <div>
-                        <p className="text-xs text-slate-500 mb-1">Phone Number</p>
-                        <p className="text-sm text-slate-200">{orderDetails.shippingAddress.phoneNumber}</p>
+                        <p className="text-xs text-slate-300 mb-1">Phone Number</p>
+                        <p className="text-sm text-white">{orderDetails.shippingAddress.phoneNumber}</p>
                       </div>
                     )}
                   </div>
 
                   {orderDetails.customerStats && (
                     <>
-                      <Separator className="bg-slate-700" />
+                      <Separator className="bg-slate-600" />
                       <div>
-                        <h4 className="text-sm font-semibold text-slate-300 mb-3">Customer Statistics</h4>
+                        <h4 className="text-sm font-semibold text-slate-100 mb-3">Customer Statistics</h4>
                         <div className="grid grid-cols-2 gap-4">
                           <div>
-                            <p className="text-xs text-slate-500 mb-1">Total Orders</p>
-                            <p className="text-sm text-slate-200">{orderDetails.customerStats.totalOrders}</p>
+                            <p className="text-xs text-slate-300 mb-1">Total Orders</p>
+                            <p className="text-sm text-white">{orderDetails.customerStats.totalOrders}</p>
                           </div>
                           <div>
-                            <p className="text-xs text-slate-500 mb-1">Total Spent</p>
+                            <p className="text-xs text-slate-300 mb-1">Total Spent</p>
                             <p className="text-sm text-green-400 font-semibold">
                               {formatCurrency(orderDetails.customerStats.totalSpent || 0)}
                             </p>
@@ -391,24 +391,24 @@ export default function OrderDetailsDialog({ orderReference, open, onOpenChange 
 
                   {orderDetails.shippingAddress && (
                     <>
-                      <Separator className="bg-slate-700" />
+                      <Separator className="bg-slate-600" />
                       <div>
-                        <h4 className="text-sm font-semibold text-slate-300 mb-3">Shipping Address</h4>
+                        <h4 className="text-sm font-semibold text-slate-100 mb-3">Shipping Address</h4>
                         <div className="space-y-2">
                           <div>
-                            <p className="text-xs text-slate-500 mb-1">Full Name</p>
-                            <p className="text-sm text-slate-200">{orderDetails.shippingAddress.fullName}</p>
+                            <p className="text-xs text-slate-300 mb-1">Full Name</p>
+                            <p className="text-sm text-white">{orderDetails.shippingAddress.fullName}</p>
                           </div>
                           <div>
-                            <p className="text-xs text-slate-500 mb-1">Address</p>
-                            <p className="text-sm text-slate-200">{orderDetails.shippingAddress.addressLine1}</p>
+                            <p className="text-xs text-slate-300 mb-1">Address</p>
+                            <p className="text-sm text-white">{orderDetails.shippingAddress.addressLine1}</p>
                             {orderDetails.shippingAddress.addressLine2 && (
-                              <p className="text-sm text-slate-200">{orderDetails.shippingAddress.addressLine2}</p>
+                              <p className="text-sm text-white">{orderDetails.shippingAddress.addressLine2}</p>
                             )}
-                            <p className="text-sm text-slate-200">
+                            <p className="text-sm text-white">
                               {orderDetails.shippingAddress.city}, {orderDetails.shippingAddress.stateProvince} {orderDetails.shippingAddress.postalCode}
                             </p>
-                            <p className="text-sm text-slate-200">{orderDetails.shippingAddress.country}</p>
+                            <p className="text-sm text-white">{orderDetails.shippingAddress.country}</p>
                           </div>
                         </div>
                       </div>
@@ -417,23 +417,23 @@ export default function OrderDetailsDialog({ orderReference, open, onOpenChange 
 
                   {orderDetails.paymentMethod && (
                     <>
-                      <Separator className="bg-slate-700" />
+                      <Separator className="bg-slate-600" />
                       <div>
-                        <h4 className="text-sm font-semibold text-slate-300 mb-3">Payment Method</h4>
+                        <h4 className="text-sm font-semibold text-slate-100 mb-3">Payment Method</h4>
                         <div className="space-y-2">
                           <div>
-                            <p className="text-xs text-slate-500 mb-1">Card Brand</p>
-                            <p className="text-sm text-slate-200">
+                            <p className="text-xs text-slate-300 mb-1">Card Brand</p>
+                            <p className="text-sm text-white">
                               {orderDetails.paymentMethod.cardBrand.charAt(0).toUpperCase() + orderDetails.paymentMethod.cardBrand.slice(1)}
                             </p>
                           </div>
                           <div>
-                            <p className="text-xs text-slate-500 mb-1">Card Number</p>
-                            <p className="text-sm text-slate-200 font-mono">•••• {orderDetails.paymentMethod.cardLast4}</p>
+                            <p className="text-xs text-slate-300 mb-1">Card Number</p>
+                            <p className="text-sm text-white font-mono">•••• {orderDetails.paymentMethod.cardLast4}</p>
                           </div>
                           <div>
-                            <p className="text-xs text-slate-500 mb-1">Expiry</p>
-                            <p className="text-sm text-slate-200">
+                            <p className="text-xs text-slate-300 mb-1">Expiry</p>
+                            <p className="text-sm text-white">
                               {String(orderDetails.paymentMethod.cardExpMonth).padStart(2, '0')}/{orderDetails.paymentMethod.cardExpYear}
                             </p>
                           </div>
@@ -442,7 +442,7 @@ export default function OrderDetailsDialog({ orderReference, open, onOpenChange 
                     </>
                   )}
 
-                  <Separator className="bg-slate-700" />
+                  <Separator className="bg-slate-600" />
                   <Link href={`/orders?userId=${orderDetails.customer.id}`}>
                     <a className="inline-flex items-center gap-2 text-sm text-purple-400 hover:text-purple-300">
                       View Customer's Order History
@@ -453,7 +453,7 @@ export default function OrderDetailsDialog({ orderReference, open, onOpenChange 
               </Card>
 
               {/* Storybook Details */}
-              <Card className="bg-slate-800 border-slate-700">
+              <Card className="bg-slate-700 border-slate-600">
                 <CardHeader>
                   <CardTitle className="text-lg text-slate-100 flex items-center gap-2">
                     <BookOpen className="w-5 h-5" />
@@ -462,8 +462,8 @@ export default function OrderDetailsDialog({ orderReference, open, onOpenChange 
                 </CardHeader>
                 <CardContent className="space-y-3">
                   <div>
-                    <p className="text-xs text-slate-500 mb-1">Title</p>
-                    <p className="text-sm text-slate-200">{orderDetails.storybook.title}</p>
+                    <p className="text-xs text-slate-300 mb-1">Title</p>
+                    <p className="text-sm text-white">{orderDetails.storybook.title}</p>
                   </div>
                   <Link href={`/view/${orderDetails.storybook.id}`}>
                     <a className="inline-flex items-center gap-2 text-sm text-purple-400 hover:text-purple-300" target="_blank">
@@ -475,7 +475,7 @@ export default function OrderDetailsDialog({ orderReference, open, onOpenChange 
               </Card>
 
               {/* Purchase Items */}
-              <Card className="bg-slate-800 border-slate-700">
+              <Card className="bg-slate-700 border-slate-600">
                 <CardHeader>
                   <CardTitle className="text-lg text-slate-100 flex items-center gap-2">
                     <DollarSign className="w-5 h-5" />
@@ -485,17 +485,17 @@ export default function OrderDetailsDialog({ orderReference, open, onOpenChange 
                 <CardContent>
                   <div className="space-y-3">
                     {orderDetails.items.map((item, idx) => (
-                      <div key={idx} className="flex justify-between items-center p-3 bg-slate-900/50 rounded-lg">
+                      <div key={idx} className="flex justify-between items-center p-3 bg-slate-800/50 rounded-lg">
                         <div className="space-y-1">
                           <div className="flex items-center gap-2">
                             {getTypeBadge(item.type)}
                             {item.bookSize && (
-                              <span className="text-xs text-slate-400">({item.bookSize})</span>
+                              <span className="text-xs text-slate-200">({item.bookSize})</span>
                             )}
                           </div>
-                          <p className="text-xs text-slate-500">Status: {item.status}</p>
+                          <p className="text-xs text-slate-300">Status: {item.status}</p>
                         </div>
-                        <p className="text-sm font-semibold text-slate-200">{formatCurrency(item.price)}</p>
+                        <p className="text-sm font-semibold text-white">{formatCurrency(item.price)}</p>
                       </div>
                     ))}
                   </div>
@@ -504,7 +504,7 @@ export default function OrderDetailsDialog({ orderReference, open, onOpenChange 
 
               {/* Tracking Info (if print order) */}
               {orderDetails.printOrder && (
-                <Card className="bg-slate-800 border-slate-700">
+                <Card className="bg-slate-700 border-slate-600">
                   <CardHeader>
                     <CardTitle className="text-lg text-slate-100 flex items-center gap-2">
                       <Truck className="w-5 h-5" />
@@ -514,14 +514,14 @@ export default function OrderDetailsDialog({ orderReference, open, onOpenChange 
                   <CardContent className="space-y-3">
                     {orderDetails.printOrder.carrier && (
                       <div>
-                        <p className="text-xs text-slate-500 mb-1">Carrier</p>
-                        <p className="text-sm text-slate-200">{orderDetails.printOrder.carrier}</p>
+                        <p className="text-xs text-slate-300 mb-1">Carrier</p>
+                        <p className="text-sm text-white">{orderDetails.printOrder.carrier}</p>
                       </div>
                     )}
                     {orderDetails.printOrder.trackingNumber && (
                       <div>
-                        <p className="text-xs text-slate-500 mb-1">Tracking Number</p>
-                        <p className="text-sm text-slate-200 font-mono">{orderDetails.printOrder.trackingNumber}</p>
+                        <p className="text-xs text-slate-300 mb-1">Tracking Number</p>
+                        <p className="text-sm text-white font-mono">{orderDetails.printOrder.trackingNumber}</p>
                       </div>
                     )}
                     {orderDetails.printOrder.trackingUrl && (
@@ -537,8 +537,8 @@ export default function OrderDetailsDialog({ orderReference, open, onOpenChange 
                     )}
                     {orderDetails.printOrder.status && (
                       <div>
-                        <p className="text-xs text-slate-500 mb-1">Print Status</p>
-                        <p className="text-sm text-slate-200">{orderDetails.printOrder.status}</p>
+                        <p className="text-xs text-slate-300 mb-1">Print Status</p>
+                        <p className="text-sm text-white">{orderDetails.printOrder.status}</p>
                       </div>
                     )}
                   </CardContent>
@@ -546,7 +546,7 @@ export default function OrderDetailsDialog({ orderReference, open, onOpenChange 
               )}
 
               {/* Order Notes */}
-              <Card className="bg-slate-800 border-slate-700">
+              <Card className="bg-slate-700 border-slate-600">
                 <CardHeader>
                   <CardTitle className="text-lg text-slate-100 flex items-center gap-2">
                     <FileText className="w-5 h-5" />
@@ -557,7 +557,7 @@ export default function OrderDetailsDialog({ orderReference, open, onOpenChange 
                   {orderDetails.notes.length > 0 ? (
                     <div className="space-y-3">
                       {orderDetails.notes.map((note) => (
-                        <div key={note.id} className="p-3 bg-slate-900/50 rounded-lg border-l-4 border-purple-500">
+                        <div key={note.id} className="p-3 bg-slate-800/50 rounded-lg border-l-4 border-purple-500">
                           <div className="flex justify-between items-start mb-2">
                             <div className="flex items-center gap-2">
                               <Badge variant="outline" className="text-xs">
@@ -569,20 +569,20 @@ export default function OrderDetailsDialog({ orderReference, open, onOpenChange 
                                 </Badge>
                               )}
                             </div>
-                            <span className="text-xs text-slate-500">{formatDate(note.createdAt)}</span>
+                            <span className="text-xs text-slate-300">{formatDate(note.createdAt)}</span>
                           </div>
-                          <p className="text-sm text-slate-300 whitespace-pre-wrap">{note.content}</p>
+                          <p className="text-sm text-slate-100 whitespace-pre-wrap">{note.content}</p>
                         </div>
                       ))}
                     </div>
                   ) : (
-                    <p className="text-sm text-slate-500 text-center py-4">No notes yet</p>
+                    <p className="text-sm text-slate-300 text-center py-4">No notes yet</p>
                   )}
                 </CardContent>
               </Card>
 
               {/* Status History Timeline */}
-              <Card className="bg-slate-800 border-slate-700">
+              <Card className="bg-slate-700 border-slate-600">
                 <CardHeader>
                   <CardTitle className="text-lg text-slate-100 flex items-center gap-2">
                     <History className="w-5 h-5" />
@@ -595,48 +595,48 @@ export default function OrderDetailsDialog({ orderReference, open, onOpenChange 
                       {orderDetails.history.map((entry, idx) => (
                         <div key={entry.id} className="relative pl-6">
                           {idx !== orderDetails.history.length - 1 && (
-                            <div className="absolute left-2 top-6 bottom-0 w-0.5 bg-slate-700" />
+                            <div className="absolute left-2 top-6 bottom-0 w-0.5 bg-slate-600" />
                           )}
                           <div className="absolute left-0 top-1 w-4 h-4 rounded-full bg-purple-500" />
                           <div className="space-y-1">
                             <div className="flex items-center gap-2">
                               {entry.previousStatus && (
-                                <span className="text-sm text-slate-400">{entry.previousStatus}</span>
+                                <span className="text-sm text-slate-200">{entry.previousStatus}</span>
                               )}
-                              {entry.previousStatus && <span className="text-slate-600">→</span>}
-                              <span className="text-sm font-semibold text-slate-200">{entry.newStatus}</span>
+                              {entry.previousStatus && <span className="text-slate-500">→</span>}
+                              <span className="text-sm font-semibold text-white">{entry.newStatus}</span>
                             </div>
-                            <p className="text-xs text-slate-500">{formatDate(entry.createdAt)}</p>
+                            <p className="text-xs text-slate-300">{formatDate(entry.createdAt)}</p>
                             {entry.changeReason && (
-                              <p className="text-xs text-slate-400 italic">{entry.changeReason}</p>
+                              <p className="text-xs text-slate-200 italic">{entry.changeReason}</p>
                             )}
                           </div>
                         </div>
                       ))}
                     </div>
                   ) : (
-                    <p className="text-sm text-slate-500 text-center py-4">No history available</p>
+                    <p className="text-sm text-slate-300 text-center py-4">No history available</p>
                   )}
                 </CardContent>
               </Card>
 
               {/* Add Note Form */}
-              <Card className="bg-slate-800 border-slate-700">
+              <Card className="bg-slate-700 border-slate-600">
                 <CardHeader>
                   <CardTitle className="text-lg text-slate-100">Add Note</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="space-y-2">
-                    <Label htmlFor="noteType" className="text-slate-300">Note Type</Label>
+                    <Label htmlFor="noteType" className="text-slate-100">Note Type</Label>
                     <Select value={noteType} onValueChange={setNoteType}>
                       <SelectTrigger 
                         id="noteType"
-                        className="bg-slate-900 border-slate-700 text-slate-200"
+                        className="bg-slate-800 border-slate-600 text-white"
                         data-testid="select-note-type"
                       >
                         <SelectValue />
                       </SelectTrigger>
-                      <SelectContent className="bg-slate-900 border-slate-700">
+                      <SelectContent className="bg-slate-800 border-slate-600">
                         <SelectItem value="general">General</SelectItem>
                         <SelectItem value="customer_service">Customer Service</SelectItem>
                         <SelectItem value="refund">Refund</SelectItem>
@@ -646,13 +646,13 @@ export default function OrderDetailsDialog({ orderReference, open, onOpenChange 
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="noteContent" className="text-slate-300">Note Content</Label>
+                    <Label htmlFor="noteContent" className="text-slate-100">Note Content</Label>
                     <Textarea
                       id="noteContent"
                       value={noteContent}
                       onChange={(e) => setNoteContent(e.target.value)}
                       placeholder="Enter note details..."
-                      className="bg-slate-900 border-slate-700 text-slate-200 min-h-[100px]"
+                      className="bg-slate-800 border-slate-600 text-white min-h-[100px]"
                       data-testid="textarea-note-content"
                     />
                   </div>
@@ -664,7 +664,7 @@ export default function OrderDetailsDialog({ orderReference, open, onOpenChange 
                       onCheckedChange={(checked) => setIsInternal(checked as boolean)}
                       data-testid="checkbox-internal-note"
                     />
-                    <Label htmlFor="isInternal" className="text-slate-300 cursor-pointer">
+                    <Label htmlFor="isInternal" className="text-slate-100 cursor-pointer">
                       Internal Note (not visible to customer)
                     </Label>
                   </div>
@@ -696,7 +696,7 @@ export default function OrderDetailsDialog({ orderReference, open, onOpenChange 
                 <Button
                   onClick={() => onOpenChange(false)}
                   variant="outline"
-                  className="border-slate-700 text-slate-300 hover:bg-slate-800"
+                  className="border-slate-600 text-slate-200 hover:bg-slate-700"
                   data-testid="button-close"
                 >
                   Close
@@ -709,16 +709,16 @@ export default function OrderDetailsDialog({ orderReference, open, onOpenChange 
 
       {/* Refund Confirmation Dialog */}
       <AlertDialog open={showRefundDialog} onOpenChange={setShowRefundDialog}>
-        <AlertDialogContent className="bg-slate-900 border-slate-800">
+        <AlertDialogContent className="bg-slate-800 border-slate-700">
           <AlertDialogHeader>
             <AlertDialogTitle className="text-slate-100">Confirm Refund</AlertDialogTitle>
-            <AlertDialogDescription className="text-slate-400">
+            <AlertDialogDescription className="text-slate-200">
               Are you sure you want to process a refund for order {orderDetails.orderReference}? 
               This action will refund {formatCurrency(orderDetails.totalAmount)} to the customer.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel className="bg-slate-800 border-slate-700 text-slate-300 hover:bg-slate-700">
+            <AlertDialogCancel className="bg-slate-700 border-slate-600 text-slate-200 hover:bg-slate-600">
               Cancel
             </AlertDialogCancel>
             <AlertDialogAction

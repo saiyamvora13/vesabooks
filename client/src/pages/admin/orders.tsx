@@ -177,7 +177,7 @@ export default function AdminOrders() {
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
               <h1 className="text-2xl sm:text-3xl font-bold text-slate-100 mb-2">Order Management</h1>
-              <p className="text-sm sm:text-base text-slate-400">
+              <p className="text-sm sm:text-base text-slate-300">
                 Search, filter, and manage customer orders
               </p>
             </div>
@@ -193,7 +193,7 @@ export default function AdminOrders() {
           </div>
 
           {/* Filters */}
-          <Card className="bg-slate-900 border-slate-800 p-4 sm:p-6">
+          <Card className="bg-slate-800 border-slate-700 p-4 sm:p-6">
             <div className="space-y-4">
               {/* Search Bar */}
               <div className="relative">
@@ -212,7 +212,7 @@ export default function AdminOrders() {
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 {/* Status Filter */}
                 <div className="space-y-2">
-                  <label className="text-xs text-slate-400">Status</label>
+                  <label className="text-xs text-slate-300">Status</label>
                   <Select value={statusFilter} onValueChange={setStatusFilter}>
                     <SelectTrigger 
                       className="bg-slate-800 border-slate-700 text-slate-200"
@@ -232,7 +232,7 @@ export default function AdminOrders() {
 
                 {/* Product Type Filter */}
                 <div className="space-y-2">
-                  <label className="text-xs text-slate-400">Product Type</label>
+                  <label className="text-xs text-slate-300">Product Type</label>
                   <Select value={productTypeFilter} onValueChange={setProductTypeFilter}>
                     <SelectTrigger 
                       className="bg-slate-800 border-slate-700 text-slate-200"
@@ -250,7 +250,7 @@ export default function AdminOrders() {
 
                 {/* Date Range Filter */}
                 <div className="space-y-2">
-                  <label className="text-xs text-slate-400">Date Range</label>
+                  <label className="text-xs text-slate-300">Date Range</label>
                   <Select value={dateRangeFilter} onValueChange={setDateRangeFilter}>
                     <SelectTrigger 
                       className="bg-slate-800 border-slate-700 text-slate-200"
@@ -271,7 +271,7 @@ export default function AdminOrders() {
           </Card>
 
           {/* Orders Table */}
-          <Card className="bg-slate-900 border-slate-800">
+          <Card className="bg-slate-800 border-slate-700">
             <div className="overflow-x-auto">
               {isLoading ? (
                 <div className="p-6 space-y-4">
@@ -283,37 +283,37 @@ export default function AdminOrders() {
                 <>
                   <Table>
                     <TableHeader>
-                      <TableRow className="border-slate-800 hover:bg-slate-800/50">
-                        <TableHead className="text-slate-300">Order Reference</TableHead>
-                        <TableHead className="text-slate-300">Customer Email</TableHead>
-                        <TableHead className="text-slate-300">Storybook Title</TableHead>
-                        <TableHead className="text-slate-300">Type</TableHead>
-                        <TableHead className="text-slate-300">Amount</TableHead>
-                        <TableHead className="text-slate-300">Status</TableHead>
-                        <TableHead className="text-slate-300">Date</TableHead>
+                      <TableRow className="border-slate-700 hover:bg-slate-700/50">
+                        <TableHead className="text-slate-200">Order Reference</TableHead>
+                        <TableHead className="text-slate-200">Customer Email</TableHead>
+                        <TableHead className="text-slate-200">Storybook Title</TableHead>
+                        <TableHead className="text-slate-200">Type</TableHead>
+                        <TableHead className="text-slate-200">Amount</TableHead>
+                        <TableHead className="text-slate-200">Status</TableHead>
+                        <TableHead className="text-slate-200">Date</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {ordersData.orders.map((order) => (
                         <TableRow
                           key={order.orderReference}
-                          className="border-slate-800 hover:bg-slate-800/50 cursor-pointer"
+                          className="border-slate-700 hover:bg-slate-700/50 cursor-pointer"
                           onClick={() => handleOrderClick(order.orderReference)}
                           data-testid={`row-order-${order.orderReference}`}
                         >
                           <TableCell className="font-mono text-purple-400 hover:text-purple-300">
                             {order.orderReference}
                           </TableCell>
-                          <TableCell className="text-slate-300">{order.customerEmail}</TableCell>
-                          <TableCell className="text-slate-300 max-w-xs truncate">
+                          <TableCell className="text-slate-100">{order.customerEmail}</TableCell>
+                          <TableCell className="text-slate-100 max-w-xs truncate">
                             {order.storybookTitle}
                           </TableCell>
                           <TableCell>{getTypeBadge(order.productType)}</TableCell>
-                          <TableCell className="text-slate-300 font-semibold">
+                          <TableCell className="text-slate-100 font-semibold">
                             {formatCurrency(order.amount)}
                           </TableCell>
                           <TableCell>{getStatusBadge(order.status)}</TableCell>
-                          <TableCell className="text-slate-400 text-sm">
+                          <TableCell className="text-slate-300 text-sm">
                             {formatDate(order.createdAt)}
                           </TableCell>
                         </TableRow>
@@ -322,8 +322,8 @@ export default function AdminOrders() {
                   </Table>
 
                   {/* Pagination */}
-                  <div className="p-4 border-t border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-4">
-                    <p className="text-sm text-slate-400">
+                  <div className="p-4 border-t border-slate-700 flex flex-col sm:flex-row items-center justify-between gap-4">
+                    <p className="text-sm text-slate-300">
                       Showing {offset + 1} to {Math.min(offset + limit, ordersData.total)} of {ordersData.total} orders
                     </p>
                     <div className="flex items-center gap-2">
@@ -332,13 +332,13 @@ export default function AdminOrders() {
                         disabled={currentPage === 1}
                         variant="outline"
                         size="sm"
-                        className="border-slate-700 text-slate-300 hover:bg-slate-800 disabled:opacity-50"
+                        className="border-slate-600 text-slate-200 hover:bg-slate-700 disabled:opacity-50"
                         data-testid="button-prev-page"
                       >
                         <ChevronLeft className="w-4 h-4" />
                         {!isMobile && <span className="ml-1">Previous</span>}
                       </Button>
-                      <span className="text-sm text-slate-400">
+                      <span className="text-sm text-slate-300">
                         Page {currentPage} of {totalPages}
                       </span>
                       <Button
@@ -346,7 +346,7 @@ export default function AdminOrders() {
                         disabled={currentPage === totalPages}
                         variant="outline"
                         size="sm"
-                        className="border-slate-700 text-slate-300 hover:bg-slate-800 disabled:opacity-50"
+                        className="border-slate-600 text-slate-200 hover:bg-slate-700 disabled:opacity-50"
                         data-testid="button-next-page"
                       >
                         {!isMobile && <span className="mr-1">Next</span>}
@@ -356,8 +356,8 @@ export default function AdminOrders() {
                   </div>
                 </>
               ) : (
-                <div className="flex flex-col items-center justify-center py-16 text-slate-400">
-                  <Package className="w-16 h-16 mb-4 text-slate-600" />
+                <div className="flex flex-col items-center justify-center py-16 text-slate-300">
+                  <Package className="w-16 h-16 mb-4 text-slate-500" />
                   <h3 className="text-lg font-semibold mb-2">No Orders Found</h3>
                   <p className="text-sm text-center max-w-md">
                     {searchQuery || statusFilter !== "all" || productTypeFilter !== "all" || dateRangeFilter !== "all"
