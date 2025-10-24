@@ -8,6 +8,7 @@ import type { Express, RequestHandler } from "express";
 import memoize from "memoizee";
 import connectPg from "connect-pg-simple";
 import { storage } from "./storage";
+import crypto from "crypto";
 
 if (!process.env.REPLIT_DOMAINS) {
   throw new Error("Environment variable REPLIT_DOMAINS not provided");
@@ -23,6 +24,31 @@ const getOidcConfig = memoize(
   { maxAge: 3600 * 1000 }
 );
 
+function getSessionSecret(): string {
+  // In production/deployment, SESSION_SECRET is required
+  if (process.env.REPLIT_DEPLOYMENT === '1') {
+    if (!process.env.SESSION_SECRET) {
+      throw new Error(
+        'SESSION_SECRET environment variable is required for production deployments. ' +
+        'Please add it to your Replit Secrets before deploying.'
+      );
+    }
+    return process.env.SESSION_SECRET;
+  }
+  
+  // In development, auto-generate a secure secret if not provided
+  if (!process.env.SESSION_SECRET) {
+    const generatedSecret = crypto.randomBytes(32).toString('base64');
+    console.warn(
+      '⚠️  WARNING: Using auto-generated SESSION_SECRET for development. ' +
+      'For production, please add SESSION_SECRET to your Replit Secrets.'
+    );
+    return generatedSecret;
+  }
+  
+  return process.env.SESSION_SECRET;
+}
+
 export function getSession() {
   const sessionTtl = 7 * 24 * 60 * 60 * 1000; // 1 week
   const pgStore = connectPg(session);
@@ -33,7 +59,7 @@ export function getSession() {
     tableName: "sessions",
   });
   return session({
-    secret: process.env.SESSION_SECRET!,
+    secret: getSessionSecret(),
     store: sessionStore,
     resave: false,
     saveUninitialized: false,
