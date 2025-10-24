@@ -22,9 +22,13 @@ export default function Signup() {
   const signupSchema = useMemo(() => z.object({
     email: z.string().email(t('common.validation.emailInvalid')),
     password: z.string().min(8, t('common.validation.passwordMinLength')),
+    confirmPassword: z.string().min(8, t('common.validation.passwordMinLength')),
     firstName: z.string().optional(),
     lastName: z.string().optional(),
-  }), [i18n.language]);
+  }).refine((data) => data.password === data.confirmPassword, {
+    message: t('common.validation.passwordsNoMatch'),
+    path: ["confirmPassword"],
+  }), [i18n.language, t]);
 
   type SignupForm = z.infer<typeof signupSchema>;
 
@@ -33,6 +37,7 @@ export default function Signup() {
     defaultValues: {
       email: "",
       password: "",
+      confirmPassword: "",
       firstName: "",
       lastName: "",
     },
@@ -40,7 +45,9 @@ export default function Signup() {
 
   const signupMutation = useMutation({
     mutationFn: async (data: SignupForm) => {
-      const response = await apiRequest("POST", "/api/auth/signup", data);
+      // Remove confirmPassword before sending to backend
+      const { confirmPassword, ...signupData } = data;
+      const response = await apiRequest("POST", "/api/auth/signup", signupData);
       return response.json();
     },
     onSuccess: () => {
@@ -118,6 +125,27 @@ export default function Signup() {
                         autoComplete="new-password"
                         className="rounded-lg"
                         data-testid="input-password"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="confirmPassword"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-base sm:text-sm">{t('common.labels.confirmPassword')}</FormLabel>
+                    <FormControl>
+                      <Input
+                        {...field}
+                        type="password"
+                        placeholder={t('common.placeholders.confirmPassword')}
+                        autoComplete="new-password"
+                        className="rounded-lg"
+                        data-testid="input-confirm-password"
                       />
                     </FormControl>
                     <FormMessage />
