@@ -3560,23 +3560,36 @@ Sitemap: ${baseUrl}/sitemap.xml`;
           price,
           bookSize: item.bookSize || 'a5-portrait',
           quantity: item.quantity,
+          cartItemId: item.id, // Store cart item ID for selective removal
         });
       }
 
-      // Check if cart contains print items
-      const hasPrintItems = items.some((item: any) => item.type === 'print');
+      // If no shipping address is provided, only process digital items
+      // This allows users to buy digital-only even if they have print items in cart
+      const itemsToProcess = !shippingAddress 
+        ? items.filter((item: any) => item.type === 'digital')
+        : items;
       
       console.log('[Cart Finalize] Processed items:', items.map(item => ({ 
         storybookId: item.storybookId, 
         type: item.type,
         price: item.price
       })));
-      console.log('[Cart Finalize] Has print items:', hasPrintItems, 'Has shipping address:', !!shippingAddress);
+      console.log('[Cart Finalize] Items to process:', itemsToProcess.map(item => ({ 
+        storybookId: item.storybookId, 
+        type: item.type
+      })));
+      console.log('[Cart Finalize] Has shipping address:', !!shippingAddress);
       
-      // Require shipping address for print items
-      if (hasPrintItems && !shippingAddress) {
+      // Validate we have items to process
+      if (itemsToProcess.length === 0) {
+        if (!shippingAddress && items.some((item: any) => item.type === 'print')) {
+          return res.status(400).json({ 
+            message: "Shipping address is required for print orders" 
+          });
+        }
         return res.status(400).json({ 
-          message: "Shipping address is required for print orders" 
+          message: "No items to process" 
         });
       }
 
@@ -3586,7 +3599,7 @@ Sitemap: ${baseUrl}/sitemap.xml`;
       const createdPurchases = [];
 
       // Create purchase records in 'creating' status (NOT charged yet)
-      for (const item of items) {
+      for (const item of itemsToProcess) {
         const { storybookId, type, price, bookSize, quantity } = item;
         
         for (let i = 0; i < quantity; i++) {
@@ -3797,8 +3810,15 @@ Sitemap: ${baseUrl}/sitemap.xml`;
         }
       }
 
-      // Clear the cart
-      await storage.clearCart(userId);
+      // Clear only the processed items from cart
+      // If no shipping address was provided, only digital items were processed
+      // Keep print items in cart for future purchase
+      const cartItemIdsToRemove = itemsToProcess.map((item: any) => item.cartItemId);
+      for (const cartItemId of cartItemIdsToRemove) {
+        await storage.removeFromCart(userId, cartItemId);
+      }
+      
+      console.log('[Cart Finalize] Removed', cartItemIdsToRemove.length, 'items from cart');
 
       res.json({ 
         purchases: createdPurchases,
