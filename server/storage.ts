@@ -48,11 +48,35 @@ export interface OrderSearchResult {
 }
 
 export interface OrderDetails {
-  purchases: Array<Purchase & {
-    user: User | null;
-    storybook: Storybook | null;
-    printOrder: PrintOrder | null;
+  orderReference: string;
+  createdAt: Date;
+  totalAmount: number;
+  customer: {
+    id: string;
+    email: string | null;
+    firstName: string | null;
+    lastName: string | null;
+    createdAt: Date | null;
+    authProvider: string | null;
+  } | null;
+  storybook: {
+    id: string;
+    title: string;
+  } | null;
+  items: Array<{
+    type: 'print' | 'digital';
+    bookSize: string | null;
+    price: string;
+    status: string;
   }>;
+  printOrder: {
+    trackingNumber: string | null;
+    trackingUrl: string | null;
+    carrier: string | null;
+    status: string;
+  } | null;
+  notes: OrderNote[];
+  history: OrderStatusHistory[];
   customerStats: {
     totalOrders: number;
     totalSpent: number;
@@ -73,8 +97,6 @@ export interface OrderDetails {
     cardExpMonth: number;
     cardExpYear: number;
   } | null;
-  notes: OrderNote[];
-  statusHistory: OrderStatusHistory[];
 }
 
 export interface IStorage {
@@ -1591,6 +1613,9 @@ export class DatabaseStorage implements IStorage {
     // Build WHERE conditions
     const conditions = [];
 
+    // Exclude orders with null orderReference (incomplete orders)
+    conditions.push(sql`${purchases.orderReference} IS NOT NULL`);
+
     if (filters.orderReference) {
       conditions.push(ilike(purchases.orderReference, `%${filters.orderReference}%`));
     }
@@ -1718,8 +1743,51 @@ export class DatabaseStorage implements IStorage {
       return null;
     }
 
+    // Extract data from first purchase
+    const firstPurchase = purchasesData[0];
+    const orderRef = firstPurchase.purchase.orderReference;
+    const createdAt = firstPurchase.purchase.createdAt;
+    
+    // Extract customer info
+    const customer = firstPurchase.user ? {
+      id: firstPurchase.user.id,
+      email: firstPurchase.user.email,
+      firstName: firstPurchase.user.firstName,
+      lastName: firstPurchase.user.lastName,
+      createdAt: firstPurchase.user.createdAt,
+      authProvider: firstPurchase.user.authProvider,
+    } : null;
+    
+    // Extract storybook info
+    const storybook = firstPurchase.storybook ? {
+      id: firstPurchase.storybook.id,
+      title: firstPurchase.storybook.title,
+    } : null;
+    
+    // Find first print order and extract only needed fields
+    const firstPrintOrder = purchasesData.find(p => p.printOrder)?.printOrder;
+    const printOrder = firstPrintOrder ? {
+      trackingNumber: firstPrintOrder.trackingNumber,
+      trackingUrl: firstPrintOrder.trackingUrl,
+      carrier: firstPrintOrder.carrier,
+      status: firstPrintOrder.status,
+    } : null;
+    
+    // Calculate total amount
+    const totalAmount = purchasesData.reduce((sum, p) => {
+      return sum + Number(p.purchase.price);
+    }, 0);
+    
+    // Transform purchases into items array
+    const items = purchasesData.map(p => ({
+      type: (p.printOrder ? 'print' : 'digital') as 'print' | 'digital',
+      bookSize: p.purchase.bookSize || null,
+      price: p.purchase.price,
+      status: p.purchase.status,
+    }));
+
     // Get userId from first purchase
-    const userId = purchasesData[0].purchase.userId;
+    const userId = firstPurchase.purchase.userId;
     
     let customerStats = null;
     let shippingAddress = null;
@@ -1769,8 +1837,7 @@ export class DatabaseStorage implements IStorage {
       }
 
       // Get payment method - first try to match by stripePaymentMethodId from print order
-      const printOrder = purchasesData.find(p => p.printOrder)?.printOrder;
-      const stripePaymentMethodId = printOrder?.stripePaymentMethodId;
+      const stripePaymentMethodId = firstPrintOrder?.stripePaymentMethodId;
       
       if (stripePaymentMethodId) {
         const [paymentResult] = await db
@@ -1815,20 +1882,19 @@ export class DatabaseStorage implements IStorage {
     // Fetch status history
     const statusHistory = await this.getOrderStatusHistory(orderReference);
 
-    const purchasesList = purchasesData.map(row => ({
-      ...row.purchase,
-      user: row.user,
-      storybook: row.storybook,
-      printOrder: row.printOrder,
-    }));
-
     return {
-      purchases: purchasesList,
+      orderReference: orderRef!,
+      createdAt: createdAt!,
+      totalAmount,
+      customer,
+      storybook,
+      items,
+      printOrder,
+      notes,
+      history: statusHistory,
       customerStats,
       shippingAddress,
       paymentMethod,
-      notes,
-      statusHistory,
     };
   }
 
