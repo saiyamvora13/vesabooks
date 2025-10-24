@@ -74,6 +74,129 @@ Return ONLY the single mood word that best matches the text.`;
   }
 }
 
+// Detect moods for all pages in a storybook (runs in background for performance)
+export async function detectMoodsForStorybook(storybookId: string, pages: Array<{ pageNumber: number; text: string }>): Promise<void> {
+  try {
+    console.log(`[Background] Detecting moods for storybook ${storybookId}...`);
+    
+    // Detect moods for all pages in parallel
+    const moodPromises = pages.map(async (page) => ({
+      pageNumber: page.pageNumber,
+      mood: await detectPageMood(page.text),
+    }));
+    
+    const moodResults = await Promise.all(moodPromises);
+    
+    // Update the storybook with detected moods
+    const { db } = await import('../db');
+    const { storybooks } = await import('@shared/schema');
+    const { eq } = await import('drizzle-orm');
+    
+    // Get current storybook to preserve other page data
+    const [currentStorybook] = await db
+      .select()
+      .from(storybooks)
+      .where(eq(storybooks.id, storybookId))
+      .limit(1);
+    
+    if (!currentStorybook) {
+      console.error(`[Background] Storybook ${storybookId} not found for mood detection`);
+      return;
+    }
+    
+    // Merge moods into existing pages
+    const updatedPages = currentStorybook.pages.map((page: any) => {
+      const moodResult = moodResults.find(m => m.pageNumber === page.pageNumber);
+      return {
+        ...page,
+        mood: moodResult?.mood || 'calm',
+      };
+    });
+    
+    // Update database
+    await db
+      .update(storybooks)
+      .set({ pages: updatedPages as any })
+      .where(eq(storybooks.id, storybookId));
+    
+    console.log(`[Background] ✅ Mood detection completed for storybook ${storybookId}`);
+  } catch (error) {
+    console.error(`[Background] Failed to detect moods for storybook ${storybookId}:`, error);
+    // Don't throw - this is a background task
+  }
+}
+
+// Generate story in batches for performance optimization
+// Returns partial story with metadata + first batch of pages, then remaining pages
+export async function* generateStoryInBatches(
+  prompt: string,
+  inspirationImagePaths: string[],
+  pagesPerBook: number = 3,
+  illustrationStyle: string = "vibrant and colorful children's book illustration",
+  age?: string,
+  author?: string
+): AsyncGenerator<{ batch: number; story: GeneratedStory; isComplete: boolean }> {
+  // For books with 2 or fewer pages, don't batch - just generate everything at once
+  if (pagesPerBook <= 2) {
+    const fullStory = await generateStoryFromPrompt(prompt, inspirationImagePaths, pagesPerBook, illustrationStyle, age, author);
+    yield { batch: 1, story: fullStory, isComplete: true };
+    return;
+  }
+
+  // For larger books, generate in 2 batches:
+  // Batch 1: First half of pages (setup + early conflict)
+  // Batch 2: Second half of pages (resolution + ending)
+  const batch1Size = Math.ceil(pagesPerBook / 2);
+  const batch2Size = pagesPerBook - batch1Size;
+
+  console.log(`[Batched Generation] Generating ${pagesPerBook} pages in 2 batches: [${batch1Size} + ${batch2Size}]`);
+
+  // Generate first batch
+  console.time('[Batched Generation] Batch 1');
+  const batch1Story = await generateStoryFromPrompt(prompt, inspirationImagePaths, batch1Size, illustrationStyle, age, author);
+  console.timeEnd('[Batched Generation] Batch 1');
+  
+  yield { batch: 1, story: batch1Story, isComplete: false };
+
+  // Generate second batch with context from first batch
+  console.time('[Batched Generation] Batch 2');
+  const continuationPrompt = `${prompt}
+
+Continue the story from where it left off. The story so far:
+- Title: ${batch1Story.title}
+- Character: ${batch1Story.mainCharacterDescription}
+- Story arc: ${batch1Story.storyArc}
+- Previous pages: ${batch1Story.pages.map(p => `Page ${p.pageNumber}: ${p.text}`).join('\n')}
+
+Generate the REMAINING ${batch2Size} pages (pages ${batch1Size + 1}-${pagesPerBook}) that complete the story arc and provide a satisfying resolution.`;
+
+  const batch2Story = await generateStoryFromPrompt(
+    continuationPrompt, 
+    inspirationImagePaths, 
+    batch2Size, 
+    illustrationStyle, 
+    age, 
+    author
+  );
+  console.timeEnd('[Batched Generation] Batch 2');
+
+  // Merge the two batches - renumber pages in batch 2 to continue from batch 1
+  const mergedPages = [
+    ...batch1Story.pages,
+    ...batch2Story.pages.map(p => ({
+      ...p,
+      pageNumber: p.pageNumber + batch1Size,
+    })),
+  ];
+
+  const completeStory: GeneratedStory = {
+    ...batch1Story, // Use metadata from first batch
+    pages: mergedPages,
+  };
+
+  yield { batch: 2, story: completeStory, isComplete: true };
+}
+
 export async function generateStoryFromPrompt(
   prompt: string,
   inspirationImagePaths: string[],
@@ -277,12 +400,15 @@ Return JSON following the schema with exactly ${pagesPerBook} pages.`;
     parsedJson.coverImagePrompt = `${parsedJson.coverImagePrompt}. IMPORTANT: Include the title "${parsedJson.title}" prominently at the top and the author name "${parsedJson.author}" at the bottom as decorative text integrated into the illustration.`;
 
     // Analyze mood for each page and log structured scene details
+    // NOTE: Mood detection is SKIPPED during initial generation for speed
+    // Mood will be detected later in the background after images are generated
     if (parsedJson.pages && Array.isArray(parsedJson.pages)) {
       console.log(`\n[Story Generation] Processing ${parsedJson.pages.length} pages with structured scene extraction:`);
       
       for (const page of parsedJson.pages) {
         if (page.text) {
-          page.mood = await detectPageMood(page.text);
+          // Skip mood detection for now - will be done in background
+          page.mood = 'calm'; // Default placeholder
           
           // CRITICAL: Sanitize page imagePrompts to remove any title/author text mentions
           // This prevents the AI from adding title/author overlays to interior pages

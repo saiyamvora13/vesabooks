@@ -2,7 +2,7 @@ import type { Express, Request } from "express";
 import express from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { generateStoryFromPrompt, generateIllustration, optimizeImageForWeb } from "./services/gemini";
+import { generateStoryFromPrompt, generateStoryInBatches, generateIllustration, optimizeImageForWeb, detectMoodsForStorybook } from "./services/gemini";
 import { createStorybookSchema, type StoryGenerationProgress, type Purchase, type InsertPurchase, type User, type AdminUser } from "@shared/schema";
 import { randomUUID, randomBytes } from "crypto";
 import * as fs from "fs";
@@ -5738,6 +5738,14 @@ IMPORTANT: This is a book cover. Include the title "${generatedStory.title}" pro
     // Track story completion (non-blocking)
     analytics.trackStoryCompleted(userId, storybook.id, pages.length).catch(err => {
       console.error('Failed to track story_completed event:', err);
+    });
+
+    // Detect page moods in background (non-blocking for speed)
+    detectMoodsForStorybook(storybook.id, pages.map(p => ({
+      pageNumber: p.pageNumber,
+      text: p.text,
+    }))).catch(err => {
+      console.error('Failed to detect moods in background:', err);
     });
 
     // Complete - Store the storybook ID in progress for retrieval
