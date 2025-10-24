@@ -2303,13 +2303,20 @@ Sitemap: ${baseUrl}/sitemap.xml`;
         return res.status(404).json({ message: 'Storybook not found' });
       }
 
-      // Check if user owns the storybook or has purchased any version (digital or print)
-      const ownedByUser = storybook.userId === userId;
-      const printPurchase = await storage.getStorybookPurchase(userId, id, 'print');
-      const digitalPurchase = await storage.getStorybookPurchase(userId, id, 'digital');
+      // Check if user is an admin - admins can download any PDF
+      const isUserAdmin = await storage.getAdminUser(userId);
       
-      if (!ownedByUser && !printPurchase && !digitalPurchase) {
-        return res.status(403).json({ message: 'You do not have access to download this print PDF' });
+      // Get print purchase data for settings (if exists)
+      const printPurchase = await storage.getStorybookPurchase(userId, id, 'print');
+      
+      if (!isUserAdmin) {
+        // Check if user owns the storybook or has purchased any version (digital or print)
+        const ownedByUser = storybook.userId === userId;
+        const digitalPurchase = await storage.getStorybookPurchase(userId, id, 'digital');
+        
+        if (!ownedByUser && !printPurchase && !digitalPurchase) {
+          return res.status(403).json({ message: 'You do not have access to download this print PDF' });
+        }
       }
 
       const { generatePrintReadyPDF } = await import('./services/printPdf');
