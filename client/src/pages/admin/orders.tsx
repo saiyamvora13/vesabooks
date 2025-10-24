@@ -225,12 +225,12 @@ export default function AdminOrders() {
                     >
                       <SelectValue />
                     </SelectTrigger>
-                    <SelectContent className="bg-slate-800 border-slate-600">
-                      <SelectItem value="all">All</SelectItem>
-                      <SelectItem value="completed">Completed</SelectItem>
-                      <SelectItem value="pending">Pending</SelectItem>
-                      <SelectItem value="failed">Failed</SelectItem>
-                      <SelectItem value="refunded">Refunded</SelectItem>
+                    <SelectContent className="bg-slate-800 border-slate-600 text-white">
+                      <SelectItem value="all" className="text-white hover:bg-slate-700 focus:bg-slate-700 focus:text-white">All</SelectItem>
+                      <SelectItem value="completed" className="text-white hover:bg-slate-700 focus:bg-slate-700 focus:text-white">Completed</SelectItem>
+                      <SelectItem value="pending" className="text-white hover:bg-slate-700 focus:bg-slate-700 focus:text-white">Pending</SelectItem>
+                      <SelectItem value="failed" className="text-white hover:bg-slate-700 focus:bg-slate-700 focus:text-white">Failed</SelectItem>
+                      <SelectItem value="refunded" className="text-white hover:bg-slate-700 focus:bg-slate-700 focus:text-white">Refunded</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -245,10 +245,10 @@ export default function AdminOrders() {
                     >
                       <SelectValue />
                     </SelectTrigger>
-                    <SelectContent className="bg-slate-800 border-slate-600">
-                      <SelectItem value="all">All</SelectItem>
-                      <SelectItem value="digital">Digital</SelectItem>
-                      <SelectItem value="print">Print</SelectItem>
+                    <SelectContent className="bg-slate-800 border-slate-600 text-white">
+                      <SelectItem value="all" className="text-white hover:bg-slate-700 focus:bg-slate-700 focus:text-white">All</SelectItem>
+                      <SelectItem value="digital" className="text-white hover:bg-slate-700 focus:bg-slate-700 focus:text-white">Digital</SelectItem>
+                      <SelectItem value="print" className="text-white hover:bg-slate-700 focus:bg-slate-700 focus:text-white">Print</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -263,11 +263,11 @@ export default function AdminOrders() {
                     >
                       <SelectValue />
                     </SelectTrigger>
-                    <SelectContent className="bg-slate-800 border-slate-600">
-                      <SelectItem value="all">All time</SelectItem>
-                      <SelectItem value="7days">Last 7 days</SelectItem>
-                      <SelectItem value="30days">Last 30 days</SelectItem>
-                      <SelectItem value="90days">Last 90 days</SelectItem>
+                    <SelectContent className="bg-slate-800 border-slate-600 text-white">
+                      <SelectItem value="all" className="text-white hover:bg-slate-700 focus:bg-slate-700 focus:text-white">All time</SelectItem>
+                      <SelectItem value="7days" className="text-white hover:bg-slate-700 focus:bg-slate-700 focus:text-white">Last 7 days</SelectItem>
+                      <SelectItem value="30days" className="text-white hover:bg-slate-700 focus:bg-slate-700 focus:text-white">Last 30 days</SelectItem>
+                      <SelectItem value="90days" className="text-white hover:bg-slate-700 focus:bg-slate-700 focus:text-white">Last 90 days</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>

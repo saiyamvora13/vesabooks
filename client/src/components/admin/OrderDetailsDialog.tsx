@@ -305,8 +305,7 @@ export default function OrderDetailsDialog({ orderReference, open, onOpenChange 
                     rel="noopener noreferrer"
                   >
                     <Button
-                      variant="outline"
-                      className="w-full border-slate-600 text-white hover:bg-slate-600"
+                      className="w-full bg-slate-600 text-white hover:bg-slate-500 border-slate-500"
                       data-testid="button-download-epub"
                     >
                       <Download className="w-4 h-4 mr-2" />
@@ -320,8 +319,7 @@ export default function OrderDetailsDialog({ orderReference, open, onOpenChange 
                     rel="noopener noreferrer"
                   >
                     <Button
-                      variant="outline"
-                      className="w-full border-slate-600 text-white hover:bg-slate-600"
+                      className="w-full bg-slate-600 text-white hover:bg-slate-500 border-slate-500"
                       data-testid="button-download-print-pdf"
                     >
                       <Download className="w-4 h-4 mr-2" />
