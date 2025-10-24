@@ -115,7 +115,7 @@ export default function Purchases() {
   // Redirect to login if not authenticated
   useEffect(() => {
     if (!authLoading && !isAuthenticated) {
-      window.location.href = '/api/login';
+      window.location.href = '/login';
     }
   }, [authLoading, isAuthenticated]);
 

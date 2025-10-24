@@ -195,7 +195,7 @@ export default function Checkout() {
         description: t('checkout.toast.authRequired.description'),
         variant: "destructive",
       });
-      window.location.href = '/api/login';
+      window.location.href = '/login';
     }
   }, [authLoading, isAuthenticated, toast, t]);
 

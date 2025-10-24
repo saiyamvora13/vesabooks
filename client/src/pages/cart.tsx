@@ -375,7 +375,7 @@ export default function Cart() {
         description: "Please log in to checkout",
         variant: "destructive",
       });
-      window.location.href = '/api/login';
+      window.location.href = '/login';
       return;
     }
 
@@ -413,7 +413,7 @@ export default function Cart() {
           <p className="text-muted-foreground mb-8">
             You need to be logged in to use the shopping cart
           </p>
-          <Button onClick={() => window.location.href = '/api/login'} className="gradient-bg hover:opacity-90 !text-[hsl(258,90%,20%)]" data-testid="button-sign-in">
+          <Button onClick={() => window.location.href = '/login'} className="gradient-bg hover:opacity-90 !text-[hsl(258,90%,20%)]" data-testid="button-sign-in">
             Sign In
           </Button>
         </div>

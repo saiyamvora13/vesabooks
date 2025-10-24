@@ -1262,7 +1262,7 @@ export default function Library() {
             <p className="text-muted-foreground mb-8 max-w-md mx-auto">
               {t('storybook.library.pleaseLogin.description')}
             </p>
-            <Button onClick={() => window.location.href = '/api/login'} data-testid="button-login">
+            <Button onClick={() => window.location.href = '/login'} data-testid="button-login">
               {t('storybook.library.pleaseLogin.button')}
             </Button>
           </div>
