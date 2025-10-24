@@ -4,6 +4,7 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { generateStoryFromPrompt, generateStoryInBatches, generateIllustration, optimizeImageForWeb } from "./services/gemini";
 import { createStorybookSchema, type StoryGenerationProgress, type Purchase, type InsertPurchase, type User, type AdminUser } from "@shared/schema";
+import { storybookGenerationLimiter } from "./utils/concurrencyLimiter";
 import { randomUUID, randomBytes } from "crypto";
 import * as fs from "fs";
 import * as path from "path";
@@ -1858,6 +1859,19 @@ Sitemap: ${baseUrl}/sitemap.xml`;
           await storage.incrementIpStoryCount(ipAddress);
         }
 
+        // Check concurrency limit before starting generation
+        const stats = storybookGenerationLimiter.getStats();
+        if (!storybookGenerationLimiter.tryAcquire()) {
+          console.warn(`[Concurrency] ⚠️  Generation limit reached (${stats.active}/${stats.max} active, ${stats.queued} queued)`);
+          return res.status(429).json({ 
+            message: "Too many books are being created right now. Please try again in 30-60 seconds.",
+            retryAfter: 30 
+          });
+        }
+
+        const updatedStats = storybookGenerationLimiter.getStats();
+        console.log(`[Concurrency] ✅ Slot acquired (${updatedStats.active}/${updatedStats.max} active)${userId ? ` - User: ${userId}` : ' - Anonymous'}`);
+
         // Start generation in background with userId (null for anonymous), author, age, pagesPerBook, and illustrationStyle
         generateStorybookAsync(sessionId, userId, prompt, authorName, age, imagePaths, validatedPagesPerBook, finalIllustrationStyle)
           .catch((error: unknown) => {
@@ -1869,6 +1883,11 @@ Sitemap: ${baseUrl}/sitemap.xml`;
               message: `Generation failed: ${errorMessage}`,
               error: errorMessage,
             });
+          })
+          .finally(() => {
+            storybookGenerationLimiter.release();
+            const finalStats = storybookGenerationLimiter.getStats();
+            console.log(`[Concurrency] 🔓 Slot released (${finalStats.active}/${finalStats.max} active)`);
           });
 
         res.json({ 

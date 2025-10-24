@@ -4,6 +4,59 @@ import sharp from "sharp";
 
 const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || "" });
 
+/**
+ * Retry helper with exponential backoff
+ * Handles rate limiting (429) and temporary errors
+ */
+async function retryWithBackoff<T>(
+  operation: () => Promise<T>,
+  maxRetries: number = 3,
+  operationName: string = 'API call'
+): Promise<T> {
+  let lastError: Error | null = null;
+  
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      return await operation();
+    } catch (error) {
+      lastError = error as Error;
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      
+      // Check if this is a rate limit error (429) or quota error
+      const isRateLimitError = 
+        errorMessage.includes("429") || 
+        errorMessage.includes("RESOURCE_EXHAUSTED") || 
+        errorMessage.includes("Quota exceeded") ||
+        errorMessage.includes("rate limit");
+      
+      // Check if this is a temporary error that should be retried
+      const isRetryableError = 
+        isRateLimitError ||
+        errorMessage.includes("503") || 
+        errorMessage.includes("502") ||
+        errorMessage.includes("temporarily unavailable") ||
+        errorMessage.includes("UNAVAILABLE");
+      
+      if (!isRetryableError || attempt === maxRetries) {
+        // Don't retry on non-retryable errors or if we've exhausted retries
+        throw error;
+      }
+      
+      // Calculate exponential backoff delay: 2s, 4s, 8s, 16s
+      const delay = Math.pow(2, attempt + 1) * 1000;
+      
+      console.warn(
+        `[Retry] ${operationName} failed with ${isRateLimitError ? '429 rate limit' : 'temporary error'} ` +
+        `- attempt ${attempt + 1}/${maxRetries + 1}, waiting ${delay/1000}s...`
+      );
+      
+      await new Promise(resolve => setTimeout(resolve, delay));
+    }
+  }
+  
+  throw lastError || new Error(`${operationName} failed after ${maxRetries + 1} attempts`);
+}
+
 export interface StoryPage {
   pageNumber: number;
   text: string;
@@ -281,15 +334,19 @@ Return JSON following the schema with exactly ${pagesPerBook} pages.`;
       required: ["title", "author", "mainCharacterDescription", "defaultClothing", "storyArc", "coverImagePrompt", "pages"],
     };
 
-    const response = await ai.models.generateContent({
-      model: "gemini-2.5-flash",
-      contents: contents,
-      config: {
-        systemInstruction: systemInstruction,
-        responseMimeType: "application/json",
-        responseSchema: storySchema,
-      },
-    });
+    const response = await retryWithBackoff(
+      () => ai.models.generateContent({
+        model: "gemini-2.5-flash",
+        contents: contents,
+        config: {
+          systemInstruction: systemInstruction,
+          responseMimeType: "application/json",
+          responseSchema: storySchema,
+        },
+      }),
+      3,
+      'Story generation'
+    );
 
     const rawJson = response.text?.trim();
     if (!rawJson) {
@@ -433,9 +490,6 @@ export async function generateIllustration(
   explicitStyle?: string, // Optional: explicit art style from user prompt for consistency
   allowText?: boolean // Optional: allow text in the image (for cover with title/author)
 ): Promise<void> {
-  let retries = 3;
-  let waitTime = 2000; // Start with a 2-second delay
-
   // Filter out any invalid reference images
   const validReferences = (referenceImagePaths || []).filter(path => path && fs.existsSync(path));
   const hasReferences = validReferences.length > 0;
@@ -446,62 +500,63 @@ export async function generateIllustration(
   console.log(`[generateIllustration] Reference images: ${hasReferences ? validReferences.length : 'NONE'}`);
   console.log(`[generateIllustration] Art style: ${explicitStyle || 'default'}`);
 
-  while (retries > 0) {
-    try {
-      // Build the full prompt with consistent style application
-      let fullPrompt: string;
-      
-      // Step 1: Add photo-matching instructions if we have reference images
-      const photoMatchingPrefix = hasReferences
-        ? `Reference images provided for character inspiration. IMPORTANT: Maintain the actual age and appearance of people from the reference photos - if an adult is shown, keep them as an adult with appropriate adult features and proportions; if a child is shown, keep them as a child.\n\n`
-        : '';
-      
-      // Step 2: Add the scene description
-      const sceneDescription = imagePrompt;
-      
-      // Step 3: Add the style directive (CRITICAL: this must be consistent for ALL images)
-      let styleDirective: string;
-      if (explicitStyle) {
-        // Use the extracted style (e.g., "photo-realistic, lifelike..." or "watercolor painting style")
-        styleDirective = `\n\nSTYLE: ${explicitStyle}`;
-      } else {
-        // Default illustrated storybook style
-        styleDirective = ', in the style of a vibrant and colorful illustrated storybook';
-      }
-      
-      // Step 4: Add explicit NO TEXT constraint (prevents AI from rendering text/titles/author names)
-      // UNLESS this is a cover image that should have title/author text
-      const noTextConstraint = allowText
-        ? '' // Allow text for cover images with title/author
-        : '\n\nCRITICAL CONSTRAINT: This is a pure visual illustration with NO text, NO words, NO letters, NO title, NO author name, NO book title visible anywhere in the image. Do not render any typography, captions, labels, or written content whatsoever. This image should contain only the illustrated scene described above.';
-      
-      // Step 5: Combine everything
-      fullPrompt = photoMatchingPrefix + sceneDescription + styleDirective + noTextConstraint;
-      
-      console.log(`[generateIllustration] Full prompt sent to Gemini: ${fullPrompt.substring(0, 250)}...`);
-      
-      const contentParts: any[] = [];
-      
-      // Add all reference images to help maintain consistency
-      for (const refPath of validReferences) {
-        const refImageBytes = fs.readFileSync(refPath);
-        const refImageMimeType = getMimeType(refPath);
-        
-        contentParts.push({
-          inlineData: {
-            mimeType: refImageMimeType,
-            data: refImageBytes.toString("base64"),
-          },
-        });
-      }
-      
-      // Always add the text prompt
-      contentParts.push({ text: fullPrompt });
+  // Build the full prompt with consistent style application
+  let fullPrompt: string;
+  
+  // Step 1: Add photo-matching instructions if we have reference images
+  const photoMatchingPrefix = hasReferences
+    ? `Reference images provided for character inspiration. IMPORTANT: Maintain the actual age and appearance of people from the reference photos - if an adult is shown, keep them as an adult with appropriate adult features and proportions; if a child is shown, keep them as a child.\n\n`
+    : '';
+  
+  // Step 2: Add the scene description
+  const sceneDescription = imagePrompt;
+  
+  // Step 3: Add the style directive (CRITICAL: this must be consistent for ALL images)
+  let styleDirective: string;
+  if (explicitStyle) {
+    // Use the extracted style (e.g., "photo-realistic, lifelike..." or "watercolor painting style")
+    styleDirective = `\n\nSTYLE: ${explicitStyle}`;
+  } else {
+    // Default illustrated storybook style
+    styleDirective = ', in the style of a vibrant and colorful illustrated storybook';
+  }
+  
+  // Step 4: Add explicit NO TEXT constraint (prevents AI from rendering text/titles/author names)
+  // UNLESS this is a cover image that should have title/author text
+  const noTextConstraint = allowText
+    ? '' // Allow text for cover images with title/author
+    : '\n\nCRITICAL CONSTRAINT: This is a pure visual illustration with NO text, NO words, NO letters, NO title, NO author name, NO book title visible anywhere in the image. Do not render any typography, captions, labels, or written content whatsoever. This image should contain only the illustrated scene described above.';
+  
+  // Step 5: Combine everything
+  fullPrompt = photoMatchingPrefix + sceneDescription + styleDirective + noTextConstraint;
+  
+  console.log(`[generateIllustration] Full prompt sent to Gemini: ${fullPrompt.substring(0, 250)}...`);
+  
+  const contentParts: any[] = [];
+  
+  // Add all reference images to help maintain consistency
+  for (const refPath of validReferences) {
+    const refImageBytes = fs.readFileSync(refPath);
+    const refImageMimeType = getMimeType(refPath);
+    
+    contentParts.push({
+      inlineData: {
+        mimeType: refImageMimeType,
+        data: refImageBytes.toString("base64"),
+      },
+    });
+  }
+  
+  // Always add the text prompt
+  contentParts.push({ text: fullPrompt });
 
-      const contents = {
-        parts: contentParts,
-      };
+  const contents = {
+    parts: contentParts,
+  };
 
+  // Use retry with exponential backoff for image generation
+  await retryWithBackoff(
+    async () => {
       const response = await ai.models.generateContent({
         model: "gemini-2.5-flash-image",
         contents: contents,
@@ -526,27 +581,10 @@ export async function generateIllustration(
       }
       
       throw new Error("Image generation failed to return an image part.");
-
-    } catch (error: any) {
-      retries--;
-      const errorMessage = error.toString();
-      
-      if (retries > 0 && (errorMessage.includes("429") || errorMessage.includes("RESOURCE_EXHAUSTED"))) {
-        console.warn(`Rate limit hit. Retrying in ${waitTime / 1000}s... (${retries} retries left)`);
-        await delay(waitTime);
-        waitTime *= 2; 
-      } else {
-        if (errorMessage.includes("429") || errorMessage.includes("RESOURCE_EXHAUSTED") || errorMessage.includes("Quota exceeded")) {
-          console.error("Image generation failed due to quota limit.", error);
-          throw new Error("You have exceeded your API quota for the day. Please check your plan details and try again tomorrow.");
-        }
-        console.error("Image generation failed.", error);
-        throw new Error("Image generation failed. The AI service may be temporarily unavailable or overloaded.");
-      }
-    }
-  }
-  
-  throw new Error("Image generation failed after all retries.");
+    },
+    3,
+    'Image generation'
+  );
 }
 
 export async function regenerateSinglePage(
