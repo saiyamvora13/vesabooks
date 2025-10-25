@@ -35,12 +35,19 @@ export default function AdminSettings() {
     return acc;
   }, {} as Record<string, string>) || {};
 
+  // Convert cents to dollars for display
+  const centsTodollars = (cents: string) => {
+    if (!cents) return "";
+    const amount = parseFloat(cents) / 100;
+    return amount.toFixed(2);
+  };
+
   const form = useForm<SettingsForm>({
     resolver: zodResolver(settingsSchema),
     values: {
       pages_per_book: settingsMap.pages_per_book || "",
-      digital_price: settingsMap.digital_price || "",
-      print_price: settingsMap.print_price || "",
+      digital_price: settingsMap.digital_price ? centsTodollars(settingsMap.digital_price) : "",
+      print_price: settingsMap.print_price ? centsTodollars(settingsMap.print_price) : "",
       print_margin_percentage: settingsMap.print_margin_percentage || "20",
     },
   });
@@ -67,10 +74,16 @@ export default function AdminSettings() {
   });
 
   const onSubmit = async (data: SettingsForm) => {
+    // Convert dollars to cents for storage
+    const dollarsToCents = (dollars: string) => {
+      const amount = parseFloat(dollars) * 100;
+      return Math.round(amount).toString();
+    };
+
     const updates = [
       { key: "pages_per_book", value: data.pages_per_book },
-      { key: "digital_price", value: data.digital_price },
-      { key: "print_price", value: data.print_price },
+      { key: "digital_price", value: dollarsToCents(data.digital_price) },
+      { key: "print_price", value: dollarsToCents(data.print_price) },
       { key: "print_margin_percentage", value: data.print_margin_percentage },
     ];
 
