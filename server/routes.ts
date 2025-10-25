@@ -1816,7 +1816,7 @@ Sitemap: ${baseUrl}/sitemap.xml`;
     },
     async (req: any, res) => {
       try {
-        const { prompt, author, age, illustrationStyle } = req.body;
+        const { prompt, author, age, illustrationStyle, foreword } = req.body;
         const files = req.files as Express.Multer.File[] | undefined;
         
         // Determine user ID (authenticated or null for anonymous)
@@ -1895,8 +1895,8 @@ Sitemap: ${baseUrl}/sitemap.xml`;
         const updatedStats = storybookGenerationLimiter.getStats();
         console.log(`[Concurrency] ✅ Slot acquired (${updatedStats.active}/${updatedStats.max} active)${userId ? ` - User: ${userId}` : ' - Anonymous'}`);
 
-        // Start generation in background with userId (null for anonymous), author, age, pagesPerBook, and illustrationStyle
-        generateStorybookAsync(sessionId, userId, prompt, authorName, age, imagePaths, validatedPagesPerBook, finalIllustrationStyle)
+        // Start generation in background with userId (null for anonymous), author, age, pagesPerBook, illustrationStyle, and foreword
+        generateStorybookAsync(sessionId, userId, prompt, authorName, age, imagePaths, validatedPagesPerBook, finalIllustrationStyle, foreword)
           .catch((error: unknown) => {
             console.error("Story generation failed:", error);
             const errorMessage = error instanceof Error ? error.message : 'Unknown error';
@@ -5551,7 +5551,8 @@ async function generateStorybookAsync(
   age: string | undefined,
   imagePaths: string[],
   pagesPerBook: number = 3,
-  illustrationStyle: string = "vibrant and colorful children's book illustration"
+  illustrationStyle: string = "vibrant and colorful children's book illustration",
+  foreword?: string
 ): Promise<void> {
   try {
     // Step 1: Processing images
@@ -5877,6 +5878,7 @@ IMPORTANT: This is a book cover. Include the title "${generatedStory.title}" pro
       storyArc: generatedStory.storyArc,
       artStyle: illustrationStyle,
       orientation,
+      foreword: foreword || null,
     });
 
     // Track story completion (non-blocking)
