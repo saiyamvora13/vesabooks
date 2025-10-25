@@ -15,17 +15,17 @@ import {
 let cachedComicNeueFontBytes: ArrayBuffer | null = null;
 
 // Page manifest types
-type PageType = 'frontCover' | 'blank' | 'image' | 'text' | 'backCover';
+type PageType = 'frontCover' | 'blank' | 'image' | 'text' | 'backCover' | 'foreword';
 interface PageManifestEntry {
   type: PageType;
   pageIndex?: number; // Reference to storybook.pages index for image/text pages
   imageUrl?: string; // For cover pages
-  text?: string; // For text pages
+  text?: string; // For text pages and foreword
 }
 
 /**
  * Builds a deterministic page manifest for the print PDF
- * Structure: [front cover, blank, ...image/text pairs, blank, back cover]
+ * Structure: [front cover, blank, foreword?, ...image/text pairs, blank, back cover]
  */
 function buildPageManifest(storybook: Storybook): PageManifestEntry[] {
   const manifest: PageManifestEntry[] = [];
@@ -37,7 +37,12 @@ function buildPageManifest(storybook: Storybook): PageManifestEntry[] {
   // 2. First blank page
   manifest.push({ type: 'blank' });
   
-  // 3. Story content: each page becomes TWO PDF pages (image, then text)
+  // 3. Foreword/Dedication page (if present)
+  if (storybook.foreword) {
+    manifest.push({ type: 'foreword', text: storybook.foreword });
+  }
+  
+  // 4. Story content: each page becomes TWO PDF pages (image, then text)
   for (let i = 0; i < storybook.pages.length; i++) {
     const page = storybook.pages[i];
     
@@ -56,7 +61,7 @@ function buildPageManifest(storybook: Storybook): PageManifestEntry[] {
     });
   }
   
-  // 4. Calculate padding needed for minimum 24 pages
+  // 5. Calculate padding needed for minimum 24 pages
   const MIN_TOTAL_PAGES = 24;
   const currentPageCount = manifest.length + 2; // +2 for last blank + back cover
   
@@ -72,10 +77,10 @@ function buildPageManifest(storybook: Storybook): PageManifestEntry[] {
     console.log(`📄 Adding ${blankPairsNeeded * 2} blank pages for minimum page count`);
   }
   
-  // 5. Last blank page
+  // 6. Last blank page
   manifest.push({ type: 'blank' });
   
-  // 6. Back cover (using backCoverImageUrl or "The End" text)
+  // 7. Back cover (using backCoverImageUrl or "The End" text)
   manifest.push({ 
     type: 'backCover', 
     imageUrl: storybook.backCoverImageUrl || undefined 
@@ -186,14 +191,14 @@ export async function generatePrintReadyPDF(
   }
   
   // Helper function to word wrap text
-  function wrapText(text: string, maxWidth: number, fontSize: number): string[] {
+  function wrapText(text: string, maxWidth: number, fontSize: number, textFont: any = font): string[] {
     const words = text.split(' ');
     const lines: string[] = [];
     let currentLine = '';
     
     for (const word of words) {
       const testLine = currentLine + (currentLine ? ' ' : '') + word;
-      const testWidth = font.widthOfTextAtSize(testLine, fontSize);
+      const testWidth = textFont.widthOfTextAtSize(testLine, fontSize);
       
       if (testWidth > maxWidth && currentLine) {
         lines.push(currentLine);
@@ -301,6 +306,46 @@ export async function generatePrintReadyPDF(
             font: boldFont,
             color: rgb(0.2, 0.25, 0.31),
           });
+        }
+        break;
+        
+      case 'foreword':
+        // Foreword/Dedication page: centered, italicized text
+        page.drawRectangle({
+          x: 0, y: 0,
+          width: PAGE_WIDTH, height: PAGE_HEIGHT,
+          color: rgb(0.976, 0.969, 0.953), // Soft cream background
+        });
+        
+        if (entry.text && entry.text.trim()) {
+          // Load Georgia or Times New Roman style font (use serif)
+          const serifFont = await pdfDoc.embedFont(StandardFonts.TimesRomanItalic);
+          const fontSize = 14;
+          const lineHeight = fontSize * 1.6;
+          const textX = SAFETY_MARGIN_POINTS + 30; // Extra horizontal margins
+          const textWidth = PAGE_WIDTH - 2 * (SAFETY_MARGIN_POINTS + 30);
+          
+          const lines = wrapText(entry.text, textWidth, fontSize, serifFont);
+          
+          // Center text vertically and horizontally
+          const totalTextHeight = lines.length * lineHeight;
+          const verticalOffset = (PAGE_HEIGHT - totalTextHeight) / 2;
+          let currentY = PAGE_HEIGHT - verticalOffset;
+          
+          for (const line of lines) {
+            const lineWidth = serifFont.widthOfTextAtSize(line, fontSize);
+            const centerX = (PAGE_WIDTH - lineWidth) / 2;
+            
+            page.drawText(line, {
+              x: centerX,
+              y: currentY - fontSize,
+              size: fontSize,
+              font: serifFont,
+              color: rgb(0.2, 0.25, 0.31),
+            });
+            
+            currentY -= lineHeight;
+          }
         }
         break;
         
