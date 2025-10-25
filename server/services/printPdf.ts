@@ -436,6 +436,24 @@ export async function generatePrintReadyPDF(
           width: PAGE_WIDTH, height: PAGE_HEIGHT,
           color: rgb(1, 1, 1),
         });
+        
+        // Add attribution text to the last blank page before back cover
+        const isLastBlankBeforeBackCover = i === manifest.length - 2 && manifest[i + 1]?.type === 'backCover';
+        if (isLastBlankBeforeBackCover) {
+          const attributionText = "Created on www.vesabooks.com";
+          const attributionSize = 10;
+          const attributionWidth = font.widthOfTextAtSize(attributionText, attributionSize);
+          const attributionX = (PAGE_WIDTH - attributionWidth) / 2;
+          const attributionY = PAGE_HEIGHT / 2;
+          
+          page.drawText(attributionText, {
+            x: attributionX,
+            y: attributionY,
+            size: attributionSize,
+            font: font,
+            color: rgb(0.4, 0.4, 0.4), // Subtle gray
+          });
+        }
         break;
     }
   }
