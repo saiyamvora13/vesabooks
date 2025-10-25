@@ -480,35 +480,47 @@ export function FlipbookViewer({ pages, title, author = "AI Author", coverImageU
   const bookSheets = useMemo(() => {
     const sheets = [];
 
-    // Add cover page
+    // 1. Cover sheet: front = Cover, back = blank
+    const blankPage = (
+      <div 
+        className="w-full h-full"
+        style={{
+          background: 'linear-gradient(135deg, #f9f7f3 0%, #faf8f5 50%, #f7f5f1 100%)',
+        }}
+      />
+    );
+    
+    sheets.push({
+      front: <Cover title={title} author={author} coverImageUrl={coverImageUrl} />,
+      back: blankPage,
+    });
+
+    // 2. Foreword sheet (if foreword exists): front = blank, back = foreword
     if (foreword) {
-      // If foreword exists, cover back shows foreword
       sheets.push({
-        front: <Cover title={title} author={author} coverImageUrl={coverImageUrl} />,
+        front: blankPage,
         back: <ForewordPage foreword={foreword} isMobile={isMobile} />,
-      });
-    } else {
-      // No foreword: cover back shows first story image
-      sheets.push({
-        front: <Cover title={title} author={author} coverImageUrl={coverImageUrl} />,
-        back: pages.length > 0 ? (
-          <ImagePage 
-            page={pages[0]} 
-            pageNum={1} 
-            isOwner={isOwner}
-            onRegeneratePage={onRegeneratePage}
-            isRegenerating={regeneratingPageNumber === pages[0].pageNumber}
-            isMobile={isMobile}
-            zoom={imageZoom}
-            position={imagePosition}
-          />
-        ) : <EndPage totalPages={0} backCoverImageUrl={backCoverImageUrl} />,
       });
     }
 
+    // 3. Story pages: each page creates one sheet with image left / text right
     for (let i = 0; i < numPages; i++) {
       const page = pages[i];
-      const frontContent = (
+      
+      const imageContent = (
+        <ImagePage 
+          page={page} 
+          pageNum={i + 1}
+          isOwner={isOwner}
+          onRegeneratePage={onRegeneratePage}
+          isRegenerating={regeneratingPageNumber === page.pageNumber}
+          isMobile={isMobile}
+          zoom={imageZoom}
+          position={imagePosition}
+        />
+      );
+      
+      const textContent = (
         <TextPage 
           page={page} 
           author={author} 
@@ -517,22 +529,18 @@ export function FlipbookViewer({ pages, title, author = "AI Author", coverImageU
           isOwner={isOwner}
           onRegeneratePage={onRegeneratePage}
           isRegenerating={regeneratingPageNumber === page.pageNumber}
+          isMobile={isMobile}
         />
       );
-      const backContent = (i < numPages - 1)
-        ? (
-          <ImagePage 
-            page={pages[i + 1]} 
-            pageNum={i + 2}
-            isOwner={isOwner}
-            onRegeneratePage={onRegeneratePage}
-            isRegenerating={regeneratingPageNumber === pages[i + 1].pageNumber}
-          />
-        )
-        : <EndPage totalPages={numPages * 2} backCoverImageUrl={backCoverImageUrl} />;
 
-      sheets.push({ front: frontContent, back: backContent });
+      sheets.push({ front: imageContent, back: textContent });
     }
+
+    // 4. End sheet: back cover
+    sheets.push({
+      front: blankPage,
+      back: <EndPage totalPages={numPages * 2} backCoverImageUrl={backCoverImageUrl} />,
+    });
 
     return sheets;
   }, [pages, title, author, coverImageUrl, backCoverImageUrl, foreword, goToNextPage, numPages, isOwner, onRegeneratePage, regeneratingPageNumber, isMobile, imageZoom, imagePosition]);
