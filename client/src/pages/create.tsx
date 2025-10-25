@@ -51,6 +51,7 @@ export default function Create() {
     age: z.enum(["", "3-5", "6-8", "9-12"]).optional(),
     illustrationStyle: z.string().default("vibrant and colorful children's book illustration"),
     customIllustrationStyle: z.string().optional(),
+    foreword: z.string().max(500, "Foreword must be 500 characters or less").optional(),
     images: z.array(z.instanceof(File)).min(0).max(5, t('common.validation.maxImagesExceeded')),
   }).refine(
     (data) => {
@@ -77,6 +78,7 @@ export default function Create() {
       age: "",
       illustrationStyle: "vibrant and colorful children's book illustration",
       customIllustrationStyle: "",
+      foreword: "",
       images: [],
     },
   });
@@ -104,6 +106,9 @@ export default function Create() {
         ? data.customIllustrationStyle
         : data.illustrationStyle;
       formData.append("illustrationStyle", finalIllustrationStyle);
+      if (data.foreword) {
+        formData.append("foreword", data.foreword);
+      }
       data.images.forEach(image => {
         formData.append("images", image);
       });
@@ -571,6 +576,44 @@ export default function Create() {
                         <div className="text-sm text-muted-foreground">
                           <i className="fas fa-info-circle mr-1"></i>
                           If left blank, your full name will be used as the author
+                        </div>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  {/* Foreword/Dedication Field */}
+                  <FormField
+                    control={form.control}
+                    name="foreword"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-base sm:text-sm font-semibold flex items-center">
+                          <i className="fas fa-heart text-primary mr-2"></i>
+                          Dedication / Foreword
+                          <span className="ml-auto text-muted-foreground font-normal text-xs sm:text-xs">Optional</span>
+                        </FormLabel>
+                        <FormControl>
+                          <Textarea
+                            {...field}
+                            rows={3}
+                            maxLength={500}
+                            placeholder="To my wonderful Mom - Happy Mother's Day! This story was made just for you with all my love. - Sarah"
+                            className="resize-none rounded-2xl text-base sm:text-sm"
+                            data-testid="input-foreword"
+                            style={{
+                              fontSize: '16px', // Prevents zoom on iOS
+                            }}
+                          />
+                        </FormControl>
+                        <div className="flex justify-between items-center text-sm text-muted-foreground">
+                          <div>
+                            <i className="fas fa-info-circle mr-1"></i>
+                            Add a personal message for gift books (appears on first page)
+                          </div>
+                          <span className="text-xs">
+                            {field.value?.length || 0}/500
+                          </span>
                         </div>
                         <FormMessage />
                       </FormItem>
