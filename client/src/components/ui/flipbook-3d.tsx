@@ -528,38 +528,54 @@ export function FlipbookViewer({ pages, title, author = "AI Author", coverImageU
       }
     } else {
       // WITHOUT FOREWORD: Cover → image/text pairs  
-      // Sheet 1+: Image/text pairs for story pages, starting with cover/first-image
-      for (let i = 0; i < numPages; i++) {
-        const page = pages[i];
-        const frontContent = i === 0 ? (
-          <Cover title={title} author={author} coverImageUrl={coverImageUrl} />
-        ) : (
+      // Sheet 1: Cover front, First image back
+      sheets.push({
+        front: <Cover title={title} author={author} coverImageUrl={coverImageUrl} />,
+        back: pages[0] ? (
           <ImagePage 
-            page={page} 
-            pageNum={i + 1}
+            page={pages[0]} 
+            pageNum={1}
             isOwner={isOwner}
             onRegeneratePage={onRegeneratePage}
-            isRegenerating={regeneratingPageNumber === page.pageNumber}
+            isRegenerating={regeneratingPageNumber === pages[0].pageNumber}
             isMobile={isMobile}
             zoom={imageZoom}
             position={imagePosition}
           />
-        );
+        ) : blankPage,
+      });
+      
+      // Sheets 2+: Text left, Next image right
+      for (let i = 0; i < numPages; i++) {
+        const page = pages[i];
+        const nextPage = i + 1 < numPages ? pages[i + 1] : null;
         
-        const textContent = (
-          <TextPage 
-            page={page} 
-            author={author} 
-            pageNum={i + 1} 
-            onTurn={goToNextPage}
-            isOwner={isOwner}
-            onRegeneratePage={onRegeneratePage}
-            isRegenerating={regeneratingPageNumber === page.pageNumber}
-            isMobile={isMobile}
-          />
-        );
-        
-        sheets.push({ front: frontContent, back: textContent });
+        sheets.push({
+          front: (
+            <TextPage 
+              page={page} 
+              author={author} 
+              pageNum={i + 1} 
+              onTurn={goToNextPage}
+              isOwner={isOwner}
+              onRegeneratePage={onRegeneratePage}
+              isRegenerating={regeneratingPageNumber === page.pageNumber}
+              isMobile={isMobile}
+            />
+          ),
+          back: nextPage ? (
+            <ImagePage 
+              page={nextPage} 
+              pageNum={i + 2}
+              isOwner={isOwner}
+              onRegeneratePage={onRegeneratePage}
+              isRegenerating={regeneratingPageNumber === nextPage.pageNumber}
+              isMobile={isMobile}
+              zoom={imageZoom}
+              position={imagePosition}
+            />
+          ) : blankPage,
+        });
       }
     }
 
