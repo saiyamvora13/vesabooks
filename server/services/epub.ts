@@ -72,6 +72,14 @@ export async function generateEpub(storybook: Storybook): Promise<Buffer> {
     });
   }
 
+  // Add attribution page before back cover
+  content.push({
+    content: `<div class="page-attribution">
+  <p>Created on <strong>www.vesabooks.com</strong></p>
+</div>`,
+    excludeFromToc: true,
+  });
+
   // Add back cover if it exists
   if (storybook.backCoverImageUrl) {
     const backCoverUrl = `${baseUrl}${storybook.backCoverImageUrl}`;
@@ -177,11 +185,34 @@ export async function generateEpub(storybook: Storybook): Promise<Buffer> {
         padding: 0;
       }
       
+      /* Attribution page - centered */
+      .page-attribution {
+        page-break-after: always;
+        height: 100%;
+        width: 100%;
+        margin: 0;
+        padding: 40px;
+        background-color: #faf8f5;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      
+      .page-attribution p {
+        font-family: "EB Garamond", Georgia, serif;
+        font-size: 16px;
+        color: #666666;
+        text-align: center;
+        margin: 0;
+        padding: 0;
+      }
+      
       /* Ensure proper page breaks */
       .page-image,
       .page-text,
       .blank-page,
-      .page-foreword {
+      .page-foreword,
+      .page-attribution {
         page-break-inside: avoid;
       }
     `,
