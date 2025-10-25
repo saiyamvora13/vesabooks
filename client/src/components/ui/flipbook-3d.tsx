@@ -624,10 +624,10 @@ export function FlipbookViewer({ pages, title, author = "AI Author", coverImageU
       }
     }
 
-    // Final sheet: Back cover on front (shows on right when opened), blank on back (outside of book)
+    // Final sheet: Blank on front (shows on right when viewing "The End"), back cover on back (visible when book is closed)
     sheets.push({
-      front: <EndPage totalPages={numPages * 2} backCoverImageUrl={backCoverImageUrl} />,
-      back: blankPage,
+      front: blankPage,
+      back: <EndPage totalPages={numPages * 2} backCoverImageUrl={backCoverImageUrl} />,
     });
 
     return sheets;
