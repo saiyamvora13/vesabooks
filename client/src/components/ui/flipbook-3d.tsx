@@ -305,18 +305,13 @@ const EndPage = ({ totalPages, backCoverImageUrl }: { totalPages: number; backCo
           className="w-full h-full object-cover" 
           loading="lazy"
         />
-        {totalPages > 0 && (
-          <span className="absolute bottom-4 left-8 text-sm font-serif text-slate-600 bg-white/80 px-2 py-1 rounded">
-            {totalPages}
-          </span>
-        )}
       </div>
     );
   }
 
   return (
     <div 
-      className="w-full h-full flex flex-col items-center justify-center p-4 relative"
+      className="w-full h-full flex flex-col items-center justify-center p-4"
       style={{
         background: 'linear-gradient(135deg, #f9f7f3 0%, #faf8f5 50%, #f7f5f1 100%)',
       }}
@@ -327,11 +322,6 @@ const EndPage = ({ totalPages, backCoverImageUrl }: { totalPages: number; backCo
       >
         The End
       </p>
-      {totalPages > 0 && (
-        <span className="absolute bottom-4 left-8 text-sm font-serif text-slate-600">
-          {totalPages}
-        </span>
-      )}
     </div>
   );
 };
@@ -600,7 +590,7 @@ export function FlipbookViewer({ pages, title, author = "AI Author", coverImageU
     // Final sheet: Attribution page on left, Back cover on right (back of book)
     const attributionPage = (
       <div 
-        className="w-full h-full flex items-center justify-center"
+        className="w-full h-full flex items-center justify-start pl-12"
         style={{
           background: 'linear-gradient(135deg, #f9f7f3 0%, #faf8f5 50%, #f7f5f1 100%)',
         }}
