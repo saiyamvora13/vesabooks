@@ -35,13 +35,7 @@ export async function generateEpub(storybook: Storybook): Promise<Buffer> {
     fs.writeFileSync(compositeCoverPath, coverBuffer);
   }
 
-  // Add blank page after cover (matches flipbook: cover back = blank)
-  content.push({
-    content: `<div class="blank-page"></div>`,
-    excludeFromToc: true,
-  });
-
-  // Add foreword/dedication page if present (matches flipbook: separate foreword sheet)
+  // Add foreword/dedication page if present
   if (storybook.foreword) {
     content.push({
       content: `<div class="page-foreword">
@@ -69,17 +63,6 @@ export async function generateEpub(storybook: Storybook): Promise<Buffer> {
       content: `<div class="page-text">
   <p>${escapeHtml(page.text)}</p>
 </div>`,
-      excludeFromToc: true,
-    });
-  }
-
-  // Only add alignment blank page if needed for back cover
-  // Back cover should be on a left page (even index in our 0-based array)
-  const currentPageCount = content.length;
-  if (storybook.backCoverImageUrl && currentPageCount % 2 === 1) {
-    // Current count is odd, so next page would be on right - add blank to push back cover to left
-    content.push({
-      content: `<div class="blank-page"></div>`,
       excludeFromToc: true,
     });
   }
