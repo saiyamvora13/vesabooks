@@ -590,13 +590,13 @@ export function FlipbookViewer({ pages, title, author = "AI Author", coverImageU
     // Final sheet: Attribution page on left, Back cover on right (back of book)
     const attributionPage = (
       <div 
-        className="w-full h-full flex items-center justify-start pl-12"
+        className="w-full h-full flex items-center justify-center"
         style={{
           background: 'linear-gradient(135deg, #f9f7f3 0%, #faf8f5 50%, #f7f5f1 100%)',
         }}
       >
         <p 
-          className="text-sm text-slate-600"
+          className="text-base text-slate-600"
           style={{ fontFamily: '"EB Garamond", "Merriweather", Georgia, serif' }}
         >
           Created on <span className="font-medium">www.vesabooks.com</span>
