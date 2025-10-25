@@ -65,8 +65,9 @@ export const SAFETY_MARGIN_POINTS = SAFETY_MARGIN_MM * MM_TO_POINTS;
 // Required specifications
 export const REQUIRED_DPI = 300;
 export const COLOR_PROFILE = 'RGB';
-export const MIN_PAGES = 24;
-export const MAX_PAGES = 300;
+export const MIN_PAGES_FINAL_BOOK = 24; // Final book (including Prodigi's binding pages)
+export const MAX_PAGES_FINAL_BOOK = 300; // Final book (including Prodigi's binding pages)
+export const PRODIGI_BINDING_PAGES = 6; // Pages Prodigi adds automatically (binding sheets + inside covers)
 
 // Helper function to get book dimensions in points
 export function getBookDimensionsInPoints(bookSizeId: string): { width: number; height: number } {
@@ -87,16 +88,27 @@ export function getBookSizesByOrientation(orientation: BookOrientation): BookSiz
   return Object.values(BOOK_SIZES).filter(size => size.orientation === orientation);
 }
 
-// Validate page count
-export function validatePageCount(pageCount: number): { valid: boolean; message?: string } {
-  if (pageCount < MIN_PAGES) {
-    return { valid: false, message: `Minimum ${MIN_PAGES} pages required for professional printing` };
+// Validate page count for our PDF (Prodigi adds ~6 pages automatically)
+export function validatePageCount(pdfPageCount: number): { valid: boolean; message?: string } {
+  const finalBookPages = pdfPageCount + PRODIGI_BINDING_PAGES;
+  
+  if (finalBookPages < MIN_PAGES_FINAL_BOOK) {
+    return { 
+      valid: false, 
+      message: `PDF has ${pdfPageCount} pages. Final book will have ${finalBookPages} pages (including Prodigi's ${PRODIGI_BINDING_PAGES} binding pages). Minimum ${MIN_PAGES_FINAL_BOOK} pages required.` 
+    };
   }
-  if (pageCount > MAX_PAGES) {
-    return { valid: false, message: `Maximum ${MAX_PAGES} pages allowed` };
+  if (finalBookPages > MAX_PAGES_FINAL_BOOK) {
+    return { 
+      valid: false, 
+      message: `PDF has ${pdfPageCount} pages. Final book will have ${finalBookPages} pages. Maximum ${MAX_PAGES_FINAL_BOOK} pages allowed.` 
+    };
   }
-  if (pageCount % 2 !== 0) {
-    return { valid: true, message: `Odd page count (${pageCount}). Even number recommended for professional printing` };
+  if (pdfPageCount % 2 !== 0) {
+    return { 
+      valid: true, 
+      message: `PDF has odd page count (${pdfPageCount}). Even number recommended.` 
+    };
   }
   return { valid: true };
 }

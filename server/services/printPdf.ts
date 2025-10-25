@@ -15,7 +15,7 @@ import {
 let cachedComicNeueFontBytes: ArrayBuffer | null = null;
 
 // Page manifest types
-type PageType = 'frontCover' | 'blank' | 'image' | 'text' | 'backCover' | 'foreword';
+type PageType = 'frontCover' | 'image' | 'text' | 'backCover' | 'foreword' | 'attribution';
 interface PageManifestEntry {
   type: PageType;
   pageIndex?: number; // Reference to storybook.pages index for image/text pages
@@ -24,35 +24,41 @@ interface PageManifestEntry {
 }
 
 /**
- * Builds a deterministic page manifest for the print PDF
- * Structure: [front cover, blank, foreword?, ...image/text pairs, blank, back cover]
+ * Builds a deterministic page manifest for the print PDF following Prodigi's requirements
+ * 
+ * Structure: [front cover, foreword?, ...image/text pairs, attribution, back cover]
+ * 
+ * NOTE: Per Prodigi hardcover photo book guide:
+ * - PDF Page 1 = Front cover
+ * - PDF Page 2+ = Content pages (Prodigi auto-adds binding sheets)
+ * - PDF Last page = Back cover
+ * - Prodigi automatically adds: inside front cover, binding sheets (6 blank pages total)
+ * - We do NOT add blank pages - Prodigi handles all binding pages
  */
 function buildPageManifest(storybook: Storybook): PageManifestEntry[] {
   const manifest: PageManifestEntry[] = [];
   
-  // 1. Front cover (using coverImageUrl or first page image)
+  // 1. Front cover (Page 1 of PDF)
   const coverImageUrl = storybook.coverImageUrl || storybook.pages[0]?.imageUrl;
   manifest.push({ type: 'frontCover', imageUrl: coverImageUrl || undefined });
   
-  // 2. Foreword/Dedication page replaces first blank (or blank if no foreword)
+  // 2. Foreword/Dedication (if present) - First content page
   if (storybook.foreword) {
     manifest.push({ type: 'foreword', text: storybook.foreword });
-  } else {
-    manifest.push({ type: 'blank' });
   }
   
-  // 4. Story content: each page becomes TWO PDF pages (image, then text)
+  // 3. Story content: each page becomes TWO PDF pages (image, then text)
   for (let i = 0; i < storybook.pages.length; i++) {
     const page = storybook.pages[i];
     
-    // Image page (left/even)
+    // Image page
     manifest.push({ 
       type: 'image', 
       pageIndex: i, 
       imageUrl: page.imageUrl || undefined 
     });
     
-    // Text page (right/odd)
+    // Text page
     manifest.push({ 
       type: 'text', 
       pageIndex: i, 
@@ -60,46 +66,42 @@ function buildPageManifest(storybook: Storybook): PageManifestEntry[] {
     });
   }
   
-  // 5. Calculate padding needed for minimum 24 pages
-  const MIN_TOTAL_PAGES = 24;
-  const currentPageCount = manifest.length + 2; // +2 for last blank + back cover
+  // 4. Attribution page before back cover
+  manifest.push({ type: 'attribution' });
   
-  if (currentPageCount < MIN_TOTAL_PAGES) {
-    const pagesNeeded = MIN_TOTAL_PAGES - currentPageCount;
-    // Add blank pages in pairs to maintain even count and left/right alignment
-    const blankPairsNeeded = Math.ceil(pagesNeeded / 2);
-    
-    for (let i = 0; i < blankPairsNeeded * 2; i++) {
-      manifest.push({ type: 'blank' });
-    }
-    
-    console.log(`📄 Adding ${blankPairsNeeded * 2} blank pages for minimum page count`);
-  }
-  
-  // 6. Last blank page
-  manifest.push({ type: 'blank' });
-  
-  // 7. Back cover (using backCoverImageUrl or "The End" text)
+  // 5. Back cover (Last page of PDF)
   manifest.push({ 
     type: 'backCover', 
     imageUrl: storybook.backCoverImageUrl || undefined 
   });
   
-  // Ensure even page count for proper book binding
-  if (manifest.length % 2 !== 0) {
-    manifest.push({ type: 'blank' });
-    console.log(`📄 Adding 1 blank page to ensure even page count`);
-  }
+  console.log(`📖 PDF structure: Front cover → ${storybook.foreword ? 'Foreword → ' : ''}${storybook.pages.length * 2} story pages → Attribution → Back cover`);
+  console.log(`📄 Total PDF pages: ${manifest.length} (Prodigi will add ~6 binding pages automatically)`);
   
   return manifest;
 }
 
 /**
  * Generates a professional print-ready PDF for hardcover photo books
- * New layout: Image and text on separate pages (not overlaid)
- * - Front cover → Blank → Image/Text pairs → Blank → Back cover
- * - Minimum 24 pages, even page count
- * - 300 DPI resolution with 10mm safety margins
+ * Following Prodigi's hardcover photo book specifications
+ * 
+ * PDF Structure:
+ * - Page 1: Front cover
+ * - Page 2+: Content (foreword if present, then image/text pairs, attribution)
+ * - Last page: Back cover
+ * 
+ * Prodigi automatically adds:
+ * - Inside front cover (blank)
+ * - Front binding sheet (2 blank pages)
+ * - Back binding sheet (2 blank pages)
+ * - Inside back cover (blank)
+ * Total: ~6 pages added by Prodigi
+ * 
+ * Specifications:
+ * - 300 DPI resolution
+ * - 10mm safety margins
+ * - RGB color profile
+ * - PDF/X-4 compliant
  */
 export async function generatePrintReadyPDF(
   storybook: Storybook, 
@@ -216,8 +218,9 @@ export async function generatePrintReadyPDF(
   // Build page manifest
   const manifest = buildPageManifest(storybook);
   
-  console.log(`📖 Generating print PDF with ${manifest.length} pages`);
-  console.log(`📄 Layout: Front cover → Blank → ${storybook.pages.length * 2} content pages (${storybook.pages.length} image/text pairs) → Blank → Back cover`);
+  console.log(`📖 Generating Prodigi-compliant print PDF with ${manifest.length} pages`);
+  console.log(`📄 Our PDF: Front cover → ${storybook.foreword ? 'Foreword → ' : ''}${storybook.pages.length * 2} story pages → Attribution → Back cover`);
+  console.log(`📘 Final book: Prodigi adds ~6 binding pages automatically`);
   
   // Render each page based on manifest
   for (let i = 0; i < manifest.length; i++) {
@@ -429,31 +432,27 @@ export async function generatePrintReadyPDF(
         }
         break;
         
-      case 'blank':
-        // Blank page: pure white
+      case 'attribution':
+        // Attribution page: "Created on www.vesabooks.com"
         page.drawRectangle({
           x: 0, y: 0,
           width: PAGE_WIDTH, height: PAGE_HEIGHT,
-          color: rgb(1, 1, 1),
+          color: rgb(0.976, 0.969, 0.953), // Soft cream background
         });
         
-        // Add attribution text to the last blank page before back cover
-        const isLastBlankBeforeBackCover = i === manifest.length - 2 && manifest[i + 1]?.type === 'backCover';
-        if (isLastBlankBeforeBackCover) {
-          const attributionText = "Created on www.vesabooks.com";
-          const attributionSize = 10;
-          const attributionWidth = font.widthOfTextAtSize(attributionText, attributionSize);
-          const attributionX = (PAGE_WIDTH - attributionWidth) / 2;
-          const attributionY = PAGE_HEIGHT / 2;
-          
-          page.drawText(attributionText, {
-            x: attributionX,
-            y: attributionY,
-            size: attributionSize,
-            font: font,
-            color: rgb(0.4, 0.4, 0.4), // Subtle gray
-          });
-        }
+        const attributionText = "Created on www.vesabooks.com";
+        const attributionSize = 10;
+        const attributionWidth = font.widthOfTextAtSize(attributionText, attributionSize);
+        const attributionX = (PAGE_WIDTH - attributionWidth) / 2;
+        const attributionY = PAGE_HEIGHT / 2;
+        
+        page.drawText(attributionText, {
+          x: attributionX,
+          y: attributionY,
+          size: attributionSize,
+          font: font,
+          color: rgb(0.4, 0.4, 0.4), // Subtle gray
+        });
         break;
     }
   }

@@ -26,6 +26,30 @@ The platform includes an e-commerce system with Stripe payments, EPUB e-book dow
 
 ### Prodigi Print API Integration
 
+#### Print-Ready PDF Structure
+The system generates PDFs following Prodigi's hardcover photo book specifications exactly:
+
+**Our PDF Structure:**
+- Page 1: Front cover
+- Page 2+: Content pages (foreword if present, then image/text pairs, attribution page)
+- Last page: Back cover
+
+**Prodigi Automatically Adds (~6 pages):**
+- Inside front cover (blank)
+- Front binding sheet (2 blank pages)
+- Back binding sheet (2 blank pages)
+- Inside back cover (blank)
+
+**Key Requirements:**
+- 300 DPI resolution
+- 10mm safety margins on all pages
+- RGB color profile
+- Final book: 24-300 pages total (including Prodigi's automatic additions)
+- Our PDF: Minimum 18 pages (becomes 24 with Prodigi's 6 binding pages)
+- No blank pages in our PDF - Prodigi handles all binding pages
+
+**Attribution:** "Created on www.vesabooks.com" appears as a dedicated page with soft cream background before the back cover in all formats (PDF, EPUB, Flipbook).
+
 #### Order Status & Shipment Stages
 Prodigi API tracks orders through multiple stages:
 
