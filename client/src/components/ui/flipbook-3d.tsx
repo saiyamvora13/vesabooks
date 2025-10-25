@@ -15,6 +15,7 @@ interface FlipbookViewerProps {
   author?: string;
   coverImageUrl?: string;
   backCoverImageUrl?: string;
+  foreword?: string | null;
   isOwner?: boolean;
   onRegeneratePage?: (pageNumber: number) => void;
   regeneratingPageNumber?: number | null;
@@ -263,6 +264,37 @@ const TextPage = ({
   </div>
 );
 
+const ForewordPage = ({ foreword, isMobile = false }: { foreword: string; isMobile?: boolean }) => (
+  <div 
+    className={`w-full h-full flex flex-col items-center justify-center ${isMobile ? 'p-8' : 'p-12 md:p-16'} relative`}
+    style={{
+      background: 'linear-gradient(135deg, #f9f7f3 0%, #faf8f5 50%, #f7f5f1 100%)',
+    }}
+  >
+    <div className="absolute inset-0 pointer-events-none"
+      style={{
+        background: 'radial-gradient(ellipse at center, transparent 70%, rgba(245, 235, 200, 0.15) 100%)',
+      }}
+    />
+    <div className={`${isMobile ? 'max-w-md' : 'max-w-xl'} mx-auto text-center`}>
+      <p 
+        className={`text-slate-700 dark:text-slate-300 ${
+          isMobile 
+            ? 'text-base leading-relaxed' 
+            : 'text-lg md:text-xl leading-loose'
+        } italic`}
+        style={{ 
+          fontFamily: '"Times New Roman", Times, Georgia, serif',
+          fontSize: isMobile ? '16px' : undefined,
+          lineHeight: isMobile ? '1.8' : undefined
+        }}
+      >
+        {foreword}
+      </p>
+    </div>
+  </div>
+);
+
 const EndPage = ({ totalPages, backCoverImageUrl }: { totalPages: number; backCoverImageUrl?: string }) => {
   if (backCoverImageUrl) {
     return (
@@ -304,7 +336,7 @@ const EndPage = ({ totalPages, backCoverImageUrl }: { totalPages: number; backCo
   );
 };
 
-export function FlipbookViewer({ pages, title, author = "AI Author", coverImageUrl, backCoverImageUrl, isOwner = false, onRegeneratePage, regeneratingPageNumber, onPageChange, orientation = 'portrait' }: FlipbookViewerProps) {
+export function FlipbookViewer({ pages, title, author = "AI Author", coverImageUrl, backCoverImageUrl, foreword, isOwner = false, onRegeneratePage, regeneratingPageNumber, onPageChange, orientation = 'portrait' }: FlipbookViewerProps) {
   const numPages = pages.length;
   const numSheets = numPages + 1;
   const [currentPage, setCurrentPage] = useState(0);
@@ -448,18 +480,31 @@ export function FlipbookViewer({ pages, title, author = "AI Author", coverImageU
   const bookSheets = useMemo(() => {
     const sheets = [];
 
-    sheets.push({
-      front: <Cover title={title} author={author} coverImageUrl={coverImageUrl} />,
-      back: pages.length > 0 ? (
-        <ImagePage 
-          page={pages[0]} 
-          pageNum={1} 
-          isOwner={isOwner}
-          onRegeneratePage={onRegeneratePage}
-          isRegenerating={regeneratingPageNumber === pages[0].pageNumber}
-        />
-      ) : <EndPage totalPages={0} backCoverImageUrl={backCoverImageUrl} />,
-    });
+    // Add cover page
+    if (foreword) {
+      // If foreword exists, cover back shows foreword
+      sheets.push({
+        front: <Cover title={title} author={author} coverImageUrl={coverImageUrl} />,
+        back: <ForewordPage foreword={foreword} isMobile={isMobile} />,
+      });
+    } else {
+      // No foreword: cover back shows first story image
+      sheets.push({
+        front: <Cover title={title} author={author} coverImageUrl={coverImageUrl} />,
+        back: pages.length > 0 ? (
+          <ImagePage 
+            page={pages[0]} 
+            pageNum={1} 
+            isOwner={isOwner}
+            onRegeneratePage={onRegeneratePage}
+            isRegenerating={regeneratingPageNumber === pages[0].pageNumber}
+            isMobile={isMobile}
+            zoom={imageZoom}
+            position={imagePosition}
+          />
+        ) : <EndPage totalPages={0} backCoverImageUrl={backCoverImageUrl} />,
+      });
+    }
 
     for (let i = 0; i < numPages; i++) {
       const page = pages[i];
@@ -490,7 +535,7 @@ export function FlipbookViewer({ pages, title, author = "AI Author", coverImageU
     }
 
     return sheets;
-  }, [pages, title, author, coverImageUrl, backCoverImageUrl, goToNextPage, numPages, isOwner, onRegeneratePage, regeneratingPageNumber]);
+  }, [pages, title, author, coverImageUrl, backCoverImageUrl, foreword, goToNextPage, numPages, isOwner, onRegeneratePage, regeneratingPageNumber, isMobile, imageZoom, imagePosition]);
 
   const isBookOpen = currentPage > 0;
 

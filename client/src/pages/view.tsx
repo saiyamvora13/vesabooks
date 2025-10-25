@@ -652,6 +652,7 @@ export default function View() {
               author={storybook.author || "AI Storyteller"}
               coverImageUrl={storybook.coverImageUrl || storybook.pages[0]?.imageUrl}
               backCoverImageUrl={storybook.backCoverImageUrl || undefined}
+              foreword={storybook.foreword || undefined}
               isOwner={isAuthenticated && user?.id === storybook.userId}
               onRegeneratePage={handleRegeneratePage}
               regeneratingPageNumber={regeneratePageMutation.isPending ? pageToRegenerate : null}
