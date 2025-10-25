@@ -8,6 +8,7 @@ import { FlipbookViewer } from "@/components/ui/flipbook-3d";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Textarea } from "@/components/ui/textarea";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -27,7 +28,7 @@ import {
 } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
 import { type Storybook } from "@shared/schema";
-import { ShoppingCart, Star, Share2, Info } from "lucide-react";
+import { ShoppingCart, Star, Share2, Info, Edit2 } from "lucide-react";
 import { addToCart } from "@/lib/cartUtils";
 import { useAuth } from "@/hooks/useAuth";
 import { RatingDialog } from "@/components/rating-dialog";
@@ -57,7 +58,9 @@ export default function View() {
   const [verifiedEmail, setVerifiedEmail] = useState<string | null>(null);
   const [checkoutDialogOpen, setCheckoutDialogOpen] = useState(false);
   const [checkoutType, setCheckoutType] = useState<'digital' | 'print'>('digital');
-  const { toast } = useToast();
+  const [editForewordOpen, setEditForewordOpen] = useState(false);
+  const [forewordText, setForewordText] = useState("");
+  const { toast} = useToast();
   const { isAuthenticated, user} = useAuth();
 
   // Determine if viewing by ID or share URL
@@ -132,6 +135,39 @@ export default function View() {
     if (pageToRegenerate !== null) {
       regeneratePageMutation.mutate(pageToRegenerate);
     }
+  };
+
+  // Edit foreword mutation
+  const editForewordMutation = useMutation({
+    mutationFn: async (newForeword: string) => {
+      if (!storybookId) throw new Error('No storybook ID');
+      const res = await apiRequest('PATCH', `/api/storybooks/${storybookId}/foreword`, { foreword: newForeword });
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/storybooks', storybookId] });
+      toast({
+        title: "Foreword updated!",
+        description: "Your dedication has been saved.",
+      });
+      setEditForewordOpen(false);
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Failed to update foreword",
+        description: error.message || "An error occurred while updating the foreword.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleEditForeword = () => {
+    setForewordText(storybook?.foreword || "");
+    setEditForewordOpen(true);
+  };
+
+  const handleSaveForeword = () => {
+    editForewordMutation.mutate(forewordText);
   };
 
   // Claim storybook mutation
@@ -721,6 +757,35 @@ export default function View() {
                   <p className="text-base" data-testid="info-author">{storybook.author}</p>
                 </div>
               )}
+              {/* Foreword/Dedication */}
+              {(storybook.foreword || isOwner) && (
+                <div className="bg-muted/50 rounded-lg p-4 border">
+                  <div className="flex items-center justify-between mb-2">
+                    <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Dedication</h3>
+                    {isOwner && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={handleEditForeword}
+                        className="h-8 gap-2"
+                        data-testid="button-edit-foreword"
+                      >
+                        <Edit2 className="w-3 h-3" />
+                        Edit
+                      </Button>
+                    )}
+                  </div>
+                  {storybook.foreword ? (
+                    <p className="text-base leading-relaxed italic text-center font-serif" data-testid="info-foreword">
+                      {storybook.foreword}
+                    </p>
+                  ) : (
+                    <p className="text-sm text-muted-foreground italic text-center">
+                      No dedication added yet. Click Edit to add one.
+                    </p>
+                  )}
+                </div>
+              )}
             </div>
 
             {/* Story Prompt */}
@@ -834,6 +899,51 @@ export default function View() {
           queryClient.invalidateQueries({ queryKey: ['/api/purchases/check-combined', storybookId] });
         }}
       />
+
+      {/* Edit Foreword Dialog */}
+      <Dialog open={editForewordOpen} onOpenChange={setEditForewordOpen}>
+        <DialogContent className="max-w-[95vw] md:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Edit Dedication</DialogTitle>
+            <DialogDescription>
+              Add a personal message that will appear on the first page of your storybook (max 500 characters)
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Textarea
+                value={forewordText}
+                onChange={(e) => setForewordText(e.target.value.slice(0, 500))}
+                placeholder="To my wonderful Mom - Happy Mother's Day! This story was made just for you with all my love. - Sarah"
+                rows={5}
+                maxLength={500}
+                className="resize-none font-serif italic"
+                data-testid="textarea-edit-foreword"
+              />
+              <div className="flex justify-between text-sm text-muted-foreground">
+                <span>This will appear centered and italicized on the first page</span>
+                <span>{forewordText.length}/500</span>
+              </div>
+            </div>
+            <div className="flex gap-2 justify-end">
+              <Button
+                variant="outline"
+                onClick={() => setEditForewordOpen(false)}
+                data-testid="button-cancel-foreword"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleSaveForeword}
+                disabled={editForewordMutation.isPending}
+                data-testid="button-save-foreword"
+              >
+                {editForewordMutation.isPending ? "Saving..." : "Save"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
