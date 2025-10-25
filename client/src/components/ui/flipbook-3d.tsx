@@ -597,9 +597,25 @@ export function FlipbookViewer({ pages, title, author = "AI Author", coverImageU
       }
     }
 
-    // Final sheet: Blank on left, Back cover on right (back of book)
+    // Final sheet: Attribution page on left, Back cover on right (back of book)
+    const attributionPage = (
+      <div 
+        className="w-full h-full flex items-center justify-center"
+        style={{
+          background: 'linear-gradient(135deg, #f9f7f3 0%, #faf8f5 50%, #f7f5f1 100%)',
+        }}
+      >
+        <p 
+          className="text-sm text-slate-600"
+          style={{ fontFamily: '"EB Garamond", "Merriweather", Georgia, serif' }}
+        >
+          Created on <span className="font-medium">www.vesabooks.com</span>
+        </p>
+      </div>
+    );
+    
     sheets.push({
-      front: blankPage,
+      front: attributionPage,
       back: <EndPage totalPages={numPages * 2} backCoverImageUrl={backCoverImageUrl} />,
     });
 
@@ -623,14 +639,27 @@ export function FlipbookViewer({ pages, title, author = "AI Author", coverImageU
       return `Page ${pageNum}`;
     } else {
       // Desktop dual-page display
-      if (currentPage > 0 && currentPage <= numPages) {
-        const firstPage = (currentPage - 1) * 2 + 1;
-        const secondPage = firstPage + 1;
-        return `Pages ${firstPage} - ${secondPage}`;
+      if (foreword) {
+        // With foreword: Page 1 shows blank/foreword
+        if (currentPage === 1) return "Foreword";
+        
+        // Page 2+ shows story content
+        if (currentPage > 1 && currentPage <= numPages + 1) {
+          // Adjust for foreword offset
+          const storyPageNum = (currentPage - 2) * 2 + 1;
+          return `Pages ${storyPageNum} - ${storyPageNum + 1}`;
+        }
+      } else {
+        // Without foreword: start from page 1
+        if (currentPage > 0 && currentPage <= numPages) {
+          const firstPage = (currentPage - 1) * 2 + 1;
+          const secondPage = firstPage + 1;
+          return `Pages ${firstPage} - ${secondPage}`;
+        }
       }
       return "The End";
     }
-  }, [currentPage, numPages, isMobile, pages.length, totalMobilePages]);
+  }, [currentPage, numPages, isMobile, pages.length, totalMobilePages, foreword]);
 
   if (isMobile) {
     // Single page view for mobile - shows one page at a time
