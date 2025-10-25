@@ -35,6 +35,16 @@ export async function generateEpub(storybook: Storybook): Promise<Buffer> {
     fs.writeFileSync(compositeCoverPath, coverBuffer);
   }
 
+  // Add foreword/dedication page if present
+  if (storybook.foreword) {
+    content.push({
+      content: `<div class="page-foreword">
+  <p>${escapeHtml(storybook.foreword)}</p>
+</div>`,
+      excludeFromToc: true,
+    });
+  }
+
   // Add each story page as separate left (image) and right (text) pages
   // Start directly with the story content
   for (const page of storybook.pages) {
@@ -149,10 +159,35 @@ export async function generateEpub(storybook: Storybook): Promise<Buffer> {
         padding: 0;
       }
       
+      /* Foreword/Dedication page - centered, italicized */
+      .page-foreword {
+        page-break-after: always;
+        height: 100%;
+        width: 100%;
+        margin: 0;
+        padding: 60px 40px;
+        background-color: #ffffff;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      
+      .page-foreword p {
+        font-family: "Times New Roman", Times, Georgia, serif;
+        font-size: 16px;
+        font-style: italic;
+        line-height: 1.8;
+        color: #333333;
+        text-align: center;
+        margin: 0;
+        padding: 0;
+      }
+      
       /* Ensure proper page breaks */
       .page-image,
       .page-text,
-      .blank-page {
+      .blank-page,
+      .page-foreword {
         page-break-inside: avoid;
       }
     `,
