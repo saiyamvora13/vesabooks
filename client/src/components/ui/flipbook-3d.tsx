@@ -338,7 +338,6 @@ const EndPage = ({ totalPages, backCoverImageUrl }: { totalPages: number; backCo
 
 export function FlipbookViewer({ pages, title, author = "AI Author", coverImageUrl, backCoverImageUrl, foreword, isOwner = false, onRegeneratePage, regeneratingPageNumber, onPageChange, orientation = 'portrait' }: FlipbookViewerProps) {
   const numPages = pages.length;
-  const numSheets = numPages + 1;
   const [currentPage, setCurrentPage] = useState(0);
   const [isMobile, setIsMobile] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -376,10 +375,9 @@ export function FlipbookViewer({ pages, title, author = "AI Author", coverImageU
   }, [currentPage, onPageChange]);
 
   const totalMobilePages = (pages.length * 2) + 1; // cover + (text + image) per story page
-  const maxPage = isMobile ? totalMobilePages : numSheets;
   
   const goToPrevPage = useCallback(() => setCurrentPage((p) => Math.max(0, p - 1)), []);
-  const goToNextPage = useCallback(() => setCurrentPage((p) => Math.min(p + 1, maxPage)), [maxPage]);
+  const goToNextPage = useCallback(() => setCurrentPage((p) => p + 1), []);
 
   const handleKeyDown = useCallback((event: KeyboardEvent) => {
     if (event.key === 'ArrowLeft') goToPrevPage();
@@ -829,7 +827,7 @@ export function FlipbookViewer({ pages, title, author = "AI Author", coverImageU
           </div>
 
           {/* Bookmark ribbon */}
-          {currentPage > 0 && currentPage < numSheets && (
+          {currentPage > 0 && currentPage < bookSheets.length && (
             <div 
               className="absolute top-0 w-2 h-40 z-[10000] transition-all duration-700"
               style={{
@@ -865,7 +863,7 @@ export function FlipbookViewer({ pages, title, author = "AI Author", coverImageU
                 background: 'repeating-linear-gradient(90deg, #f8f6f2 0px, #f5f3ef 1px, #e8e6e2 2px)',
                 boxShadow: 'inset -2px 0 4px rgba(0,0,0,0.1)',
                 borderRadius: '0 2px 2px 0',
-                transform: `scaleX(${Math.max(0.5, currentPage / numSheets)})`,
+                transform: `scaleX(${Math.max(0.5, currentPage / bookSheets.length)})`,
                 transformOrigin: 'right center',
                 transition: 'transform 0.7s ease-in-out',
               }}
@@ -879,7 +877,7 @@ export function FlipbookViewer({ pages, title, author = "AI Author", coverImageU
                 background: 'repeating-linear-gradient(90deg, #e8e6e2 0px, #f5f3ef 1px, #f8f6f2 2px)',
                 boxShadow: 'inset 2px 0 4px rgba(0,0,0,0.1)',
                 borderRadius: '2px 0 0 2px',
-                transform: `scaleX(${Math.max(0.5, 1 - currentPage / numSheets)})`,
+                transform: `scaleX(${Math.max(0.5, 1 - currentPage / bookSheets.length)})`,
                 transformOrigin: 'left center',
                 transition: 'transform 0.7s ease-in-out',
               }}
@@ -889,7 +887,7 @@ export function FlipbookViewer({ pages, title, author = "AI Author", coverImageU
           <div className="absolute top-0 left-0 w-full h-full" style={{ transformStyle: 'preserve-3d' }}>
             {bookSheets.map((sheet, index) => {
               const isFlipped = currentPage > index;
-              const zIndex = isFlipped ? index + 1 : numSheets - index;
+              const zIndex = isFlipped ? index + 1 : bookSheets.length - index;
 
               return (
                 <div
@@ -945,7 +943,7 @@ export function FlipbookViewer({ pages, title, author = "AI Author", coverImageU
         </span>
         <button
           onClick={goToNextPage}
-          disabled={currentPage >= numSheets}
+          disabled={currentPage >= bookSheets.length}
           className="p-2 rounded-full hover:bg-slate-200 dark:hover:bg-slate-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           aria-label="Next Page"
           data-testid="button-next-page"
