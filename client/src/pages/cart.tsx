@@ -186,8 +186,8 @@ function CartItemCard({
               </div>
             )}
 
-            {/* Quantity Control (only for digital) */}
-            {validProductType === 'digital' ? (
+            {/* Quantity Control (only for print - multiple physical copies) */}
+            {validProductType === 'print' ? (
               <div className="space-y-2">
                 <Label htmlFor={`quantity-${item.id}`} className="text-sm font-medium">
                   Quantity
