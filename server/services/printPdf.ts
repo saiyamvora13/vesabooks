@@ -34,12 +34,11 @@ function buildPageManifest(storybook: Storybook): PageManifestEntry[] {
   const coverImageUrl = storybook.coverImageUrl || storybook.pages[0]?.imageUrl;
   manifest.push({ type: 'frontCover', imageUrl: coverImageUrl || undefined });
   
-  // 2. First blank page
-  manifest.push({ type: 'blank' });
-  
-  // 3. Foreword/Dedication page (if present)
+  // 2. Foreword/Dedication page replaces first blank (or blank if no foreword)
   if (storybook.foreword) {
     manifest.push({ type: 'foreword', text: storybook.foreword });
+  } else {
+    manifest.push({ type: 'blank' });
   }
   
   // 4. Story content: each page becomes TWO PDF pages (image, then text)
