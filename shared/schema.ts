@@ -57,6 +57,7 @@ export const storybooks = pgTable("storybooks", {
   storyArc: text("story_arc"),
   artStyle: text("art_style"),
   orientation: text("orientation").default('portrait'),
+  foreword: varchar("foreword", { length: 500 }),
   isPublic: boolean("is_public").notNull().default(false),
   shareCount: numeric("share_count").notNull().default('0'),
   viewCount: numeric("view_count").notNull().default('0'),
