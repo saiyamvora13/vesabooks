@@ -502,9 +502,28 @@ export function FlipbookViewer({ pages, title, author = "AI Author", coverImageU
         ) : blankPage,
       });
       
+      // Attribution page component
+      const attributionPage = (
+        <div 
+          className="w-full h-full flex items-center justify-center"
+          style={{
+            background: 'linear-gradient(135deg, #f9f7f3 0%, #faf8f5 50%, #f7f5f1 100%)',
+          }}
+        >
+          <p 
+            className="text-base text-slate-600"
+            style={{ fontFamily: '"EB Garamond", "Merriweather", Georgia, serif' }}
+          >
+            Created on <span className="font-medium">www.vesabooks.com</span>
+          </p>
+        </div>
+      );
+      
       // Sheet 3+: Text front, Next Image back (opens to: image left | text right)
+      // Last sheet has attribution on back
       for (let i = 0; i < numPages; i++) {
         const page = pages[i];
+        const isLastPage = i === numPages - 1;
         const nextPage = i + 1 < numPages ? pages[i + 1] : null;
         
         sheets.push({
@@ -520,7 +539,7 @@ export function FlipbookViewer({ pages, title, author = "AI Author", coverImageU
               isMobile={isMobile}
             />
           ),
-          back: nextPage ? (
+          back: isLastPage ? attributionPage : (nextPage ? (
             <ImagePage 
               page={nextPage} 
               pageNum={i + 2}
@@ -531,7 +550,7 @@ export function FlipbookViewer({ pages, title, author = "AI Author", coverImageU
               zoom={imageZoom}
               position={imagePosition}
             />
-          ) : blankPage,
+          ) : blankPage),
         });
       }
     } else {
@@ -553,9 +572,27 @@ export function FlipbookViewer({ pages, title, author = "AI Author", coverImageU
         ) : blankPage,
       });
       
-      // Sheets 2+: Text left, Next image right
+      // Attribution page component
+      const attributionPage = (
+        <div 
+          className="w-full h-full flex items-center justify-center"
+          style={{
+            background: 'linear-gradient(135deg, #f9f7f3 0%, #faf8f5 50%, #f7f5f1 100%)',
+          }}
+        >
+          <p 
+            className="text-base text-slate-600"
+            style={{ fontFamily: '"EB Garamond", "Merriweather", Georgia, serif' }}
+          >
+            Created on <span className="font-medium">www.vesabooks.com</span>
+          </p>
+        </div>
+      );
+      
+      // Sheets 2+: Text left, Next image right (last sheet has attribution on back)
       for (let i = 0; i < numPages; i++) {
         const page = pages[i];
+        const isLastPage = i === numPages - 1;
         const nextPage = i + 1 < numPages ? pages[i + 1] : null;
         
         sheets.push({
@@ -571,7 +608,7 @@ export function FlipbookViewer({ pages, title, author = "AI Author", coverImageU
               isMobile={isMobile}
             />
           ),
-          back: nextPage ? (
+          back: isLastPage ? attributionPage : (nextPage ? (
             <ImagePage 
               page={nextPage} 
               pageNum={i + 2}
@@ -582,31 +619,15 @@ export function FlipbookViewer({ pages, title, author = "AI Author", coverImageU
               zoom={imageZoom}
               position={imagePosition}
             />
-          ) : blankPage,
+          ) : blankPage),
         });
       }
     }
 
-    // Final sheet: Attribution page on left, Back cover on right (back of book)
-    const attributionPage = (
-      <div 
-        className="w-full h-full flex items-center justify-center"
-        style={{
-          background: 'linear-gradient(135deg, #f9f7f3 0%, #faf8f5 50%, #f7f5f1 100%)',
-        }}
-      >
-        <p 
-          className="text-base text-slate-600"
-          style={{ fontFamily: '"EB Garamond", "Merriweather", Georgia, serif' }}
-        >
-          Created on <span className="font-medium">www.vesabooks.com</span>
-        </p>
-      </div>
-    );
-    
+    // Final sheet: Back cover on front (shows on right when opened), blank on back (outside of book)
     sheets.push({
-      front: attributionPage,
-      back: <EndPage totalPages={numPages * 2} backCoverImageUrl={backCoverImageUrl} />,
+      front: <EndPage totalPages={numPages * 2} backCoverImageUrl={backCoverImageUrl} />,
+      back: blankPage,
     });
 
     return sheets;
