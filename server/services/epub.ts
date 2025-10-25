@@ -35,7 +35,12 @@ export async function generateEpub(storybook: Storybook): Promise<Buffer> {
     fs.writeFileSync(compositeCoverPath, coverBuffer);
   }
 
-  // Add foreword/dedication page if present
+  // Add blank page after cover, then foreword if present
+  content.push({
+    content: `<div class="blank-page"></div>`,
+    excludeFromToc: true,
+  });
+
   if (storybook.foreword) {
     content.push({
       content: `<div class="page-foreword">
