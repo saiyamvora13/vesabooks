@@ -480,7 +480,6 @@ export function FlipbookViewer({ pages, title, author = "AI Author", coverImageU
   const bookSheets = useMemo(() => {
     const sheets = [];
 
-    // 1. Cover sheet: front = Cover, back = blank
     const blankPage = (
       <div 
         className="w-full h-full"
@@ -490,53 +489,118 @@ export function FlipbookViewer({ pages, title, author = "AI Author", coverImageU
       />
     );
     
-    sheets.push({
-      front: <Cover title={title} author={author} coverImageUrl={coverImageUrl} />,
-      back: blankPage,
-    });
-
-    // 2. Foreword sheet (if foreword exists): front = blank, back = foreword
     if (foreword) {
+      // WITH FOREWORD: Cover → blank/foreword → image/text pairs
+      // Sheet 1: Cover front, blank back
       sheets.push({
-        front: blankPage,
-        back: <ForewordPage foreword={foreword} isMobile={isMobile} />,
+        front: <Cover title={title} author={author} coverImageUrl={coverImageUrl} />,
+        back: blankPage,
       });
+      
+      // Sheet 2: Foreword front, Page1-image back  
+      // Spread shows: blank (cover back) left / foreword right
+      sheets.push({
+        front: <ForewordPage foreword={foreword} isMobile={isMobile} />,
+        back: pages[0] ? (
+          <ImagePage 
+            page={pages[0]} 
+            pageNum={1}
+            isOwner={isOwner}
+            onRegeneratePage={onRegeneratePage}
+            isRegenerating={regeneratingPageNumber === pages[0].pageNumber}
+            isMobile={isMobile}
+            zoom={imageZoom}
+            position={imagePosition}
+          />
+        ) : blankPage,
+      });
+      
+      // Sheet 3+: Page-text front, Next-page-image back
+      // Spread shows: image (prev sheet back) left / text right
+      for (let i = 0; i < numPages; i++) {
+        const page = pages[i];
+        const textContent = (
+          <TextPage 
+            page={page} 
+            author={author} 
+            pageNum={i + 1} 
+            onTurn={goToNextPage}
+            isOwner={isOwner}
+            onRegeneratePage={onRegeneratePage}
+            isRegenerating={regeneratingPageNumber === page.pageNumber}
+            isMobile={isMobile}
+          />
+        );
+        
+        const backContent = (i + 1 < numPages) ? (
+          <ImagePage 
+            page={pages[i + 1]} 
+            pageNum={i + 2}
+            isOwner={isOwner}
+            onRegeneratePage={onRegeneratePage}
+            isRegenerating={regeneratingPageNumber === pages[i + 1].pageNumber}
+            isMobile={isMobile}
+            zoom={imageZoom}
+            position={imagePosition}
+          />
+        ) : blankPage;
+        
+        sheets.push({ front: textContent, back: backContent });
+      }
+    } else {
+      // WITHOUT FOREWORD: Cover → image/text pairs  
+      // Sheet 1: Cover front, Page1-image back
+      sheets.push({
+        front: <Cover title={title} author={author} coverImageUrl={coverImageUrl} />,
+        back: pages[0] ? (
+          <ImagePage 
+            page={pages[0]} 
+            pageNum={1}
+            isOwner={isOwner}
+            onRegeneratePage={onRegeneratePage}
+            isRegenerating={regeneratingPageNumber === pages[0].pageNumber}
+            isMobile={isMobile}
+            zoom={imageZoom}
+            position={imagePosition}
+          />
+        ) : blankPage,
+      });
+      
+      // Sheet 2+: Page-text front, Next-page-image back
+      // Spread shows: image (prev sheet back) left / text right
+      for (let i = 0; i < numPages; i++) {
+        const page = pages[i];
+        const textContent = (
+          <TextPage 
+            page={page} 
+            author={author} 
+            pageNum={i + 1} 
+            onTurn={goToNextPage}
+            isOwner={isOwner}
+            onRegeneratePage={onRegeneratePage}
+            isRegenerating={regeneratingPageNumber === page.pageNumber}
+            isMobile={isMobile}
+          />
+        );
+        
+        const backContent = (i + 1 < numPages) ? (
+          <ImagePage 
+            page={pages[i + 1]} 
+            pageNum={i + 2}
+            isOwner={isOwner}
+            onRegeneratePage={onRegeneratePage}
+            isRegenerating={regeneratingPageNumber === pages[i + 1].pageNumber}
+            isMobile={isMobile}
+            zoom={imageZoom}
+            position={imagePosition}
+          />
+        ) : blankPage;
+        
+        sheets.push({ front: textContent, back: backContent });
+      }
     }
 
-    // 3. Story pages: each page creates one sheet with image left / text right
-    for (let i = 0; i < numPages; i++) {
-      const page = pages[i];
-      
-      const imageContent = (
-        <ImagePage 
-          page={page} 
-          pageNum={i + 1}
-          isOwner={isOwner}
-          onRegeneratePage={onRegeneratePage}
-          isRegenerating={regeneratingPageNumber === page.pageNumber}
-          isMobile={isMobile}
-          zoom={imageZoom}
-          position={imagePosition}
-        />
-      );
-      
-      const textContent = (
-        <TextPage 
-          page={page} 
-          author={author} 
-          pageNum={i + 1} 
-          onTurn={goToNextPage}
-          isOwner={isOwner}
-          onRegeneratePage={onRegeneratePage}
-          isRegenerating={regeneratingPageNumber === page.pageNumber}
-          isMobile={isMobile}
-        />
-      );
-
-      sheets.push({ front: imageContent, back: textContent });
-    }
-
-    // 4. End sheet: back cover
+    // Final sheet: blank front, back cover back
     sheets.push({
       front: blankPage,
       back: <EndPage totalPages={numPages * 2} backCoverImageUrl={backCoverImageUrl} />,
