@@ -2495,6 +2495,39 @@ Sitemap: ${baseUrl}/sitemap.xml`;
     }
   });
 
+  // Update foreword/dedication for a storybook (requires authentication and ownership)
+  app.patch("/api/storybooks/:id/foreword", isAuthenticated, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const { foreword } = req.body;
+      const userId = req.user.id || req.user.claims?.sub;
+
+      // Validate foreword length (max 500 characters)
+      if (foreword && foreword.length > 500) {
+        return res.status(400).json({ message: "Foreword must be 500 characters or less" });
+      }
+
+      // Get the storybook
+      const storybook = await storage.getStorybook(id);
+      if (!storybook) {
+        return res.status(404).json({ message: "Storybook not found" });
+      }
+
+      // Check ownership
+      if (storybook.userId !== userId) {
+        return res.status(403).json({ message: "You don't have permission to modify this storybook" });
+      }
+
+      // Update the foreword
+      await storage.updateStorybookForeword(id, foreword || null);
+
+      res.json({ message: "Foreword updated successfully", foreword });
+    } catch (error: any) {
+      console.error("Update foreword error:", error);
+      res.status(500).json({ message: "Failed to update foreword" });
+    }
+  });
+
   // Regenerate a single page in a storybook (requires authentication and ownership)
   app.post("/api/storybooks/:id/regenerate-page", isAuthenticated, async (req: any, res) => {
     try {
