@@ -4156,6 +4156,71 @@ Sitemap: ${baseUrl}/sitemap.xml`;
         }
       }
 
+      // Handle digital purchases - charge immediately and mark as completed
+      const digitalPurchases = createdPurchases.filter(p => p.type === 'digital');
+      
+      if (digitalPurchases.length > 0) {
+        console.log(`[Cart Finalize] Processing ${digitalPurchases.length} digital purchase(s) - charging immediately`);
+        
+        try {
+          // Get user for Stripe customer
+          const user = await storage.getUser(userId);
+          if (!user) {
+            throw new Error('User not found');
+          }
+          
+          // Get or create Stripe customer
+          const customerId = await getOrCreateStripeCustomer(user);
+          
+          // Attach payment method to customer if not already attached
+          try {
+            await stripe.paymentMethods.attach(stripePaymentMethodId, {
+              customer: customerId,
+            });
+          } catch (error: any) {
+            // If payment method is already attached, that's fine
+            if (error.code !== 'resource_already_exists') {
+              throw error;
+            }
+          }
+          
+          // Calculate total for digital purchases
+          const digitalTotal = digitalPurchases.reduce((sum, p) => sum + parseInt(p.price), 0);
+          
+          // Create payment intent and charge for all digital purchases
+          const paymentIntent = await stripe.paymentIntents.create({
+            amount: digitalTotal,
+            currency: 'usd',
+            customer: customerId,
+            payment_method: stripePaymentMethodId,
+            confirm: true,
+            off_session: true,
+            metadata: {
+              userId,
+              orderReference,
+              productType: 'digital',
+              purchaseCount: digitalPurchases.length,
+            },
+          });
+          
+          // Update all digital purchases to completed status
+          for (const digitalPurchase of digitalPurchases) {
+            await storage.updatePurchaseStatus(digitalPurchase.id, 'completed', paymentIntent.id);
+          }
+          
+          console.log(`[Cart Finalize] Completed ${digitalPurchases.length} digital purchase(s), charged ${digitalTotal} cents`);
+        } catch (error) {
+          console.error(`[Cart Finalize] Failed to charge digital purchases:`, error);
+          
+          // Update digital purchases to failed status
+          for (const digitalPurchase of digitalPurchases) {
+            await storage.updatePurchaseStatus(digitalPurchase.id, 'failed', '');
+          }
+          
+          throw error;
+        }
+      }
+
       // Clear only the processed items from cart
       // If no shipping address was provided, only digital items were processed
       // Keep print items in cart for future purchase
