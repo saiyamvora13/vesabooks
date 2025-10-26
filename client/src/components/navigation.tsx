@@ -63,9 +63,11 @@ export default function Navigation() {
           {/* Logo - Optimized for mobile */}
           <Link href="/">
             <div className="flex items-center space-x-2 cursor-pointer" data-testid="link-home">
-              <div className="w-8 h-8 sm:w-10 sm:h-10 gradient-bg rounded-xl flex items-center justify-center">
-                <i className="fas fa-book-open text-[hsl(258,90%,20%)] text-sm sm:text-lg"></i>
-              </div>
+              <img 
+                src="/favicon.png" 
+                alt="StoryBook AI Logo" 
+                className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl"
+              />
               <span className="text-base sm:text-xl font-bold font-display gradient-text">StoryBook AI</span>
             </div>
           </Link>
