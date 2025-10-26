@@ -357,17 +357,29 @@ export function FlipbookViewer({ pages, title, author = "AI Author", coverImageU
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
-  // Call onPageChange callback when page changes
-  useEffect(() => {
-    if (onPageChange && currentPage >= 0) {
-      onPageChange(currentPage);
-    }
-  }, [currentPage, onPageChange]);
-
   const totalMobilePages = (pages.length * 2) + 1; // cover + (text + image) per story page
   
-  const goToPrevPage = useCallback(() => setCurrentPage((p) => Math.max(0, p - 1)), []);
-  const goToNextPage = useCallback(() => setCurrentPage((p) => p + 1), []);
+  const goToPrevPage = useCallback(() => {
+    setCurrentPage((p) => {
+      const newPage = Math.max(0, p - 1);
+      // Only trigger onPageChange if page actually changed
+      if (newPage !== p && onPageChange) {
+        onPageChange(newPage);
+      }
+      return newPage;
+    });
+  }, [onPageChange]);
+  
+  const goToNextPage = useCallback(() => {
+    setCurrentPage((p) => {
+      const newPage = p + 1;
+      // Only trigger onPageChange if page actually changed
+      if (newPage !== p && onPageChange) {
+        onPageChange(newPage);
+      }
+      return newPage;
+    });
+  }, [onPageChange]);
 
   const handleKeyDown = useCallback((event: KeyboardEvent) => {
     if (event.key === 'ArrowLeft') goToPrevPage();
