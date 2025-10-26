@@ -86,6 +86,13 @@ export default function Signup() {
       <Card className="w-full max-w-sm sm:max-w-md rounded-2xl shadow-xl">
         <CardContent className="p-6 sm:p-8">
           <div className="text-center mb-8 sm:mb-10">
+            <div className="flex justify-center mb-4">
+              <img 
+                src="/favicon.png" 
+                alt="StoryBook AI Logo" 
+                className="w-16 h-16 rounded-xl"
+              />
+            </div>
             <h1 className="text-2xl sm:text-3xl font-bold mb-2">{t('auth.signup.title')}</h1>
             <p className="text-sm sm:text-base text-muted-foreground">
               {t('auth.signup.subtitle')}
