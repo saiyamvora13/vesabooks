@@ -27,7 +27,7 @@ import { generateInvoicePDF } from "./services/invoicePdf";
 import { generateOrderReference } from "./utils/orderReference";
 import { db } from "./db";
 import { eq } from "drizzle-orm";
-import { sendPrintOrderProcessing } from "./services/resend-email";
+import { sendPrintOrderProcessing, sendPrintOrderProcessingEmailHelper } from "./services/resend-email";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', {
   apiVersion: "2025-09-30.clover",
@@ -4247,52 +4247,12 @@ Sitemap: ${baseUrl}/sitemap.xml`;
               }
               
               try {
-                const storybook = await storage.getStorybook(purchase.storybookId);
-                if (!storybook) {
-                  console.error(`[Prodigi Two-Phase] Storybook ${purchase.storybookId} not found for email`);
-                  continue;
-                }
-                
-                // Build cover URL
-                const baseUrl = process.env.REPLIT_DOMAINS 
-                  ? `https://${process.env.REPLIT_DOMAINS.split(',')[0]}`
-                  : 'http://localhost:5000';
-                const coverUrl = storybook.coverImageUrl || `${baseUrl}/api/storybooks/${storybook.id}/preview`;
-                
-                // Build address string from shipping address
-                const addressParts = [
-                  shippingAddress.addressLine1,
-                  shippingAddress.addressLine2,
-                  shippingAddress.city,
-                  shippingAddress.state,
-                  shippingAddress.postalCode,
-                  shippingAddress.countryCode
-                ].filter(Boolean);
-                const addressString = addressParts.join(', ');
-                
-                // Get user for email
-                const user = await storage.getUser(userId);
-                if (!user) {
-                  console.error(`[Prodigi Two-Phase] User ${userId} not found for email`);
-                  continue;
-                }
-                
-                const recipientEmail = shippingAddress.email || user.email;
-                const recipientName = shippingAddress.name || user.firstName || user.email?.split('@')[0] || 'Customer';
-                
-                await sendPrintOrderProcessing({
-                  recipientEmail,
-                  recipientName,
-                  storybookTitle: storybook.title,
-                  storybookCoverUrl: coverUrl,
-                  orderId: orderReference,
-                  bookSize: purchase.bookSize || 'A5 Portrait',
-                  shippingMethod: 'Standard',
-                  recipientAddress: addressString,
-                  estimatedProduction: '5-7 business days',
+                await sendPrintOrderProcessingEmailHelper({
+                  purchase,
+                  orderReference,
+                  shippingAddress,
+                  userId,
                 });
-                
-                console.log(`[Prodigi Two-Phase] Order processing email sent to ${recipientEmail} for purchase ${purchaseId}`);
               } catch (emailError) {
                 console.error(`[Prodigi Two-Phase] Failed to send order processing email for purchase ${purchaseId}:`, emailError);
                 // Don't fail the checkout if email fails
