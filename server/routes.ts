@@ -3,7 +3,7 @@ import express from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { generateStoryFromPrompt, generateStoryInBatches, generateIllustration, optimizeImageForWeb } from "./services/gemini";
-import { createStorybookSchema, type StoryGenerationProgress, type Purchase, type InsertPurchase, type User, type AdminUser } from "@shared/schema";
+import { createStorybookSchema, type StoryGenerationProgress, type Purchase, type InsertPurchase, type User, type AdminUser, purchases } from "@shared/schema";
 import { storybookGenerationLimiter } from "./utils/concurrencyLimiter";
 import { randomUUID, randomBytes } from "crypto";
 import * as fs from "fs";
@@ -25,6 +25,8 @@ import { prodigiService } from "./services/prodigi";
 import { ObjectStorageService } from "./objectStorage";
 import { generateInvoicePDF } from "./services/invoicePdf";
 import { generateOrderReference } from "./utils/orderReference";
+import { db } from "./db";
+import { eq } from "drizzle-orm";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', {
   apiVersion: "2025-09-30.clover",
@@ -5004,7 +5006,86 @@ Sitemap: ${baseUrl}/sitemap.xml`;
                 
                 console.log(`[Prodigi Two-Phase] ✅ Orders updated to 'pending' status`);
                 
-                // TODO: Send confirmation email to customer
+                // Send confirmation emails to customers
+                const { sendPrintOrderConfirmation } = await import("./services/resend-email");
+                
+                for (const printOrder of ordersToCharge) {
+                  try {
+                    // Get purchase by ID
+                    const purchaseResults = await db.select().from(purchases).where(eq(purchases.id, printOrder.purchaseId));
+                    const purchase = purchaseResults[0];
+                    
+                    if (!purchase) {
+                      console.error(`[Prodigi Two-Phase] Purchase ${printOrder.purchaseId} not found for email`);
+                      continue;
+                    }
+                    
+                    // Get user details
+                    if (!purchase.userId) {
+                      console.error(`[Prodigi Two-Phase] No userId for purchase ${printOrder.purchaseId}`);
+                      continue;
+                    }
+                    
+                    const user = await storage.getUser(purchase.userId);
+                    if (!user || !user.email) {
+                      console.error(`[Prodigi Two-Phase] User ${purchase.userId} not found or has no email`);
+                      continue;
+                    }
+                    
+                    // Get storybook details
+                    const storybook = await storage.getStorybook(purchase.storybookId);
+                    if (!storybook) {
+                      console.error(`[Prodigi Two-Phase] Storybook ${purchase.storybookId} not found for email`);
+                      continue;
+                    }
+                    
+                    // Extract recipient details from webhookData (Prodigi order object)
+                    // webhookData is stored as JSON, parse it if it's a string
+                    const prodigiOrderData = typeof printOrder.webhookData === 'string' 
+                      ? JSON.parse(printOrder.webhookData) 
+                      : printOrder.webhookData;
+                    const recipient = prodigiOrderData?.recipient || {};
+                    const recipientAddress = recipient.address;
+                    
+                    // Build address string
+                    const addressParts = [
+                      recipientAddress?.line1,
+                      recipientAddress?.line2,
+                      recipientAddress?.townOrCity,
+                      recipientAddress?.stateOrCounty,
+                      recipientAddress?.postalOrZipCode,
+                      recipientAddress?.countryCode
+                    ].filter(Boolean);
+                    const addressString = addressParts.join(', ');
+                    
+                    // Get base URL for cover image
+                    const baseUrl = process.env.REPLIT_DOMAINS 
+                      ? `https://${process.env.REPLIT_DOMAINS.split(',')[0]}`
+                      : 'http://localhost:5000';
+                    const coverUrl = storybook.coverImageUrl || `${baseUrl}/api/storybooks/${storybook.id}/preview`;
+                    
+                    // Send confirmation email (use recipient email from Prodigi order, fallback to user email)
+                    const recipientEmail = recipient.email || user.email;
+                    const recipientName = recipient.name || user.firstName || user.email?.split('@')[0] || 'Customer';
+                    
+                    await sendPrintOrderConfirmation({
+                      recipientEmail,
+                      recipientName,
+                      storybookTitle: storybook.title,
+                      storybookCoverUrl: coverUrl,
+                      orderId: purchase.orderReference || printOrder.prodigiOrderId || 'N/A',
+                      bookSize: purchase.bookSize || 'A5 Portrait',
+                      shippingMethod: prodigiOrderData?.shippingMethod || 'Standard',
+                      recipientAddress: addressString,
+                      estimatedProduction: '3-5 business days',
+                    });
+                    
+                    console.log(`[Prodigi Two-Phase] ✅ Confirmation email sent to ${recipientEmail}`);
+                  } catch (emailError) {
+                    console.error(`[Prodigi Two-Phase] Failed to send email for order ${printOrder.id}:`, emailError);
+                    // Don't fail the webhook if email fails
+                  }
+                }
               } else {
                 throw new Error(`Payment failed with status: ${paymentIntent.status}`);
               }

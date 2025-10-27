@@ -17,6 +17,7 @@ import { SEO } from "@/components/SEO";
 import { useState, useEffect, useRef } from "react";
 import { BOOK_SIZES, getBookSizesByOrientation, type BookOrientation } from "@shared/bookSizes";
 import { NewCheckoutDialog } from "@/components/cart/NewCheckoutDialog";
+import { clearCart } from "@/lib/cartUtils";
 
 
 interface EnrichedCartItem extends CartItem {
@@ -392,6 +393,9 @@ export default function Cart() {
   };
 
   const handleCheckoutSuccess = () => {
+    // Clear cart after successful order placement
+    clearCart();
+    
     // Redirect to orders page to view the order
     setTimeout(() => {
       setLocation('/orders');
