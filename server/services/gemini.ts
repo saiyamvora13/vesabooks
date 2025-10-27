@@ -94,11 +94,12 @@ export async function* generateStoryInBatches(
   pagesPerBook: number = 3,
   illustrationStyle: string = "vibrant and colorful children's book illustration",
   age?: string,
-  author?: string
+  author?: string,
+  characterDescriptions: string[] = []
 ): AsyncGenerator<{ batch: number; story: GeneratedStory; isComplete: boolean }> {
   // For books with 2 or fewer pages, don't batch - just generate everything at once
   if (pagesPerBook <= 2) {
-    const fullStory = await generateStoryFromPrompt(prompt, inspirationImagePaths, pagesPerBook, illustrationStyle, age, author);
+    const fullStory = await generateStoryFromPrompt(prompt, inspirationImagePaths, pagesPerBook, illustrationStyle, age, author, characterDescriptions);
     yield { batch: 1, story: fullStory, isComplete: true };
     return;
   }
@@ -113,7 +114,7 @@ export async function* generateStoryInBatches(
 
   // Generate first batch
   console.time('[Batched Generation] Batch 1');
-  const batch1Story = await generateStoryFromPrompt(prompt, inspirationImagePaths, batch1Size, illustrationStyle, age, author);
+  const batch1Story = await generateStoryFromPrompt(prompt, inspirationImagePaths, batch1Size, illustrationStyle, age, author, characterDescriptions);
   console.timeEnd('[Batched Generation] Batch 1');
   
   yield { batch: 1, story: batch1Story, isComplete: false };
@@ -136,7 +137,8 @@ Generate the REMAINING ${batch2Size} pages (pages ${batch1Size + 1}-${pagesPerBo
     batch2Size, 
     illustrationStyle, 
     age, 
-    author
+    author,
+    characterDescriptions
   );
   console.timeEnd('[Batched Generation] Batch 2');
 
