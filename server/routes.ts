@@ -4455,6 +4455,125 @@ Sitemap: ${baseUrl}/sitemap.xml`;
         } catch (invoiceError) {
           console.error(`Failed to send invoice email for payment intent ${paymentIntent.id}:`, invoiceError);
         }
+      } else if (event.type === 'charge.refunded') {
+        const charge = event.data.object as Stripe.Charge;
+        const paymentIntentId = charge.payment_intent as string;
+        
+        console.log(`[Stripe Webhook] Received charge.refunded event for payment intent: ${paymentIntentId}`);
+        
+        if (!paymentIntentId) {
+          console.error("Missing payment_intent in charge:", charge.id);
+          return res.status(400).json({ message: "Missing payment_intent" });
+        }
+        
+        // Get the refund details - there can be multiple refunds for a charge
+        const refunds = charge.refunds?.data || [];
+        const totalRefunded = charge.amount_refunded || 0;
+        const chargeAmount = charge.amount || 0;
+        const isFullyRefunded = totalRefunded >= chargeAmount;
+        
+        // Get the latest refund for details
+        const latestRefund = refunds[refunds.length - 1];
+        
+        if (latestRefund) {
+          console.log(`[Stripe Webhook] Processing refund ${latestRefund.id}: Amount: ${latestRefund.amount}, Reason: ${latestRefund.reason}`);
+          
+          // Update all purchases associated with this payment intent
+          const purchases = await storage.getPurchasesByPaymentIntent(paymentIntentId);
+          
+          if (purchases.length === 0) {
+            console.warn(`[Stripe Webhook] No purchases found for payment intent ${paymentIntentId}`);
+          }
+          
+          for (const purchase of purchases) {
+            try {
+              // Determine new status based on refund amount
+              const newStatus = isFullyRefunded ? 'refunded' : 'partially_refunded';
+              
+              await storage.updatePurchaseRefund(purchase.id, {
+                status: newStatus,
+                refundAmount: latestRefund.amount.toString(),
+                refundedAt: new Date(latestRefund.created * 1000), // Convert Unix timestamp to Date
+                refundReason: latestRefund.reason || 'requested_by_customer',
+                stripeRefundId: latestRefund.id,
+              });
+              
+              console.log(`[Stripe Webhook] Updated purchase ${purchase.id} to ${newStatus} status`);
+              
+              // Send refund confirmation email
+              const user = await storage.getUser(purchase.userId!);
+              
+              if (user && user.email) {
+                const userName = `${user.firstName || ''} ${user.lastName || ''}`.trim() || 'Customer';
+                const { sendRefundConfirmationEmail } = await import("./services/resend-email");
+                const language = 'en'; // Default to English for webhooks
+                
+                await sendRefundConfirmationEmail(
+                  user.email,
+                  userName,
+                  purchase,
+                  latestRefund.amount,
+                  latestRefund.reason || 'requested_by_customer',
+                  language
+                );
+                
+                console.log(`[Stripe Webhook] Sent refund confirmation email to ${user.email}`);
+              }
+            } catch (updateError) {
+              console.error(`[Stripe Webhook] Failed to update purchase ${purchase.id}:`, updateError);
+            }
+          }
+        }
+      } else if (event.type === 'refund.created') {
+        const refund = event.data.object as Stripe.Refund;
+        const paymentIntentId = refund.payment_intent as string;
+        
+        console.log(`[Stripe Webhook] Received refund.created event: ${refund.id} for payment intent: ${paymentIntentId}`);
+        
+        // This event is similar to charge.refunded but provides refund-specific details
+        // We'll handle it the same way
+        if (!paymentIntentId) {
+          console.error("Missing payment_intent in refund:", refund.id);
+          return res.status(400).json({ message: "Missing payment_intent" });
+        }
+        
+        // Update all purchases associated with this payment intent
+        const purchases = await storage.getPurchasesByPaymentIntent(paymentIntentId);
+        
+        if (purchases.length === 0) {
+          console.warn(`[Stripe Webhook] No purchases found for payment intent ${paymentIntentId}`);
+        }
+        
+        for (const purchase of purchases) {
+          try {
+            // Check if this refund was already processed
+            if (purchase.stripeRefundId === refund.id) {
+              console.log(`[Stripe Webhook] Refund ${refund.id} already processed for purchase ${purchase.id} - skipping`);
+              continue;
+            }
+            
+            await storage.updatePurchaseRefund(purchase.id, {
+              status: refund.status === 'succeeded' ? 'refunded' : 'pending',
+              refundAmount: refund.amount.toString(),
+              refundedAt: new Date(refund.created * 1000),
+              refundReason: refund.reason || 'requested_by_customer',
+              stripeRefundId: refund.id,
+            });
+            
+            console.log(`[Stripe Webhook] Updated purchase ${purchase.id} with refund ${refund.id}`);
+          } catch (updateError) {
+            console.error(`[Stripe Webhook] Failed to update purchase ${purchase.id}:`, updateError);
+          }
+        }
+      } else if (event.type === 'refund.failed') {
+        const refund = event.data.object as Stripe.Refund;
+        const paymentIntentId = refund.payment_intent as string;
+        
+        console.error(`[Stripe Webhook] Refund FAILED: ${refund.id} for payment intent: ${paymentIntentId}`);
+        console.error(`[Stripe Webhook] Failure reason:`, refund.failure_reason);
+        
+        // Log this for manual investigation but don't change purchase status
+        // Admin will need to handle failed refunds manually in Stripe Dashboard
       }
 
       res.json({ received: true });
