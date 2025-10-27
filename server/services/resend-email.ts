@@ -276,7 +276,7 @@ export async function sendPasswordResetEmail(
   });
 }
 
-export async function sendPrintOrderConfirmation(params: {
+export async function sendPrintOrderProcessing(params: {
   recipientEmail: string;
   recipientName: string;
   storybookTitle: string;
@@ -316,7 +316,7 @@ export async function sendPrintOrderConfirmation(params: {
               <!-- Header -->
               <tr>
                 <td style="background-color: hsl(258, 90%, 20%); color: #ffffff; padding: 40px 30px; text-align: center; border-radius: 8px 8px 0 0;">
-                  <h1 style="margin: 0; font-size: 32px; font-weight: 600;">Order Confirmed! ✓</h1>
+                  <h1 style="margin: 0; font-size: 32px; font-weight: 600;">Order Being Processed ⏳</h1>
                   <p style="margin: 15px 0 0 0; font-size: 16px; opacity: 0.9;">Order #${orderId.slice(-8).toUpperCase()}</p>
                 </td>
               </tr>
@@ -328,7 +328,7 @@ export async function sendPrintOrderConfirmation(params: {
                     Hi ${recipientName},
                   </p>
                   <p style="margin: 15px 0 0 0; color: #374151; font-size: 16px; line-height: 1.6;">
-                    Thank you for your print order! We've received your order and it's being prepared for production.
+                    Thank you for your order! We've received your request and are processing it now. You'll receive another confirmation email once payment is processed and your book goes into production.
                   </p>
                 </td>
               </tr>
@@ -437,7 +437,140 @@ export async function sendPrintOrderConfirmation(params: {
     from: 'orders@vesabooks.com',
     replyTo: 'support@vesabooks.com',
     to: recipientEmail,
-    subject: `Order Confirmed - ${storybookTitle} - Print Edition`,
+    subject: `Order Received - ${storybookTitle} - Print Edition`,
+    html: htmlBody,
+  });
+}
+
+export async function sendPrintOrderConfirmation(params: {
+  recipientEmail: string;
+  recipientName: string;
+  storybookTitle: string;
+  storybookCoverUrl: string;
+  orderId: string;
+  bookSize: string;
+  shippingMethod: string;
+  recipientAddress: string;
+  estimatedProduction: string;
+}): Promise<void> {
+  const { client, fromEmail } = await getUncachableResendClient();
+  
+  const {
+    recipientEmail,
+    recipientName,
+    storybookTitle,
+    storybookCoverUrl,
+    orderId,
+    bookSize,
+    shippingMethod,
+    recipientAddress,
+    estimatedProduction,
+  } = params;
+  
+  const htmlBody = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    </head>
+    <body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f5f5f5;">
+      <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f5f5f5;">
+        <tr>
+          <td align="center" style="padding: 40px 20px;">
+            <table width="600" cellpadding="0" cellspacing="0" style="background-color: white; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); max-width: 600px;">
+              <!-- Header -->
+              <tr>
+                <td style="background-color: hsl(258, 90%, 20%); color: #ffffff; padding: 40px 30px; text-align: center; border-radius: 8px 8px 0 0;">
+                  <h1 style="margin: 0; font-size: 32px; font-weight: 600;">Payment Processed - In Production! ✓</h1>
+                  <p style="margin: 15px 0 0 0; font-size: 16px; opacity: 0.9;">Order #${orderId.slice(-8).toUpperCase()}</p>
+                </td>
+              </tr>
+              
+              <!-- Greeting -->
+              <tr>
+                <td style="padding: 30px 30px 20px 30px;">
+                  <p style="margin: 0; color: #374151; font-size: 16px; line-height: 1.6;">
+                    Hi ${recipientName},
+                  </p>
+                  <p style="margin: 15px 0 0 0; color: #374151; font-size: 16px; line-height: 1.6;">
+                    Great news! Your payment has been successfully processed and your personalized storybook is now in production. Your book is being professionally printed and bound.
+                  </p>
+                </td>
+              </tr>
+              
+              <!-- Storybook Info -->
+              <tr>
+                <td style="padding: 20px 30px;">
+                  <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f9f7f3; border-radius: 8px; overflow: hidden;">
+                    <tr>
+                      <td align="center" style="padding: 20px;">
+                        <img src="${storybookCoverUrl}" alt="${storybookTitle}" style="max-width: 200px; height: auto; border-radius: 4px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);" />
+                        <h2 style="margin: 20px 0 0 0; color: #111827; font-size: 20px; font-weight: 600;">${storybookTitle}</h2>
+                      </td>
+                    </tr>
+                  </table>
+                </td>
+              </tr>
+              
+              <!-- Order Details -->
+              <tr>
+                <td style="padding: 20px 30px;">
+                  <h3 style="margin: 0 0 15px 0; color: #111827; font-size: 18px; font-weight: 600;">Order Details</h3>
+                  <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border: 2px solid hsl(258, 90%, 20%); border-radius: 8px;">
+                    <tr>
+                      <td style="padding: 15px 20px; border-bottom: 1px solid #e5e7eb;">
+                        <p style="margin: 0 0 5px 0; color: #6b7280; font-size: 14px;">Book Size</p>
+                        <p style="margin: 0; color: #111827; font-size: 16px; font-weight: 500;">${bookSize}</p>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td style="padding: 15px 20px; border-bottom: 1px solid #e5e7eb;">
+                        <p style="margin: 0 0 5px 0; color: #6b7280; font-size: 14px;">Shipping Method</p>
+                        <p style="margin: 0; color: #111827; font-size: 16px; font-weight: 500;">${shippingMethod}</p>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td style="padding: 15px 20px; border-bottom: 1px solid #e5e7eb;">
+                        <p style="margin: 0 0 5px 0; color: #6b7280; font-size: 14px;">Shipping Address</p>
+                        <p style="margin: 0; color: #111827; font-size: 14px; line-height: 1.5;">${recipientAddress}</p>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td style="padding: 15px 20px;">
+                        <p style="margin: 0 0 5px 0; color: #6b7280; font-size: 14px;">Estimated Delivery</p>
+                        <p style="margin: 0; color: #111827; font-size: 16px; font-weight: 500;">${estimatedProduction}</p>
+                      </td>
+                    </tr>
+                  </table>
+                </td>
+              </tr>
+              
+              <!-- Footer -->
+              <tr>
+                <td style="padding: 20px 30px; border-top: 1px solid #e5e7eb; text-align: center;">
+                  <p style="margin: 0 0 10px 0; color: #374151; font-size: 14px;">
+                    Your order is now being professionally produced!<br />
+                    You'll receive a shipping notification once your book is on its way.
+                  </p>
+                  <p style="margin: 15px 0 0 0; color: #9ca3af; font-size: 12px;">
+                    Questions? Contact us at <a href="mailto:support@vesabooks.com" style="color: hsl(258, 90%, 20%); text-decoration: none;">support@vesabooks.com</a>
+                  </p>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+      </table>
+    </body>
+    </html>
+  `;
+
+  await client.emails.send({
+    from: 'orders@vesabooks.com',
+    replyTo: 'support@vesabooks.com',
+    to: recipientEmail,
+    subject: `Payment Processed - ${storybookTitle} Now in Production`,
     html: htmlBody,
   });
 }
