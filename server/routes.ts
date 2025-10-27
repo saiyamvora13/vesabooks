@@ -3,7 +3,7 @@ import express from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { generateStoryFromPrompt, generateStoryInBatches, generateIllustration, optimizeImageForWeb } from "./services/gemini";
-import { createStorybookSchema, type StoryGenerationProgress, type Purchase, type InsertPurchase, type User, type AdminUser, purchases } from "@shared/schema";
+import { createStorybookSchema, type StoryGenerationProgress, type Purchase, type InsertPurchase, type User, type AdminUser, type Storybook, purchases } from "@shared/schema";
 import { storybookGenerationLimiter } from "./utils/concurrencyLimiter";
 import { randomUUID, randomBytes } from "crypto";
 import * as fs from "fs";
@@ -54,6 +54,74 @@ async function getOrCreateStripeCustomer(user: User): Promise<string> {
   console.log(`[Stripe] Created new customer ${customer.id} for user ${user.id}`);
   
   return customer.id;
+}
+
+/**
+ * Shared helper function to generate print-ready PDF and upload to object storage.
+ * Used by both cart checkout and direct purchase flows.
+ * 
+ * This function:
+ * 1. Generates print-ready PDF with optional spine customization
+ * 2. Saves PDF to temporary file
+ * 3. Uploads to object storage
+ * 4. Cleans up temporary file
+ * 5. Returns both storage path and full URL
+ * 
+ * @param params.storybook - The storybook to generate PDF for
+ * @param params.purchaseId - The purchase ID (used for filename)
+ * @param params.bookSize - The book size (e.g., 'a5-portrait', 'a4-portrait')
+ * @param params.spineText - Optional spine text
+ * @param params.spineTextColor - Optional spine text color
+ * @param params.spineBackgroundColor - Optional spine background color
+ * @returns Promise<{ storagePath: string; fullUrl: string }>
+ */
+async function generateAndUploadPrintPDF(params: {
+  storybook: Storybook;
+  purchaseId: string;
+  bookSize: string;
+  spineText?: string;
+  spineTextColor?: string;
+  spineBackgroundColor?: string;
+}): Promise<{ storagePath: string; fullUrl: string }> {
+  const { storybook, purchaseId, bookSize, spineText, spineTextColor, spineBackgroundColor } = params;
+  
+  console.log(`[PDF Helper] Generating PDF for purchase ${purchaseId}, book size: ${bookSize}`);
+  
+  // Initialize object storage
+  const objectStorage = new ObjectStorageService();
+  
+  // Generate print-ready PDF with optional spine customization
+  const pdfBuffer = await generatePrintReadyPDF(
+    storybook, 
+    bookSize,
+    spineText,
+    spineTextColor,
+    spineBackgroundColor
+  );
+  
+  // Save PDF to temporary file
+  const tempPdfPath = path.join(process.cwd(), 'uploads', `print-${purchaseId}-${Date.now()}.pdf`);
+  fs.writeFileSync(tempPdfPath, pdfBuffer);
+  
+  // Upload PDF to object storage
+  const storagePath = await objectStorage.uploadFile(
+    tempPdfPath,
+    `print-pdfs/${purchaseId}.pdf`,
+    true
+  );
+  
+  // Clean up temporary file
+  fs.unlinkSync(tempPdfPath);
+  
+  console.log(`[PDF Helper] PDF uploaded to ${storagePath}`);
+  
+  // Build full URL for Prodigi
+  const baseUrl = process.env.REPLIT_DOMAINS 
+    ? `https://${process.env.REPLIT_DOMAINS.split(',')[0]}`
+    : 'http://localhost:5000';
+  const fullUrl = `${baseUrl}${storagePath}`;
+  
+  return { storagePath, fullUrl };
 }
 
 // Rate limiting configurations for authentication endpoints
