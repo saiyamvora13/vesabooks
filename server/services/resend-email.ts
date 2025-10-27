@@ -666,3 +666,130 @@ export async function sendOrderCancelledEmail(
   
   console.log(`✅ Order cancellation email sent to ${userEmail} for order ${printOrderId}`);
 }
+
+export async function sendRefundConfirmationEmail(
+  userEmail: string,
+  userName: string,
+  purchase: Purchase,
+  refundAmount: number,
+  refundReason: string,
+  language: string = 'en'
+): Promise<void> {
+  const { client, fromEmail } = await getUncachableResendClient();
+  
+  const storybook = await storage.getStorybook(purchase.storybookId);
+  const storybookTitle = storybook?.title || 'Unknown Storybook';
+  const orderRef = purchase.orderReference || purchase.stripePaymentIntentId;
+  const orderNumber = orderRef.slice(-8).toUpperCase();
+  
+  const formatPrice = (cents: number) => `$${(cents / 100).toFixed(2)}`;
+  
+  // Map refund reason to user-friendly text
+  const refundReasonText: { [key: string]: string } = {
+    'requested_by_customer': 'Customer request',
+    'duplicate': 'Duplicate charge',
+    'fraudulent': 'Fraudulent transaction'
+  };
+  const reasonText = refundReasonText[refundReason] || refundReason;
+  
+  const refundDate = new Date().toLocaleDateString('en-US', { 
+    year: 'numeric', 
+    month: 'long', 
+    day: 'numeric' 
+  });
+  
+  const htmlBody = `
+    <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 650px; margin: 0 auto; padding: 20px; background-color: #ffffff;">
+      <div style="background-color: #059669; color: #ffffff; padding: 30px; text-align: center; border-radius: 8px 8px 0 0;">
+        <h1 style="margin: 0; font-size: 32px; font-weight: 600;">Refund Processed</h1>
+        <p style="margin: 10px 0 0 0; font-size: 18px; opacity: 0.9;">Order #${orderNumber}</p>
+      </div>
+      
+      <div style="background-color: #f9f7f3; padding: 25px; border-radius: 0 0 8px 8px;">
+        <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
+          Hi ${userName},
+        </p>
+        
+        <p style="color: #374151; font-size: 16px; line-height: 1.6; margin: 0 0 20px 0;">
+          A refund for your order has been processed and will appear on your original payment method within 5-10 business days.
+        </p>
+      </div>
+      
+      <div style="margin-top: 30px;">
+        <table style="width: 100%; border-collapse: collapse; background-color: #ffffff; border: 2px solid #059669; border-radius: 8px; overflow: hidden;">
+          <thead>
+            <tr style="background-color: #059669; color: #ffffff;">
+              <th style="padding: 15px; text-align: left; font-weight: 600;">Refund Details</th>
+              <th style="padding: 15px; text-align: right; font-weight: 600;">Amount</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td style="padding: 12px 15px; border-bottom: 1px solid #e5e7eb; color: #374151;">
+                ${storybookTitle}<br>
+                <span style="font-size: 14px; color: #6b7280;">${purchase.type === 'digital' ? 'Digital Edition' : 'Print Edition'}</span>
+              </td>
+              <td style="padding: 12px 15px; border-bottom: 1px solid #e5e7eb; text-align: right; color: #374151;">
+                ${formatPrice(refundAmount)}
+              </td>
+            </tr>
+          </tbody>
+          <tfoot>
+            <tr style="background-color: #f9f7f3;">
+              <td style="padding: 15px; font-weight: 600; color: #111827; border-top: 2px solid #059669;">
+                Refund Date
+              </td>
+              <td style="padding: 15px; text-align: right; font-weight: 600; color: #111827; border-top: 2px solid #059669;">
+                ${refundDate}
+              </td>
+            </tr>
+            <tr style="background-color: #059669; color: #ffffff;">
+              <td style="padding: 15px; font-weight: 700; font-size: 18px;">
+                Total Refunded
+              </td>
+              <td style="padding: 15px; text-align: right; font-weight: 700; font-size: 18px;">
+                ${formatPrice(refundAmount)}
+              </td>
+            </tr>
+          </tfoot>
+        </table>
+      </div>
+      
+      <div style="margin-top: 30px; padding: 20px; background-color: #f9f7f3; border-radius: 8px;">
+        <p style="margin: 0 0 10px 0; color: #6b7280; font-size: 14px;">Refund Reason</p>
+        <p style="margin: 0; color: #111827; font-size: 16px; font-weight: 500;">${reasonText}</p>
+      </div>
+      
+      <div style="margin-top: 30px; padding: 20px; background-color: #ecfdf5; border-left: 4px solid #059669; border-radius: 4px;">
+        <p style="margin: 0; color: #065f46; font-size: 14px; line-height: 1.6;">
+          <strong>What happens next?</strong><br>
+          Your refund will be credited to your original payment method within 5-10 business days, depending on your financial institution.
+        </p>
+      </div>
+      
+      <div style="margin-top: 30px; padding: 20px; text-align: center; border-top: 1px solid #e5e7eb;">
+        <p style="margin: 0 0 10px 0; color: #374151; font-size: 14px;">
+          If you have questions about this refund, please contact our support team.
+        </p>
+        <p style="margin: 0; color: #6b7280; font-size: 14px;">
+          Thank you for using Vesa Books
+        </p>
+      </div>
+      
+      <div style="margin-top: 20px; padding: 15px; text-align: center;">
+        <p style="margin: 0; color: #9ca3af; font-size: 12px;">
+          This is an automated refund confirmation email.
+        </p>
+      </div>
+    </div>
+  `;
+
+  await client.emails.send({
+    from: fromEmail,
+    to: userEmail,
+    subject: `Refund Processed - Order #${orderNumber}`,
+    html: htmlBody,
+  });
+  
+  console.log(`✅ Refund confirmation email sent to ${userEmail} for order ${orderRef}`);
+}
