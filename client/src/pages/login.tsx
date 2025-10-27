@@ -13,6 +13,7 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Link } from "wouter";
 import { useTranslation } from 'react-i18next';
 import { SEO } from "@/components/SEO";
+import logoImage from "@/assets/logo.png";
 
 export default function Login() {
   const { t, i18n } = useTranslation();
@@ -77,7 +78,7 @@ export default function Login() {
           <div className="text-center mb-8 sm:mb-10">
             <div className="flex justify-center mb-4">
               <img 
-                src="/favicon.png" 
+                src={logoImage} 
                 alt="StoryBook AI Logo" 
                 className="w-16 h-16 rounded-xl"
               />

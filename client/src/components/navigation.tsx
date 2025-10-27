@@ -18,6 +18,7 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import LanguageSwitcher from "@/components/LanguageSwitcher";
 import { useTranslation } from "react-i18next";
 import type { CartItem } from "@shared/schema";
+import logoImage from "@/assets/logo.png";
 
 export default function Navigation() {
   const { t } = useTranslation();
@@ -64,7 +65,7 @@ export default function Navigation() {
           <Link href="/">
             <div className="flex items-center space-x-2 cursor-pointer" data-testid="link-home">
               <img 
-                src="/favicon.png" 
+                src={logoImage} 
                 alt="StoryBook AI Logo" 
                 className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl"
               />
