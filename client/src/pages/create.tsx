@@ -13,6 +13,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { FileUpload } from "@/components/ui/file-upload";
+import { FileUploadWithDescriptions, FileWithDescription } from "@/components/ui/file-upload-with-descriptions";
 import { ProgressTracker } from "@/components/ui/progress-tracker";
 import Navigation from "@/components/navigation";
 import { useToast } from "@/hooks/use-toast";
@@ -52,7 +53,10 @@ export default function Create() {
     illustrationStyle: z.string().default("vibrant and colorful children's book illustration"),
     customIllustrationStyle: z.string().optional(),
     foreword: z.string().max(500, "Foreword must be 500 characters or less").optional(),
-    images: z.array(z.instanceof(File)).min(0).max(5, t('common.validation.maxImagesExceeded')),
+    characterImages: z.array(z.object({
+      file: z.instanceof(File),
+      description: z.string(),
+    })).min(0).max(5, t('common.validation.maxImagesExceeded')),
   }).refine(
     (data) => {
       if (data.illustrationStyle === "custom") {
@@ -79,7 +83,7 @@ export default function Create() {
       illustrationStyle: "vibrant and colorful children's book illustration",
       customIllustrationStyle: "",
       foreword: "",
-      images: [],
+      characterImages: [],
     },
   });
 
@@ -109,8 +113,11 @@ export default function Create() {
       if (data.foreword) {
         formData.append("foreword", data.foreword);
       }
-      data.images.forEach(image => {
-        formData.append("images", image);
+      
+      // Append character images and their descriptions
+      data.characterImages.forEach((item, index) => {
+        formData.append("images", item.file);
+        formData.append(`characterDescriptions`, item.description);
       });
 
       // Get reCAPTCHA token for anonymous users
@@ -620,25 +627,29 @@ export default function Create() {
                     )}
                   />
 
-                  {/* Image Upload */}
+                  {/* Character Images Upload with Descriptions */}
                   <FormField
                     control={form.control}
-                    name="images"
+                    name="characterImages"
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel className="text-base sm:text-sm font-semibold flex items-center">
-                          <i className="fas fa-image text-secondary mr-2"></i>
-                          {t('storybook.create.images.label')}
-                          <span className="ml-auto text-muted-foreground font-normal text-xs sm:text-sm">{t('storybook.create.images.count')}</span>
+                          <i className="fas fa-users text-secondary mr-2"></i>
+                          Character Images
+                          <span className="ml-auto text-muted-foreground font-normal text-xs sm:text-sm">Optional • Up to 5 images</span>
                         </FormLabel>
+                        <div className="text-sm text-muted-foreground mb-2">
+                          <i className="fas fa-info-circle mr-1"></i>
+                          Upload images of characters and describe them so the AI knows who is who
+                        </div>
                         <FormControl>
-                          <FileUpload
+                          <FileUploadWithDescriptions
                             value={field.value}
                             onChange={field.onChange}
                             accept="image/png,image/jpeg"
                             maxFiles={5}
                             maxSize={10 * 1024 * 1024} // 10MB
-                            data-testid="file-upload-images"
+                            data-testid="file-upload-character-images"
                           />
                         </FormControl>
                         <FormMessage />
