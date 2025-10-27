@@ -106,16 +106,21 @@ export const purchases = pgTable("purchases", {
   price: numeric("price").notNull(),
   orderReference: text("order_reference"), // Clean order ID like ORDER-ABC12345
   stripePaymentIntentId: text("stripe_payment_intent_id").notNull(),
-  status: text("status").notNull().default('pending'),
+  status: text("status").notNull().default('pending'), // pending, completed, creating, refunded, partially_refunded
   bookSize: text("book_size").default('a5-portrait'),
   spineText: text("spine_text"),
   spineTextColor: text("spine_text_color").default('#000000'),
   spineBackgroundColor: text("spine_background_color").default('#FFFFFF'),
+  refundAmount: numeric("refund_amount"), // Amount refunded in cents
+  refundedAt: timestamp("refunded_at"), // When the refund was processed
+  refundReason: text("refund_reason"), // Reason from Stripe: requested_by_customer, duplicate, fraudulent
+  stripeRefundId: text("stripe_refund_id"), // Stripe refund ID for tracking
   createdAt: timestamp("created_at").defaultNow(),
 }, (table) => [
   index("idx_purchases_user_created").on(table.userId, table.createdAt),
   index("idx_purchases_storybook").on(table.storybookId),
   index("idx_purchases_order_reference").on(table.orderReference),
+  index("idx_purchases_status").on(table.status), // Add index for filtering by status
   unique().on(table.stripePaymentIntentId, table.storybookId, table.type),
   unique("uq_purchases_order_reference").on(table.orderReference),
 ]);
