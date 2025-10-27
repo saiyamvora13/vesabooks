@@ -3822,6 +3822,19 @@ Sitemap: ${baseUrl}/sitemap.xml`;
           });
 
           console.log(`[Direct Purchase] Print order created in 'creating' status for purchase ${purchase.id}`);
+          
+          // Send "Order Processing" email using shared helper
+          try {
+            await sendPrintOrderProcessingEmailHelper({
+              purchase,
+              orderReference,
+              shippingAddress,
+              userId,
+            });
+          } catch (emailError) {
+            console.error(`[Direct Purchase] Failed to send order processing email:`, emailError);
+            // Don't fail the purchase if email fails
+          }
         } catch (error) {
           console.error(`[Direct Purchase] Failed to create print order:`, error);
           
