@@ -1816,7 +1816,7 @@ Sitemap: ${baseUrl}/sitemap.xml`;
     },
     async (req: any, res) => {
       try {
-        const { prompt, author, age, illustrationStyle, foreword } = req.body;
+        const { prompt, author, age, illustrationStyle, foreword, characterDescriptions } = req.body;
         const files = req.files as Express.Multer.File[] | undefined;
         
         // Determine user ID (authenticated or null for anonymous)
@@ -1843,6 +1843,11 @@ Sitemap: ${baseUrl}/sitemap.xml`;
         // Images are now optional - handle empty or undefined files
         const imagePaths = files ? files.map(f => f.path) : [];
         const imageFilenames = files ? files.map(f => f.filename) : [];
+        
+        // Parse character descriptions (sent as array from FormData)
+        const characterDescArray = characterDescriptions 
+          ? (Array.isArray(characterDescriptions) ? characterDescriptions : [characterDescriptions])
+          : [];
 
         // Use provided illustration style or default
         const finalIllustrationStyle = illustrationStyle || "vibrant and colorful children's book illustration";
@@ -1895,8 +1900,8 @@ Sitemap: ${baseUrl}/sitemap.xml`;
         const updatedStats = storybookGenerationLimiter.getStats();
         console.log(`[Concurrency] ✅ Slot acquired (${updatedStats.active}/${updatedStats.max} active)${userId ? ` - User: ${userId}` : ' - Anonymous'}`);
 
-        // Start generation in background with userId (null for anonymous), author, age, pagesPerBook, illustrationStyle, and foreword
-        generateStorybookAsync(sessionId, userId, prompt, authorName, age, imagePaths, validatedPagesPerBook, finalIllustrationStyle, foreword)
+        // Start generation in background with userId (null for anonymous), author, age, pagesPerBook, illustrationStyle, foreword, and character descriptions
+        generateStorybookAsync(sessionId, userId, prompt, authorName, age, imagePaths, validatedPagesPerBook, finalIllustrationStyle, foreword, characterDescArray)
           .catch((error: unknown) => {
             console.error("Story generation failed:", error);
             const errorMessage = error instanceof Error ? error.message : 'Unknown error';
@@ -5650,7 +5655,8 @@ async function generateStorybookAsync(
   imagePaths: string[],
   pagesPerBook: number = 3,
   illustrationStyle: string = "vibrant and colorful children's book illustration",
-  foreword?: string
+  foreword?: string,
+  characterDescriptions: string[] = []
 ): Promise<void> {
   try {
     // Step 1: Processing images
@@ -5668,7 +5674,7 @@ async function generateStorybookAsync(
     });
 
     console.time('📝 Story generation');
-    const generatedStory = await generateStoryFromPrompt(prompt, imagePaths, pagesPerBook, illustrationStyle, age, author);
+    const generatedStory = await generateStoryFromPrompt(prompt, imagePaths, pagesPerBook, illustrationStyle, age, author, characterDescriptions);
     console.timeEnd('📝 Story generation');
 
     // Step 3: Generate illustrations

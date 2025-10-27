@@ -163,7 +163,8 @@ export async function generateStoryFromPrompt(
   pagesPerBook: number = 3,
   illustrationStyle: string = "vibrant and colorful children's book illustration",
   age?: string,
-  author?: string
+  author?: string,
+  characterDescriptions: string[] = []
 ): Promise<GeneratedStory> {
   try {
     const hasImages = inspirationImagePaths && inspirationImagePaths.length > 0;
@@ -217,7 +218,19 @@ export async function generateStoryFromPrompt(
       ageGuidance = ` The target reader age is ${age} years old. ${ageRanges[age as keyof typeof ageRanges] || 'Adapt the content appropriately for the specified age group.'}`;
     }
 
-    const systemInstruction = `You are a storybook author creating a ${pagesPerBook}-page illustrated story${hasImages ? ' using the provided reference photos for character inspiration' : ''}.${ageGuidance} ${hasImages ? 'IMPORTANT: Maintain the actual age and appearance of people from the reference photos - if an adult is shown, keep them as an adult; if a child is shown, keep them as a child.' : ''}
+    // Build character descriptions guidance
+    let characterGuidance = '';
+    if (hasImages && characterDescriptions.length > 0) {
+      characterGuidance = '\n\nCHARACTER REFERENCE INFORMATION:\n';
+      characterDescriptions.forEach((desc, index) => {
+        if (desc && desc.trim()) {
+          characterGuidance += `- Image ${index + 1}: ${desc}\n`;
+        }
+      });
+      characterGuidance += '\nIMPORTANT: Use these descriptions to identify which character is which in the reference photos. Maintain the actual appearance, age, and characteristics described for each character throughout the story.';
+    }
+
+    const systemInstruction = `You are a storybook author creating a ${pagesPerBook}-page illustrated story${hasImages ? ' using the provided reference photos for character inspiration' : ''}.${ageGuidance}${characterGuidance} ${hasImages ? 'IMPORTANT: Maintain the actual age and appearance of people from the reference photos - if an adult is shown, keep them as an adult; if a child is shown, keep them as a child.' : ''}
 
 Create a cohesive story following ${narrativeStructure}
 
