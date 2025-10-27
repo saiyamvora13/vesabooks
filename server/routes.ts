@@ -4163,8 +4163,6 @@ Sitemap: ${baseUrl}/sitemap.xml`;
       const printPurchases = createdPurchases.filter(p => p.type === 'print');
       
       if (printPurchases.length > 0) {
-        const objectStorage = new ObjectStorageService();
-        
         // Shipping address is required for print orders (validated earlier)
         if (!shippingAddress) {
           throw new Error("Shipping address is required for print orders but was not provided");
@@ -4186,36 +4184,15 @@ Sitemap: ${baseUrl}/sitemap.xml`;
               throw new Error(`Storybook ${printPurchase.storybookId} not found`);
             }
             
-            // Generate print-ready PDF
-            const pdfBuffer = await generatePrintReadyPDF(
-              storybook, 
-              printPurchase.bookSize || 'a5-portrait',
-              printPurchase.spineText || undefined,
-              printPurchase.spineTextColor || undefined,
-              printPurchase.spineBackgroundColor || undefined
-            );
-            
-            // Save PDF to temporary file
-            const tempPdfPath = path.join(process.cwd(), 'uploads', `print-${printPurchase.id}-${Date.now()}.pdf`);
-            fs.writeFileSync(tempPdfPath, pdfBuffer);
-            
-            // Upload PDF to object storage
-            const pdfStoragePath = await objectStorage.uploadFile(
-              tempPdfPath,
-              `print-pdfs/${printPurchase.id}.pdf`,
-              true
-            );
-            
-            // Clean up temporary file
-            fs.unlinkSync(tempPdfPath);
-            
-            console.log(`[Prodigi Two-Phase] PDF uploaded to ${pdfStoragePath}`);
-            
-            // Get full PDF URL for Prodigi
-            const baseUrl = process.env.REPLIT_DOMAINS 
-              ? `https://${process.env.REPLIT_DOMAINS.split(',')[0]}`
-              : 'http://localhost:5000';
-            const pdfUrl = `${baseUrl}${pdfStoragePath}`;
+            // Generate and upload print-ready PDF using shared helper
+            const { fullUrl: pdfUrl } = await generateAndUploadPrintPDF({
+              storybook,
+              purchaseId: printPurchase.id,
+              bookSize: printPurchase.bookSize || 'a5-portrait',
+              spineText: printPurchase.spineText || undefined,
+              spineTextColor: printPurchase.spineTextColor || undefined,
+              spineBackgroundColor: printPurchase.spineBackgroundColor || undefined,
+            });
             
             // Get product SKU
             const sku = prodigiService.getProductSKU(printPurchase.bookSize || 'a5-portrait', storybook.pages.length);
