@@ -134,16 +134,19 @@ export default function AdminOrders() {
       completed: { className: "bg-green-500/20 text-green-400 border-green-500/50", icon: CheckCircle2 },
       pending: { className: "bg-yellow-500/20 text-yellow-400 border-yellow-500/50", icon: Clock },
       failed: { className: "bg-red-500/20 text-red-400 border-red-500/50", icon: XCircle },
-      refunded: { className: "bg-slate-500/20 text-slate-400 border-slate-500/50", icon: AlertCircle },
+      refunded: { className: "bg-orange-500/20 text-orange-400 border-orange-500/50", icon: AlertCircle },
+      partially_refunded: { className: "bg-amber-500/20 text-amber-400 border-amber-500/50", icon: AlertCircle },
     };
 
     const variant = variants[status] || variants.pending;
     const Icon = variant.icon;
+    
+    const displayStatus = status === 'partially_refunded' ? 'Partially Refunded' : status;
 
     return (
       <Badge className={variant.className}>
         <Icon className="w-3 h-3 mr-1" />
-        {status}
+        {displayStatus}
       </Badge>
     );
   };
@@ -231,6 +234,7 @@ export default function AdminOrders() {
                       <SelectItem value="pending" className="text-white hover:bg-slate-700 focus:bg-slate-700 focus:text-white">Pending</SelectItem>
                       <SelectItem value="failed" className="text-white hover:bg-slate-700 focus:bg-slate-700 focus:text-white">Failed</SelectItem>
                       <SelectItem value="refunded" className="text-white hover:bg-slate-700 focus:bg-slate-700 focus:text-white">Refunded</SelectItem>
+                      <SelectItem value="partially_refunded" className="text-white hover:bg-slate-700 focus:bg-slate-700 focus:text-white">Partially Refunded</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
