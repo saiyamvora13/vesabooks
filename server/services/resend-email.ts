@@ -677,9 +677,22 @@ export async function sendRefundConfirmationEmail(
 ): Promise<void> {
   const { client, fromEmail } = await getUncachableResendClient();
   
+  // Validation: Ensure refund amount is valid
+  if (!refundAmount || refundAmount <= 0) {
+    console.error(`[Email] Invalid refund amount: ${refundAmount} for purchase ${purchase.id}`);
+    throw new Error('Invalid refund amount');
+  }
+  
+  // Validation: Ensure refund doesn't exceed purchase price
+  const purchasePrice = parseInt(purchase.price);
+  if (refundAmount > purchasePrice) {
+    console.warn(`[Email] Refund amount ${refundAmount} exceeds purchase price ${purchasePrice} - capping at purchase price`);
+    refundAmount = purchasePrice;
+  }
+  
   const storybook = await storage.getStorybook(purchase.storybookId);
   const storybookTitle = storybook?.title || 'Unknown Storybook';
-  const orderRef = purchase.orderReference || purchase.stripePaymentIntentId;
+  const orderRef = purchase.orderReference || purchase.stripePaymentIntentId || purchase.id;
   const orderNumber = orderRef.slice(-8).toUpperCase();
   
   const formatPrice = (cents: number) => `$${(cents / 100).toFixed(2)}`;

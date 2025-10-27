@@ -28,6 +28,8 @@ The platform includes an e-commerce system with Stripe payments, EPUB e-book dow
 
 **Stripe Customer Management**: Each user has a linked Stripe customer ID stored in `stripeCustomerId` field. The `getOrCreateStripeCustomer()` helper function retrieves existing customer IDs or creates new Stripe customers on demand, enabling proper payment method reuse for direct purchases from the library. Payment methods are attached to customers before creating PaymentIntents with `off_session: true`, ensuring compliance with Stripe's requirements for saved payment method usage.
 
+**Refund System**: Comprehensive refund handling with automatic webhook processing for Stripe refunds. The system tracks full and partial refunds through database fields (refundAmount, refundedAt, refundReason, stripeRefundId) and purchase statuses ('refunded', 'partially_refunded'). Webhook handlers (`charge.refunded`, `refund.created`) calculate proportional refunds for batch orders, implement idempotency protection to prevent duplicate processing, and validate refund amounts against purchase prices. Email notifications are sent on first refund only. Frontend displays refund status with color-coded badges (orange for full, yellow for partial) and detailed refund information in both customer My Orders page and Admin Orders dashboard. Known limitations: print orders require manual Prodigi cancellation before Stripe refund, one email per purchase (subsequent partials not notified), and rounding in proportional refunds may differ by 1-2 cents. See REFUND_SYSTEM.md for complete documentation.
+
 ### Prodigi Print API Integration
 
 #### Print-Ready PDF Structure

@@ -4458,8 +4458,9 @@ Sitemap: ${baseUrl}/sitemap.xml`;
       } else if (event.type === 'charge.refunded') {
         const charge = event.data.object as Stripe.Charge;
         const paymentIntentId = charge.payment_intent as string;
+        const stripeEventId = event.id;
         
-        console.log(`[Stripe Webhook] Received charge.refunded event for payment intent: ${paymentIntentId}`);
+        console.log(`[Stripe Webhook] Received charge.refunded event ${stripeEventId} for payment intent: ${paymentIntentId}`);
         
         if (!paymentIntentId) {
           console.error("Missing payment_intent in charge:", charge.id);
@@ -4468,99 +4469,159 @@ Sitemap: ${baseUrl}/sitemap.xml`;
         
         // Get the refund details - there can be multiple refunds for a charge
         const refunds = charge.refunds?.data || [];
-        const totalRefunded = charge.amount_refunded || 0;
-        const chargeAmount = charge.amount || 0;
-        const isFullyRefunded = totalRefunded >= chargeAmount;
-        
-        // Get the latest refund for details
         const latestRefund = refunds[refunds.length - 1];
         
-        if (latestRefund) {
-          console.log(`[Stripe Webhook] Processing refund ${latestRefund.id}: Amount: ${latestRefund.amount}, Reason: ${latestRefund.reason}`);
-          
-          // Update all purchases associated with this payment intent
-          const purchases = await storage.getPurchasesByPaymentIntent(paymentIntentId);
-          
-          if (purchases.length === 0) {
-            console.warn(`[Stripe Webhook] No purchases found for payment intent ${paymentIntentId}`);
-          }
-          
-          for (const purchase of purchases) {
-            try {
-              // Determine new status based on refund amount
-              const newStatus = isFullyRefunded ? 'refunded' : 'partially_refunded';
-              
-              await storage.updatePurchaseRefund(purchase.id, {
-                status: newStatus,
-                refundAmount: latestRefund.amount.toString(),
-                refundedAt: new Date(latestRefund.created * 1000), // Convert Unix timestamp to Date
-                refundReason: latestRefund.reason || 'requested_by_customer',
-                stripeRefundId: latestRefund.id,
-              });
-              
-              console.log(`[Stripe Webhook] Updated purchase ${purchase.id} to ${newStatus} status`);
-              
-              // Send refund confirmation email
-              const user = await storage.getUser(purchase.userId!);
-              
-              if (user && user.email) {
-                const userName = `${user.firstName || ''} ${user.lastName || ''}`.trim() || 'Customer';
-                const { sendRefundConfirmationEmail } = await import("./services/resend-email");
-                const language = 'en'; // Default to English for webhooks
+        if (!latestRefund) {
+          console.warn("[Stripe Webhook] No refund data found in charge.refunded event");
+          return res.status(400).json({ message: "No refund data" });
+        }
+        
+        console.log(`[Stripe Webhook] Processing refund ${latestRefund.id}: Amount: ${latestRefund.amount}, Reason: ${latestRefund.reason}`);
+        
+        // Get all purchases for this payment intent
+        const purchases = await storage.getPurchasesByPaymentIntent(paymentIntentId);
+        
+        if (purchases.length === 0) {
+          console.warn(`[Stripe Webhook] No purchases found for payment intent ${paymentIntentId}`);
+          return res.json({ received: true });
+        }
+        
+        // IDEMPOTENCY CHECK: Skip if this exact refund was already processed
+        const alreadyProcessed = purchases.some(p => p.stripeRefundId === latestRefund.id);
+        if (alreadyProcessed) {
+          console.log(`[Stripe Webhook] Refund ${latestRefund.id} already processed - skipping duplicate event`);
+          return res.json({ received: true, message: 'Already processed' });
+        }
+        
+        // Calculate total purchase amount for proportional distribution
+        const totalPurchaseAmount = purchases.reduce((sum, p) => sum + parseInt(p.price), 0);
+        
+        for (const purchase of purchases) {
+          try {
+            const purchaseAmount = parseInt(purchase.price);
+            
+            // Calculate proportional refund for this purchase
+            // If single purchase, assign full refund amount; otherwise distribute proportionally
+            const proportionalRefund = purchases.length === 1 
+              ? latestRefund.amount 
+              : Math.round((latestRefund.amount * purchaseAmount) / totalPurchaseAmount);
+            
+            // Calculate cumulative refund amount (existing + new)
+            const existingRefund = parseInt(purchase.refundAmount || '0');
+            const newRefundTotal = existingRefund + proportionalRefund;
+            
+            // Validation: Cap refund at purchase price
+            const cappedRefundTotal = Math.min(newRefundTotal, purchaseAmount);
+            
+            // Determine status based on refund amount vs purchase price
+            const isFullyRefunded = cappedRefundTotal >= purchaseAmount;
+            const newStatus = isFullyRefunded ? 'refunded' : 'partially_refunded';
+            
+            await storage.updatePurchaseRefund(purchase.id, {
+              status: newStatus,
+              refundAmount: cappedRefundTotal.toString(),
+              refundedAt: new Date(latestRefund.created * 1000),
+              refundReason: latestRefund.reason || 'requested_by_customer',
+              stripeRefundId: latestRefund.id,
+            });
+            
+            console.log(`[Stripe Webhook] Updated purchase ${purchase.id}: status=${newStatus}, refund=${cappedRefundTotal}/${purchaseAmount} cents`);
+            
+            // Send email only for first refund (not for subsequent partial refunds)
+            if (existingRefund === 0) {
+              try {
+                const user = await storage.getUser(purchase.userId!);
                 
-                await sendRefundConfirmationEmail(
-                  user.email,
-                  userName,
-                  purchase,
-                  latestRefund.amount,
-                  latestRefund.reason || 'requested_by_customer',
-                  language
-                );
-                
-                console.log(`[Stripe Webhook] Sent refund confirmation email to ${user.email}`);
+                if (user && user.email) {
+                  const userName = `${user.firstName || ''} ${user.lastName || ''}`.trim() || 'Customer';
+                  const language = 'en';
+                  const { sendRefundConfirmationEmail } = await import("./services/resend-email");
+                  
+                  await sendRefundConfirmationEmail(
+                    user.email,
+                    userName,
+                    purchase,
+                    proportionalRefund,
+                    latestRefund.reason || 'requested_by_customer',
+                    language
+                  );
+                  
+                  console.log(`[Stripe Webhook] Sent refund confirmation email to ${user.email}`);
+                }
+              } catch (emailError) {
+                console.error(`[Stripe Webhook] Failed to send email for purchase ${purchase.id}:`, emailError);
               }
-            } catch (updateError) {
-              console.error(`[Stripe Webhook] Failed to update purchase ${purchase.id}:`, updateError);
+            } else {
+              console.log(`[Stripe Webhook] Skipping email for purchase ${purchase.id} (already notified)`);
             }
+          } catch (updateError) {
+            console.error(`[Stripe Webhook] Failed to update purchase ${purchase.id}:`, updateError);
           }
         }
       } else if (event.type === 'refund.created') {
         const refund = event.data.object as Stripe.Refund;
         const paymentIntentId = refund.payment_intent as string;
+        const stripeEventId = event.id;
         
-        console.log(`[Stripe Webhook] Received refund.created event: ${refund.id} for payment intent: ${paymentIntentId}`);
+        console.log(`[Stripe Webhook] Received refund.created event ${stripeEventId}: ${refund.id} for payment intent: ${paymentIntentId}`);
         
-        // This event is similar to charge.refunded but provides refund-specific details
-        // We'll handle it the same way
         if (!paymentIntentId) {
           console.error("Missing payment_intent in refund:", refund.id);
           return res.status(400).json({ message: "Missing payment_intent" });
         }
         
-        // Update all purchases associated with this payment intent
+        // Get all purchases for this payment intent
         const purchases = await storage.getPurchasesByPaymentIntent(paymentIntentId);
         
         if (purchases.length === 0) {
           console.warn(`[Stripe Webhook] No purchases found for payment intent ${paymentIntentId}`);
+          return res.json({ received: true });
         }
+        
+        // IDEMPOTENCY CHECK: Skip if this exact refund was already processed
+        const alreadyProcessed = purchases.some(p => p.stripeRefundId === refund.id);
+        if (alreadyProcessed) {
+          console.log(`[Stripe Webhook] Refund ${refund.id} already processed - skipping duplicate event`);
+          return res.json({ received: true, message: 'Already processed' });
+        }
+        
+        // Calculate total purchase amount for proportional distribution
+        const totalPurchaseAmount = purchases.reduce((sum, p) => sum + parseInt(p.price), 0);
         
         for (const purchase of purchases) {
           try {
-            // Check if this refund was already processed
-            if (purchase.stripeRefundId === refund.id) {
-              console.log(`[Stripe Webhook] Refund ${refund.id} already processed for purchase ${purchase.id} - skipping`);
-              continue;
+            const purchaseAmount = parseInt(purchase.price);
+            
+            // Calculate proportional refund for this purchase
+            const proportionalRefund = purchases.length === 1 
+              ? refund.amount 
+              : Math.round((refund.amount * purchaseAmount) / totalPurchaseAmount);
+            
+            // Calculate cumulative refund amount
+            const existingRefund = parseInt(purchase.refundAmount || '0');
+            const newRefundTotal = existingRefund + proportionalRefund;
+            
+            // Validation: Cap refund at purchase price
+            const cappedRefundTotal = Math.min(newRefundTotal, purchaseAmount);
+            
+            // Determine status - use 'pending' if refund not yet succeeded
+            const isFullyRefunded = cappedRefundTotal >= purchaseAmount;
+            let newStatus: string;
+            if (refund.status !== 'succeeded') {
+              newStatus = 'pending'; // Keep as pending until refund succeeds
+            } else {
+              newStatus = isFullyRefunded ? 'refunded' : 'partially_refunded';
             }
             
             await storage.updatePurchaseRefund(purchase.id, {
-              status: refund.status === 'succeeded' ? 'refunded' : 'pending',
-              refundAmount: refund.amount.toString(),
+              status: newStatus,
+              refundAmount: cappedRefundTotal.toString(),
               refundedAt: new Date(refund.created * 1000),
               refundReason: refund.reason || 'requested_by_customer',
               stripeRefundId: refund.id,
             });
             
-            console.log(`[Stripe Webhook] Updated purchase ${purchase.id} with refund ${refund.id}`);
+            console.log(`[Stripe Webhook] Updated purchase ${purchase.id}: status=${newStatus}, refund=${cappedRefundTotal}/${purchaseAmount} cents`);
           } catch (updateError) {
             console.error(`[Stripe Webhook] Failed to update purchase ${purchase.id}:`, updateError);
           }
