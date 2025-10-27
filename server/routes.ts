@@ -1769,6 +1769,98 @@ Sitemap: ${baseUrl}/sitemap.xml`;
     }
   });
 
+  // POST /api/admin/orders/:orderReference/sync-status - Manually sync order status from Prodigi
+  app.post('/api/admin/orders/:orderReference/sync-status', isAdmin, async (req: any, res) => {
+    try {
+      const { orderReference } = req.params;
+
+      if (!orderReference) {
+        return res.status(400).json({ message: 'Order reference is required' });
+      }
+
+      console.log(`[Admin] Manual sync requested for order: ${orderReference}`);
+      
+      const result = await storage.syncPrintOrderFromProdigi(orderReference);
+      
+      if (result.errors.length > 0) {
+        console.error(`[Admin] Sync completed with errors for ${orderReference}:`, result.errors);
+        return res.status(207).json({ 
+          message: `Sync completed with errors: ${result.updated} orders updated`,
+          updated: result.updated,
+          errors: result.errors 
+        });
+      }
+      
+      console.log(`[Admin] Successfully synced ${result.updated} print orders for ${orderReference}`);
+      res.json({ 
+        message: `Successfully synced ${result.updated} print orders`,
+        updated: result.updated 
+      });
+    } catch (error) {
+      console.error('Sync order status error:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      res.status(500).json({ message: `Failed to sync order status: ${errorMessage}` });
+    }
+  });
+
+  // POST /api/admin/fix-order-statuses - One-time migration to normalize all order statuses
+  app.post('/api/admin/fix-order-statuses', isAdmin, async (req: any, res) => {
+    try {
+      console.log(`[Admin] Starting one-time migration to normalize order statuses`);
+      
+      // Get all print orders
+      const allPrintOrders = await storage.getAllPrintOrders(10000); // Get up to 10k orders
+      
+      const statusMap: Record<string, string> = {
+        'InProgress': 'in_progress',
+        'Complete': 'completed',
+        'Cancelled': 'cancelled',
+      };
+      
+      let updatedCount = 0;
+      const errors: string[] = [];
+      
+      for (const printOrder of allPrintOrders) {
+        // Check if status needs normalization
+        if (statusMap[printOrder.status]) {
+          try {
+            const normalizedStatus = statusMap[printOrder.status];
+            await storage.updatePrintOrderStatus(printOrder.id, {
+              status: normalizedStatus,
+            });
+            updatedCount++;
+            console.log(`[Admin] Normalized print order ${printOrder.id}: ${printOrder.status} → ${normalizedStatus}`);
+          } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+            errors.push(`Failed to update print order ${printOrder.id}: ${errorMessage}`);
+          }
+        }
+      }
+      
+      console.log(`[Admin] Migration complete: ${updatedCount} orders normalized`);
+      
+      if (errors.length > 0) {
+        console.error(`[Admin] Migration completed with ${errors.length} errors`);
+        return res.status(207).json({
+          message: `Migration complete: ${updatedCount} orders normalized`,
+          updated: updatedCount,
+          total: allPrintOrders.length,
+          errors
+        });
+      }
+      
+      res.json({
+        message: `Migration complete: ${updatedCount} orders normalized`,
+        updated: updatedCount,
+        total: allPrintOrders.length
+      });
+    } catch (error) {
+      console.error('Fix order statuses error:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      res.status(500).json({ message: `Failed to fix order statuses: ${errorMessage}` });
+    }
+  });
+
   // GET /api/admin/users/:userId/orders - Get order history for a user
   app.get('/api/admin/users/:userId/orders', isAdmin, async (req: any, res) => {
     try {
@@ -4737,9 +4829,9 @@ Sitemap: ${baseUrl}/sitemap.xml`;
         webhookData: order,
       };
 
-      // Update status from callback
+      // Update status from callback (normalize Prodigi's PascalCase to database format)
       if (status?.stage) {
-        updates.status = status.stage;
+        updates.status = prodigiService.normalizeOrderStatus(status.stage);
       }
 
       // Update shipment status details (convert object to string for storage)
@@ -4785,20 +4877,21 @@ Sitemap: ${baseUrl}/sitemap.xml`;
       }
 
       // Update purchase status when order is completed or cancelled
-      if (status?.stage === 'Complete' || status?.stage === 'Cancelled') {
-        const newPurchaseStatus = status.stage === 'Complete' ? 'completed' : 'cancelled';
-        console.log(`[Prodigi Webhook] Updating ${printOrders.length} purchase(s) to '${newPurchaseStatus}'`);
+      // Note: Normalize the status for comparison (Prodigi uses PascalCase)
+      const normalizedStage = status?.stage ? prodigiService.normalizeOrderStatus(status.stage) : null;
+      if (normalizedStage === 'completed' || normalizedStage === 'cancelled') {
+        console.log(`[Prodigi Webhook] Updating ${printOrders.length} purchase(s) to '${normalizedStage}'`);
         
         for (const printOrder of printOrders) {
-          await storage.updatePurchaseStatus(printOrder.purchaseId, newPurchaseStatus);
-          console.log(`[Prodigi Webhook] ✅ Updated purchase ${printOrder.purchaseId} to '${newPurchaseStatus}'`);
+          await storage.updatePurchaseStatus(printOrder.purchaseId, normalizedStage);
+          console.log(`[Prodigi Webhook] ✅ Updated purchase ${printOrder.purchaseId} to '${normalizedStage}'`);
         }
       }
 
       // TWO-PHASE ORDER FLOW: Deferred Payment Charging
       // If order status changed to 'InProgress' AND print orders need payment,
       // charge the customer NOW
-      if (status?.stage === 'InProgress') {
+      if (normalizedStage === 'in_progress') {
         // Process orders in BOTH 'creating' AND 'charging' status
         // 'creating' = new orders awaiting first charge attempt
         // 'charging' = orders that were interrupted mid-charge (retry them)
@@ -5501,11 +5594,11 @@ Sitemap: ${baseUrl}/sitemap.xml`;
 
       const prodigiOrder = await prodigiService.createOrder(orderRequest);
 
-      // Create print order record
+      // Create print order record (normalize Prodigi status to database format)
       const printOrder = await storage.createPrintOrder({
         purchaseId,
         prodigiOrderId: prodigiOrder.id,
-        status: prodigiOrder.status.stage,
+        status: prodigiService.normalizeOrderStatus(prodigiOrder.status.stage),
         webhookData: prodigiOrder,
       });
 
@@ -5573,9 +5666,9 @@ Sitemap: ${baseUrl}/sitemap.xml`;
         const { prodigiService } = await import("./services/prodigi");
         const prodigiOrder = await prodigiService.getOrder(printOrder.prodigiOrderId);
 
-        // Update local record
+        // Update local record (normalize Prodigi status to database format)
         await storage.updatePrintOrder(printOrder.id, {
-          status: prodigiOrder.status.stage,
+          status: prodigiService.normalizeOrderStatus(prodigiOrder.status.stage),
           webhookData: prodigiOrder,
           trackingNumber: prodigiOrder.shipments?.[0]?.tracking?.number,
           carrier: prodigiOrder.shipments?.[0]?.carrier?.name,

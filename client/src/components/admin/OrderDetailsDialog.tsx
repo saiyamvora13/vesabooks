@@ -44,7 +44,8 @@ import {
   XCircle,
   Truck,
   Send,
-  Download
+  Download,
+  RefreshCw
 } from "lucide-react";
 import { Link } from "wouter";
 
@@ -141,6 +142,32 @@ export default function OrderDetailsDialog({ orderReference, open, onOpenChange 
       });
     },
   });
+
+  const syncStatusMutation = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest("POST", `/api/admin/orders/${orderReference}/sync-status`, {});
+      return response.json();
+    },
+    onSuccess: (data) => {
+      toast({
+        title: "Status Synced",
+        description: data.message || `Successfully synced ${data.updated} print orders`,
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/orders", orderReference] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/orders"] });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Sync Failed",
+        description: error.message || "Failed to sync order status. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleSyncStatus = () => {
+    syncStatusMutation.mutate();
+  };
 
   const handleAddNote = () => {
     if (!noteContent.trim()) {
@@ -504,10 +531,23 @@ export default function OrderDetailsDialog({ orderReference, open, onOpenChange 
               {orderDetails.printOrder && (
                 <Card className="bg-slate-700 border-slate-600">
                   <CardHeader>
-                    <CardTitle className="text-lg text-slate-100 flex items-center gap-2">
-                      <Truck className="w-5 h-5" />
-                      Tracking Information
-                    </CardTitle>
+                    <div className="flex items-center justify-between">
+                      <CardTitle className="text-lg text-slate-100 flex items-center gap-2">
+                        <Truck className="w-5 h-5" />
+                        Tracking Information
+                      </CardTitle>
+                      <Button
+                        onClick={handleSyncStatus}
+                        disabled={syncStatusMutation.isPending}
+                        size="sm"
+                        variant="outline"
+                        className="bg-slate-600 hover:bg-slate-500 border-slate-500 text-slate-100"
+                        data-testid="button-sync-status"
+                      >
+                        <RefreshCw className={`w-4 h-4 mr-2 ${syncStatusMutation.isPending ? 'animate-spin' : ''}`} />
+                        {syncStatusMutation.isPending ? 'Syncing...' : 'Sync Status'}
+                      </Button>
+                    </div>
                   </CardHeader>
                   <CardContent className="space-y-3">
                     {orderDetails.printOrder.carrier && (

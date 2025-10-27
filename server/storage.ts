@@ -228,6 +228,7 @@ export interface IStorage {
   getPrintOrderWithDetails(printOrderId: string): Promise<{ printOrder: PrintOrder; purchase: Purchase; storybook: Storybook; user: User } | null>;
   updatePrintOrder(id: string, data: Partial<PrintOrder>): Promise<PrintOrder>;
   updatePrintOrderStatus(printOrderId: string, updates: Partial<PrintOrder>): Promise<PrintOrder>;
+  syncPrintOrderFromProdigi(orderReference: string): Promise<{ updated: number; errors: string[] }>;
   atomicUpdatePrintOrderStatus(printOrderId: string, fromStatus: string, toStatus: string): Promise<boolean>;
   getAllPrintOrders(limit?: number): Promise<PrintOrder[]>;
   getUserPrintOrders(userId: string): Promise<Array<PrintOrder & { purchase: Purchase; storybook: Storybook }>>;
@@ -1486,6 +1487,99 @@ export class DatabaseStorage implements IStorage {
     
     // Return true if exactly one row was updated
     return result.length === 1;
+  }
+
+  // Sync print order status from Prodigi API
+  // Fetches latest order data from Prodigi and updates all print orders with matching orderReference
+  async syncPrintOrderFromProdigi(orderReference: string): Promise<{ updated: number; errors: string[] }> {
+    const { prodigiService } = await import("./services/prodigi");
+    const errors: string[] = [];
+    let updated = 0;
+
+    try {
+      // Find all purchases with this order reference
+      const orderPurchases = await db
+        .select()
+        .from(purchases)
+        .where(eq(purchases.orderReference, orderReference));
+
+      if (orderPurchases.length === 0) {
+        errors.push(`No purchases found for order reference: ${orderReference}`);
+        return { updated, errors };
+      }
+
+      // Find all print orders for these purchases
+      const purchaseIds = orderPurchases.map(p => p.id);
+      const orderPrintOrders = await db
+        .select()
+        .from(printOrders)
+        .where(inArray(printOrders.purchaseId, purchaseIds));
+
+      if (orderPrintOrders.length === 0) {
+        errors.push(`No print orders found for order reference: ${orderReference}`);
+        return { updated, errors };
+      }
+
+      // Get unique Prodigi order IDs (should typically be just one for batch orders)
+      const prodigiOrderIds = Array.from(new Set(orderPrintOrders.map(po => po.prodigiOrderId).filter(Boolean))) as string[];
+
+      if (prodigiOrderIds.length === 0) {
+        errors.push(`No Prodigi order IDs found for order reference: ${orderReference}`);
+        return { updated, errors };
+      }
+
+      // Fetch status from Prodigi for each unique order ID
+      for (const prodigiOrderId of prodigiOrderIds) {
+        try {
+          const prodigiOrder = await prodigiService.getOrder(prodigiOrderId);
+          
+          // Normalize status before saving
+          const normalizedStatus = prodigiService.normalizeOrderStatus(prodigiOrder.status.stage);
+
+          // Prepare update data
+          const updates: Partial<PrintOrder> = {
+            status: normalizedStatus,
+            webhookData: prodigiOrder as any,
+          };
+
+          // Update shipment information if available
+          if (prodigiOrder.shipments && prodigiOrder.shipments.length > 0) {
+            const firstShipment = prodigiOrder.shipments[0];
+            if (firstShipment.tracking?.number) updates.trackingNumber = firstShipment.tracking.number;
+            if (firstShipment.tracking?.url) updates.trackingUrl = firstShipment.tracking.url;
+            if (firstShipment.carrier?.name) updates.carrier = firstShipment.carrier.name;
+            if (firstShipment.carrier?.service) updates.carrierService = firstShipment.carrier.service;
+            if (firstShipment.dispatchDate) updates.dispatchDate = new Date(firstShipment.dispatchDate);
+            if (firstShipment.estimatedDeliveryDate) {
+              updates.estimatedDelivery = new Date(firstShipment.estimatedDeliveryDate);
+            }
+          }
+
+          // Update all print orders with this Prodigi order ID
+          const printOrdersToUpdate = orderPrintOrders.filter(po => po.prodigiOrderId === prodigiOrderId);
+          
+          for (const printOrder of printOrdersToUpdate) {
+            await this.updatePrintOrderStatus(printOrder.id, updates);
+            updated++;
+          }
+
+          // Update purchase status if order is completed or cancelled
+          if (normalizedStatus === 'completed' || normalizedStatus === 'cancelled') {
+            for (const printOrder of printOrdersToUpdate) {
+              await this.updatePurchaseStatus(printOrder.purchaseId, normalizedStatus);
+            }
+          }
+        } catch (error) {
+          const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+          errors.push(`Failed to sync Prodigi order ${prodigiOrderId}: ${errorMessage}`);
+        }
+      }
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      errors.push(`Failed to sync order ${orderReference}: ${errorMessage}`);
+    }
+
+    return { updated, errors };
   }
 
   async getAllPrintOrders(limit: number = 100): Promise<PrintOrder[]> {

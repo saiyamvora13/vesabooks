@@ -202,6 +202,31 @@ export class ProdigiService {
     
     return { width: 148, height: 210 };
   }
+
+  /**
+   * Normalizes Prodigi order status to database format
+   * Prodigi uses PascalCase (InProgress, Complete, Cancelled)
+   * Database expects lowercase with underscores (in_progress, completed, cancelled)
+   */
+  normalizeOrderStatus(prodigiStatus: string): string {
+    const statusMap: Record<string, string> = {
+      'InProgress': 'in_progress',
+      'Complete': 'completed',
+      'Cancelled': 'cancelled',
+      // Handle lowercase variations just in case
+      'inprogress': 'in_progress',
+      'complete': 'completed',
+      'cancelled': 'cancelled',
+    };
+
+    const normalized = statusMap[prodigiStatus] || prodigiStatus.toLowerCase().replace(/\s+/g, '_');
+    
+    if (!statusMap[prodigiStatus] && prodigiStatus !== normalized) {
+      console.warn(`[Prodigi] Unknown status format: ${prodigiStatus}, normalized to: ${normalized}`);
+    }
+    
+    return normalized;
+  }
 }
 
 export const prodigiService = new ProdigiService();
