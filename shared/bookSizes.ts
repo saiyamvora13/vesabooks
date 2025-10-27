@@ -56,7 +56,7 @@ export const BOOK_SIZES: Record<string, BookSize> = {
 };
 
 // Default book size
-export const DEFAULT_BOOK_SIZE = BOOK_SIZES['a5-portrait'];
+export const DEFAULT_BOOK_SIZE = BOOK_SIZES['a4-portrait'];
 
 // Safety margin (10mm from edge as per specifications)
 export const SAFETY_MARGIN_MM = 10;

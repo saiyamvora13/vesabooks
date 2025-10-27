@@ -57,7 +57,7 @@ export default function View() {
   const [emailVerificationOpen, setEmailVerificationOpen] = useState(false);
   const [verifiedEmail, setVerifiedEmail] = useState<string | null>(null);
   const [checkoutDialogOpen, setCheckoutDialogOpen] = useState(false);
-  const [checkoutType, setCheckoutType] = useState<'digital' | 'print'>('digital');
+  const [checkoutType, setCheckoutType] = useState<'digital' | 'print'>('print');
   const [editForewordOpen, setEditForewordOpen] = useState(false);
   const [forewordText, setForewordText] = useState("");
   const { toast} = useToast();
@@ -881,7 +881,7 @@ export default function View() {
         directItem={{
           storybookId: storybook?.id || '',
           productType: checkoutType,
-          bookSize: 'a5-portrait',
+          bookSize: 'a4-portrait',
         }}
         hasPrintItems={checkoutType === 'print'}
         amount={pricing ? (checkoutType === 'digital' ? parseInt(pricing.digital_price) : parseInt(pricing.print_price)) : 0}

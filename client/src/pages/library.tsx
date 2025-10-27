@@ -1033,7 +1033,7 @@ function StorybookPurchaseButtons({
       const response = await apiRequest('POST', '/api/cart', {
         storybookId: storybook.id,
         productType,
-        bookSize: bookSize || 'a5-portrait',
+        bookSize: bookSize || 'a4-portrait',
         quantity: 1,
       });
       if (!response.ok) {
@@ -1145,8 +1145,8 @@ function StorybookPurchaseButtons({
             variant="default"
             className="w-full h-11 text-base font-semibold gradient-bg hover:opacity-90 !text-[hsl(258,90%,20%)] shadow-md hover:shadow-lg transition-all"
             onClick={() => addToCartMutation.mutate({ 
-              productType: digitalOwned ? 'print' : 'digital',
-              bookSize: digitalOwned ? 'a5-portrait' : undefined
+              productType: 'print',
+              bookSize: 'a4-portrait'
             })}
             disabled={addToCartMutation.isPending}
             data-testid={`button-add-to-cart-${storybook.id}`}
