@@ -3871,6 +3871,31 @@ Sitemap: ${baseUrl}/sitemap.xml`;
 
           console.log(`[Direct Purchase] Print order created in 'creating' status for purchase ${purchase.id}`);
           
+          // Auto-create free digital purchase for print purchase
+          const existingDigital = await storage.getStorybookPurchase(userId, storybookId, 'digital');
+          
+          if (!existingDigital) {
+            try {
+              const digitalPurchase = await storage.createPurchase({
+                userId,
+                storybookId,
+                type: 'digital',
+                price: '0', // Free with print
+                orderReference,
+                stripePaymentIntentId: orderReference, // Use orderReference as placeholder
+                status: 'completed', // Immediately available
+              });
+              console.log(`[Direct Purchase] Auto-created free digital version for print purchase of ${storybookId}`);
+            } catch (error: any) {
+              // Ignore duplicates
+              if (!(error.message?.includes('unique') || error.code === '23505')) {
+                console.error(`[Direct Purchase] Failed to auto-create digital purchase:`, error);
+              }
+            }
+          } else {
+            console.log(`[Direct Purchase] Digital version already exists for ${storybookId}, skipping auto-create`);
+          }
+          
           // Send "Order Processing" email using shared helper
           try {
             await sendPrintOrderProcessingEmailHelper({
@@ -4270,6 +4295,35 @@ Sitemap: ${baseUrl}/sitemap.xml`;
                 console.log(`[Prodigi Two-Phase] Print order created in 'creating' status for purchase ${purchaseId}`);
               } catch (error) {
                 console.error(`[Prodigi Two-Phase] Failed to create print order record for purchase ${purchaseId}:`, error);
+              }
+            }
+            
+            // Step 3.5: Auto-create free digital purchases for print purchases
+            console.log(`[Prodigi Two-Phase] Auto-creating free digital versions for ${printPurchases.length} print purchase(s)`);
+            for (const printPurchase of printPurchases) {
+              // Check if digital already exists
+              const existingDigital = await storage.getStorybookPurchase(userId, printPurchase.storybookId, 'digital');
+              
+              if (!existingDigital) {
+                try {
+                  await storage.createPurchase({
+                    userId,
+                    storybookId: printPurchase.storybookId,
+                    type: 'digital',
+                    price: '0', // Free with print
+                    orderReference,
+                    stripePaymentIntentId: orderReference, // Use orderReference as placeholder
+                    status: 'completed', // Immediately available
+                  });
+                  console.log(`[Prodigi Two-Phase] Auto-created free digital version for print purchase of ${printPurchase.storybookId}`);
+                } catch (error: any) {
+                  // Ignore duplicates
+                  if (!(error.message?.includes('unique') || error.code === '23505')) {
+                    console.error(`[Prodigi Two-Phase] Failed to auto-create digital purchase:`, error);
+                  }
+                }
+              } else {
+                console.log(`[Prodigi Two-Phase] Digital version already exists for ${printPurchase.storybookId}, skipping auto-create`);
               }
             }
             
