@@ -575,6 +575,95 @@ export async function sendPrintOrderConfirmation(params: {
   });
 }
 
+/**
+ * Shared helper function to send the first "Order Processing" email for print orders.
+ * Used by both cart checkout and direct purchase flows.
+ * 
+ * This function:
+ * 1. Fetches the storybook details
+ * 2. Builds the cover URL and shipping address string
+ * 3. Determines recipient email and name
+ * 4. Sends the "Order Being Processed" email
+ * 
+ * @param params.purchase - The purchase record
+ * @param params.orderReference - The ORDER-XXXXXXXX reference
+ * @param params.shippingAddress - The shipping address object (for cart) or parsed JSON (for direct)
+ * @param params.userId - The user ID
+ * @returns Promise<void>
+ * @throws Error if storybook or user not found
+ */
+export async function sendPrintOrderProcessingEmailHelper(params: {
+  purchase: Purchase;
+  orderReference: string;
+  shippingAddress: {
+    name?: string;
+    email?: string;
+    addressLine1?: string;
+    addressLine2?: string;
+    city?: string;
+    state?: string;
+    postalCode?: string;
+    countryCode?: string;
+  };
+  userId: string;
+}): Promise<void> {
+  const { purchase, orderReference, shippingAddress, userId } = params;
+  
+  console.log(`[Email Helper] Sending order processing email for purchase ${purchase.id}`);
+  
+  // Get storybook details
+  const storybook = await storage.getStorybook(purchase.storybookId);
+  if (!storybook) {
+    throw new Error(`Storybook ${purchase.storybookId} not found`);
+  }
+  
+  // Build cover URL
+  const baseUrl = process.env.REPLIT_DOMAINS 
+    ? `https://${process.env.REPLIT_DOMAINS.split(',')[0]}`
+    : 'http://localhost:5000';
+  const coverUrl = storybook.coverImageUrl || `${baseUrl}/api/storybooks/${storybook.id}/preview`;
+  
+  // Build address string from shipping address
+  const addressParts = [
+    shippingAddress.addressLine1,
+    shippingAddress.addressLine2,
+    shippingAddress.city,
+    shippingAddress.state,
+    shippingAddress.postalCode,
+    shippingAddress.countryCode
+  ].filter(Boolean);
+  const addressString = addressParts.join(', ');
+  
+  // Get user for email
+  const user = await storage.getUser(userId);
+  if (!user) {
+    throw new Error(`User ${userId} not found`);
+  }
+  
+  // Determine recipient email and name with fallbacks
+  const recipientEmail = shippingAddress.email || user.email;
+  if (!recipientEmail) {
+    throw new Error(`No email available for user ${userId}`);
+  }
+  
+  const recipientName = shippingAddress.name || user.firstName || user.email?.split('@')[0] || 'Customer';
+  
+  // Send the email
+  await sendPrintOrderProcessing({
+    recipientEmail,
+    recipientName,
+    storybookTitle: storybook.title,
+    storybookCoverUrl: coverUrl,
+    orderId: orderReference,
+    bookSize: purchase.bookSize || 'A5 Portrait',
+    shippingMethod: 'Standard',
+    recipientAddress: addressString,
+    estimatedProduction: '5-7 business days',
+  });
+  
+  console.log(`[Email Helper] Order processing email sent to ${recipientEmail} for purchase ${purchase.id}`);
+}
+
 export async function sendShippingNotification(params: {
   recipientEmail: string;
   recipientName: string;
