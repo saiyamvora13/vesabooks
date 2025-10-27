@@ -201,7 +201,8 @@ export async function sendInvoiceEmail(
   }
 
   await client.emails.send({
-    from: fromEmail,
+    from: 'orders@vesabooks.com',
+    replyTo: 'support@vesabooks.com',
     to: userEmail,
     subject: replacePlaceholders(t.subject, { invoiceNumber }),
     html: htmlBody,
@@ -267,7 +268,8 @@ export async function sendPasswordResetEmail(
   `;
 
   await client.emails.send({
-    from: fromEmail,
+    from: 'orders@vesabooks.com',
+    replyTo: 'support@vesabooks.com',
     to: userEmail,
     subject: t.subject,
     html: htmlBody,
@@ -432,7 +434,8 @@ export async function sendPrintOrderConfirmation(params: {
   `;
 
   await client.emails.send({
-    from: fromEmail,
+    from: 'orders@vesabooks.com',
+    replyTo: 'support@vesabooks.com',
     to: recipientEmail,
     subject: `Order Confirmed - ${storybookTitle} - Print Edition`,
     html: htmlBody,
@@ -584,7 +587,8 @@ export async function sendShippingNotification(params: {
   `;
 
   await client.emails.send({
-    from: fromEmail,
+    from: 'orders@vesabooks.com',
+    replyTo: 'support@vesabooks.com',
     to: recipientEmail,
     subject: 'Your StoryBook Order Has Shipped! 📦',
     html: htmlBody,
@@ -658,7 +662,8 @@ export async function sendOrderCancelledEmail(
   `;
 
   await client.emails.send({
-    from: fromEmail,
+    from: 'orders@vesabooks.com',
+    replyTo: 'support@vesabooks.com',
     to: userEmail,
     subject: replacePlaceholders(t.subject, { title: storybookTitle }),
     html: htmlBody,
@@ -798,7 +803,8 @@ export async function sendRefundConfirmationEmail(
   `;
 
   await client.emails.send({
-    from: fromEmail,
+    from: 'orders@vesabooks.com',
+    replyTo: 'support@vesabooks.com',
     to: userEmail,
     subject: `Refund Processed - Order #${orderNumber}`,
     html: htmlBody,
