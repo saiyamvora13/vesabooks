@@ -3803,33 +3803,13 @@ Sitemap: ${baseUrl}/sitemap.xml`;
 
       // Process print order with Prodigi if applicable
       if (productType === 'print' && shippingAddress) {
-        const objectStorage = new ObjectStorageService();
-        
         try {
-          // Generate PDF
-          const pdfBuffer = await generatePrintReadyPDF(storybook, bookSize || 'a5-portrait');
-          
-          // Save to temp file
-          const tempPdfPath = path.join(process.cwd(), 'uploads', `direct-print-${purchase.id}-${Date.now()}.pdf`);
-          fs.writeFileSync(tempPdfPath, pdfBuffer);
-          
-          // Upload to object storage
-          const pdfStoragePath = await objectStorage.uploadFile(
-            tempPdfPath,
-            `print-pdfs/${purchase.id}.pdf`,
-            true
-          );
-          
-          // Clean up temp file
-          fs.unlinkSync(tempPdfPath);
-          
-          console.log(`[Direct Purchase] PDF uploaded to ${pdfStoragePath}`);
-          
-          // Get full PDF URL for Prodigi
-          const baseUrl = process.env.REPLIT_DOMAINS 
-            ? `https://${process.env.REPLIT_DOMAINS.split(',')[0]}`
-            : 'http://localhost:5000';
-          const pdfUrl = `${baseUrl}${pdfStoragePath}`;
+          // Generate and upload print-ready PDF using shared helper
+          const { fullUrl: pdfUrl } = await generateAndUploadPrintPDF({
+            storybook,
+            purchaseId: purchase.id,
+            bookSize: bookSize || 'a5-portrait',
+          });
           
           // Get product SKU
           const sku = prodigiService.getProductSKU(bookSize || 'a5-portrait', storybook.pages.length);
