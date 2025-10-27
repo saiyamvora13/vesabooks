@@ -70,6 +70,10 @@ function getStatusBadgeClasses(status: string): string {
     case 'inprogress':
     case 'in progress':
       return 'bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200 border-blue-200 dark:border-blue-800';
+    case 'refunded':
+      return 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200 border-orange-200 dark:border-orange-800';
+    case 'partially_refunded':
+      return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200 border-yellow-200 dark:border-yellow-800';
     case 'cancelled':
     case 'failed':
       return 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200 border-red-200 dark:border-red-800';
@@ -88,6 +92,10 @@ function formatStatus(status: string): string {
       return 'Delivered';
     case 'completed':
       return 'Completed';
+    case 'refunded':
+      return 'Refunded';
+    case 'partially_refunded':
+      return 'Partially Refunded';
     case 'cancelled':
       return 'Cancelled';
     case 'creating':
@@ -488,6 +496,30 @@ function DigitalPurchaseCard({ purchase }: { purchase: PurchaseWithStorybook }) 
             {formatStatus(purchase.status)}
           </Badge>
         </div>
+
+        {/* Refund Information */}
+        {(purchase.status === 'refunded' || purchase.status === 'partially_refunded') && purchase.refundedAt && (
+          <div className="mb-4 p-3 bg-orange-50 dark:bg-orange-950/20 border border-orange-200 dark:border-orange-800 rounded-md">
+            <div className="flex items-start gap-2">
+              <div className="flex-1">
+                <p className="text-sm font-medium text-orange-900 dark:text-orange-100">
+                  {purchase.status === 'refunded' ? 'Full Refund Processed' : 'Partial Refund Processed'}
+                </p>
+                <p className="text-xs text-orange-700 dark:text-orange-300 mt-1">
+                  Amount: ${formatPrice(purchase.refundAmount || '0')} • {formatDate(purchase.refundedAt)}
+                </p>
+                {purchase.refundReason && (
+                  <p className="text-xs text-orange-600 dark:text-orange-400 mt-1">
+                    Reason: {purchase.refundReason === 'requested_by_customer' ? 'Customer request' : 
+                            purchase.refundReason === 'duplicate' ? 'Duplicate charge' : 
+                            purchase.refundReason === 'fraudulent' ? 'Fraudulent transaction' : 
+                            purchase.refundReason}
+                  </p>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Product Display */}
         <div className="flex gap-4 mb-4">
