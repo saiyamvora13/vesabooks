@@ -118,6 +118,14 @@ export interface IStorage {
   getStorybookPurchase(userId: string, storybookId: string, type: 'digital' | 'print'): Promise<Purchase | null>;
   checkStorybookPurchasesBatch(userId: string, storybookIds: string[], type: 'digital' | 'print'): Promise<Record<string, boolean>>;
   updatePurchaseStatus(id: string, status: string, stripePaymentIntentId?: string): Promise<Purchase>;
+  getPurchasesByPaymentIntent(paymentIntentId: string): Promise<Purchase[]>;
+  updatePurchaseRefund(id: string, refundData: {
+    status: string;
+    refundAmount: string;
+    refundedAt: Date;
+    refundReason: string;
+    stripeRefundId: string;
+  }): Promise<Purchase>;
   
   // Shopping Cart operations
   addToCart(userId: string, storybookId: string, productType: 'digital' | 'print', bookSize?: string, quantity?: number): Promise<CartItem>;
@@ -557,6 +565,35 @@ export class DatabaseStorage implements IStorage {
     const [updatedPurchase] = await db
       .update(purchases)
       .set(updateData)
+      .where(eq(purchases.id, id))
+      .returning();
+    return updatedPurchase;
+  }
+
+  async getPurchasesByPaymentIntent(paymentIntentId: string): Promise<Purchase[]> {
+    const purchasesList = await db
+      .select()
+      .from(purchases)
+      .where(eq(purchases.stripePaymentIntentId, paymentIntentId));
+    return purchasesList;
+  }
+
+  async updatePurchaseRefund(id: string, refundData: {
+    status: string;
+    refundAmount: string;
+    refundedAt: Date;
+    refundReason: string;
+    stripeRefundId: string;
+  }): Promise<Purchase> {
+    const [updatedPurchase] = await db
+      .update(purchases)
+      .set({
+        status: refundData.status,
+        refundAmount: refundData.refundAmount,
+        refundedAt: refundData.refundedAt,
+        refundReason: refundData.refundReason,
+        stripeRefundId: refundData.stripeRefundId,
+      })
       .where(eq(purchases.id, id))
       .returning();
     return updatedPurchase;
