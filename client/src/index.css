@@ -1607,27 +1607,27 @@
 
 /* Front book (position 0) - most prominent with visible spine */
 .stacked-book-0 {
-  transform: translateZ(50px) rotateY(-35deg) rotateX(8deg) scale(1.1);
+  transform: translateZ(50px) scale(1.1);
   filter: 
     drop-shadow(15px 25px 35px rgba(0, 0, 0, 0.35))
     drop-shadow(8px 12px 20px rgba(0, 0, 0, 0.25));
 }
 
 .stacked-book-0:hover {
-  transform: translateZ(70px) rotateY(-30deg) rotateX(5deg) scale(1.15);
+  transform: translateZ(70px) scale(1.15);
   filter: 
     drop-shadow(20px 30px 45px rgba(0, 0, 0, 0.4))
     drop-shadow(10px 15px 25px rgba(0, 0, 0, 0.3));
 }
 
-/* Make the 3D book effects more pronounced for front book */
+/* Front book uses the base .book-3d transform (rotateY(25deg)) for 3D effect */
 .stacked-book-0 .book-3d {
-  transform: rotateY(10deg);
+  /* No additional transform - using base rotateY(25deg) from .book-3d */
   transition: transform 0.4s ease;
 }
 
 .stacked-book-0:hover .book-3d {
-  transform: rotateY(5deg) translateY(-5px);
+  transform: rotateY(28deg) translateY(-5px);
 }
 
 /* Second book in stack - more rotation for spine visibility */
