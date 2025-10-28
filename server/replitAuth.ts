@@ -50,7 +50,7 @@ function getSessionSecret(): string {
 }
 
 export function getSession() {
-  const sessionTtl = 24 * 60 * 60 * 1000; // Reduced to 24 hours
+  const sessionTtl = 7 * 24 * 60 * 60 * 1000; // 7 days for better UX
   const pgStore = connectPg(session);
   const sessionStore = new pgStore({
     conString: process.env.DATABASE_URL,
@@ -68,7 +68,7 @@ export function getSession() {
     cookie: {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production', // Only HTTPS in production
-      sameSite: 'strict', // Changed from 'lax' to 'strict'
+      sameSite: 'lax', // 'lax' for Stripe redirects and external links
       maxAge: sessionTtl,
       domain: process.env.NODE_ENV === 'production' ? process.env.COOKIE_DOMAIN : undefined,
     },
