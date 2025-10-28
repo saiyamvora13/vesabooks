@@ -28,6 +28,9 @@
   --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
   --font-display: 'Fredoka', sans-serif;
   --font-mono: 'JetBrains Mono', monospace;
+  
+  /* 3D Book Geometry - Single source of truth for book depth */
+  --book-depth: 32px;
 }
 
 .dark {
@@ -1078,7 +1081,7 @@
           drop-shadow(0 10px 20px rgba(0, 0, 0, 0.2));
 }
 
-.book-3d-container:hover .stacked-carousel-wrapper .book-3d {
+.stacked-carousel-container:hover .stacked-carousel-wrapper .book-3d {
   transform: rotateY(-15deg) rotateX(2deg) translateY(-10px);
   filter: drop-shadow(0 35px 70px rgba(0, 0, 0, 0.5))
           drop-shadow(0 15px 30px rgba(0, 0, 0, 0.25));
@@ -1092,13 +1095,14 @@
   background: linear-gradient(135deg, #f5f5f5 0%, #e0e0e0 100%);
   border-radius: 3px 12px 12px 3px;
   overflow: hidden;
-  transform: translateZ(32px);
+  transform: translateZ(var(--book-depth));
   box-shadow: 
     inset 4px 0 12px rgba(0, 0, 0, 0.15),
     inset -1px 0 3px rgba(255, 255, 255, 0.6),
     0 0 0 1px rgba(0, 0, 0, 0.12),
     0 4px 20px rgba(0, 0, 0, 0.15);
   backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
   z-index: 3;
 }
 
@@ -1137,12 +1141,13 @@
   height: 100%;
   background: linear-gradient(135deg, #e8e8e8 0%, #d0d0d0 100%);
   border-radius: 12px 3px 3px 12px;
-  transform: translateZ(-32px) rotateY(180deg);
+  transform: translateZ(calc(-1 * var(--book-depth))) rotateY(180deg);
   box-shadow: 
     inset -4px 0 12px rgba(0, 0, 0, 0.15),
     inset 1px 0 3px rgba(255, 255, 255, 0.6),
     0 0 0 1px rgba(0, 0, 0, 0.12);
   backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
   z-index: 0;
 }
 
@@ -1157,7 +1162,7 @@
 .stacked-carousel-wrapper .book-spine {
   position: absolute;
   left: 0;
-  width: 80px;
+  width: calc(var(--book-depth) * 2);
   height: 100%;
   background: linear-gradient(
     90deg,
@@ -1174,7 +1179,7 @@
     rgba(0, 0, 0, 0.4) 100%
   );
   transform-origin: left center;
-  transform: rotateY(-90deg) translateX(-40px);
+  transform: rotateY(-90deg) translateX(calc(-1 * var(--book-depth)));
   border-radius: 4px 0 0 4px;
   box-shadow:
     inset 3px 0 6px rgba(255, 255, 255, 0.6),
@@ -1183,6 +1188,8 @@
     inset 0 -2px 0 rgba(0, 0, 0, 0.4),
     0 0 15px rgba(0, 0, 0, 0.3),
     -2px 0 8px rgba(0, 0, 0, 0.2);
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
   z-index: 1;
 }
 
@@ -1291,7 +1298,7 @@
   position: absolute;
   right: 0;
   top: 3px;
-  width: 65px;
+  width: calc(var(--book-depth) * 2);
   height: calc(100% - 6px);
   background: linear-gradient(
     90deg,
@@ -1309,12 +1316,14 @@
     rgba(0, 0, 0, 0.18) 100%
   );
   transform-origin: right center;
-  transform: rotateY(90deg) translateX(32px);
+  transform: rotateY(90deg) translateX(var(--book-depth));
   border-radius: 0 4px 4px 0;
   box-shadow:
     inset -2px 0 4px rgba(0, 0, 0, 0.15),
     inset 2px 0 3px rgba(255, 255, 255, 0.9),
     0 0 12px rgba(0, 0, 0, 0.12);
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
   z-index: 1;
 }
 
@@ -1369,7 +1378,7 @@
   top: 0;
   left: 3px;
   width: calc(100% - 6px);
-  height: 65px;
+  height: calc(var(--book-depth) * 2);
   background: linear-gradient(
     180deg,
     rgba(0, 0, 0, 0.2) 0%,
@@ -1385,11 +1394,13 @@
     rgba(0, 0, 0, 0.25) 100%
   );
   transform-origin: top center;
-  transform: rotateX(-90deg) translateY(-32px);
+  transform: rotateX(-90deg) translateY(calc(-1 * var(--book-depth)));
   border-radius: 4px 4px 0 0;
   box-shadow: 
     0 2px 6px rgba(0, 0, 0, 0.2),
     inset 0 1px 2px rgba(255, 255, 255, 0.8);
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
   z-index: 2;
 }
 
@@ -1410,7 +1421,7 @@
   bottom: 0;
   left: 3px;
   width: calc(100% - 6px);
-  height: 65px;
+  height: calc(var(--book-depth) * 2);
   background: linear-gradient(
     180deg,
     rgba(0, 0, 0, 0.25) 0%,
@@ -1426,11 +1437,13 @@
     rgba(0, 0, 0, 0.2) 100%
   );
   transform-origin: bottom center;
-  transform: rotateX(90deg) translateY(32px);
+  transform: rotateX(90deg) translateY(var(--book-depth));
   border-radius: 0 0 4px 4px;
   box-shadow: 
     0 -2px 6px rgba(0, 0, 0, 0.2),
     inset 0 -1px 2px rgba(255, 255, 255, 0.8);
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
   z-index: 2;
 }
 
