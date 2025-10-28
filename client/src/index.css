@@ -1060,8 +1060,7 @@
 
 /* 3D Book Carousel Styles */
 .book-3d-container {
-  perspective: 2000px;
-  perspective-origin: 50% 50%;
+  perspective: 1500px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -1073,121 +1072,40 @@
   width: 280px;
   height: 380px;
   transform-style: preserve-3d;
-  transform: rotateY(25deg) rotateX(3deg);
+  transform: rotateY(-25deg) rotateX(5deg);
   transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
-  filter: drop-shadow(10px 15px 30px rgba(0, 0, 0, 0.25))
-          drop-shadow(5px 8px 15px rgba(0, 0, 0, 0.15));
+  filter: drop-shadow(0 25px 50px rgba(0, 0, 0, 0.4))
+          drop-shadow(0 10px 20px rgba(0, 0, 0, 0.2));
 }
 
 .book-3d-container:hover .book-3d {
-  transform: rotateY(30deg) rotateX(2deg) translateY(-10px);
-  filter: drop-shadow(15px 20px 40px rgba(0, 0, 0, 0.3))
-          drop-shadow(8px 12px 20px rgba(0, 0, 0, 0.2));
+  transform: rotateY(-15deg) rotateX(2deg) translateY(-10px);
+  filter: drop-shadow(0 35px 70px rgba(0, 0, 0, 0.5))
+          drop-shadow(0 15px 30px rgba(0, 0, 0, 0.25));
 }
 
-/* Book Cover (front) - Main face of book - CAROUSEL SPECIFIC */
-.stacked-book .book-cover {
+/* Book Cover (front) */
+.book-cover {
   position: absolute;
-  left: 0;
-  top: 0;
   width: 100%;
   height: 100%;
-  background: 
-    linear-gradient(
-      135deg,
-      #f8f8f8 0%,
-      #f5f5f5 20%,
-      #efefef 40%,
-      #e8e8e8 60%,
-      #e0e0e0 80%,
-      #d8d8d8 100%
-    );
-  border-radius: 4px;
+  background: linear-gradient(135deg, #f5f5f5 0%, #e0e0e0 100%);
+  border-radius: 2px 12px 12px 2px;
   overflow: hidden;
   transform: translateZ(25px);
   box-shadow: 
-    0 8px 20px rgba(0, 0, 0, 0.2),
-    0 4px 10px rgba(0, 0, 0, 0.15);
+    inset 3px 0 10px rgba(0, 0, 0, 0.1),
+    inset -1px 0 2px rgba(255, 255, 255, 0.5),
+    0 0 0 1px rgba(0, 0, 0, 0.1);
   backface-visibility: hidden;
 }
 
-/* Glossy hardcover overlay effect */
-.book-cover::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: linear-gradient(
-    105deg,
-    transparent 40%,
-    rgba(255, 255, 255, 0.2) 45%,
-    rgba(255, 255, 255, 0.4) 48%,
-    rgba(255, 255, 255, 0.5) 50%,
-    rgba(255, 255, 255, 0.4) 52%,
-    rgba(255, 255, 255, 0.2) 55%,
-    transparent 60%,
-    transparent 100%
-  );
-  transform: translateX(-100%);
-  animation: bookShine 8s ease-in-out infinite;
-  pointer-events: none;
-  border-radius: inherit;
-}
-
-/* Hardcover texture overlay */
-.book-cover::after {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: 
-    repeating-linear-gradient(
-      90deg,
-      transparent,
-      transparent 2px,
-      rgba(0, 0, 0, 0.03) 2px,
-      rgba(0, 0, 0, 0.03) 4px
-    ),
-    repeating-linear-gradient(
-      0deg,
-      transparent,
-      transparent 2px,
-      rgba(0, 0, 0, 0.03) 2px,
-      rgba(0, 0, 0, 0.03) 4px
-    );
-  opacity: 0.5;
-  pointer-events: none;
-  border-radius: inherit;
-}
-
-.dark .stacked-book .book-cover {
-  background: 
-    radial-gradient(
-      ellipse at 30% 20%,
-      rgba(255, 255, 255, 0.1) 0%,
-      transparent 50%
-    ),
-    linear-gradient(
-      135deg,
-      #353535 0%,
-      #2e2e2e 20%,
-      #282828 40%,
-      #222222 60%,
-      #1c1c1c 80%,
-      #161616 100%
-    );
+.dark .book-cover {
+  background: linear-gradient(135deg, #2a2a2a 0%, #1a1a1a 100%);
   box-shadow: 
-    inset 3px 0 10px rgba(0, 0, 0, 0.4),
-    inset -1px 0 3px rgba(255, 255, 255, 0.15),
-    inset 0 2px 4px rgba(255, 255, 255, 0.1),
-    inset 0 -2px 4px rgba(0, 0, 0, 0.3),
-    0 5px 15px rgba(0, 0, 0, 0.4),
-    0 10px 25px rgba(0, 0, 0, 0.35),
-    0 0 0 1px rgba(0, 0, 0, 0.3);
+    inset 3px 0 10px rgba(0, 0, 0, 0.3),
+    inset -1px 0 2px rgba(255, 255, 255, 0.1),
+    0 0 0 1px rgba(0, 0, 0, 0.2);
 }
 
 /* Book Back Cover */
@@ -1211,55 +1129,54 @@
     0 0 0 1px rgba(0, 0, 0, 0.2);
 }
 
-/* Book Spine - Orange binding visible on right edge - CAROUSEL SPECIFIC */
-.stacked-book .book-spine {
+/* Book Spine - Enhanced and More Visible */
+.book-spine {
   position: absolute;
-  right: 0;
-  top: 0;
-  width: 10px;
+  left: -10px;
+  width: 70px;
   height: 100%;
   background: linear-gradient(
-    to bottom,
-    #fbbf24 0%,
-    #f59e0b 25%,
-    #f97316 50%,
-    #f59e0b 75%,
-    #fbbf24 100%
+    90deg,
+    rgba(0, 0, 0, 0.25) 0%,
+    #d0d0d0 4%,
+    #e5e5e5 12%,
+    #f0f0f0 20%,
+    #c8c8c8 50%,
+    #b0b0b0 80%,
+    #a0a0a0 88%,
+    #909090 96%,
+    rgba(0, 0, 0, 0.25) 100%
   );
   transform-origin: left center;
-  transform: rotateY(90deg) translateZ(25px);
+  transform: rotateY(-90deg) translateX(-35px);
+  border-radius: 3px;
   box-shadow:
-    inset 2px 0 4px rgba(0, 0, 0, 0.3),
-    inset -2px 0 4px rgba(0, 0, 0, 0.2);
+    inset 2px 0 4px rgba(255, 255, 255, 0.5),
+    inset -2px 0 4px rgba(0, 0, 0, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.4),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.3),
+    0 0 10px rgba(0, 0, 0, 0.2);
 }
 
-.dark .stacked-book .book-spine {
+.dark .book-spine {
   background: linear-gradient(
     90deg,
-    rgba(0, 0, 0, 0.6) 0%,
-    #282828 2%,
-    #383838 5%,
-    #454545 10%,
-    #505050 18%,
-    #585858 25%,
-    #505050 35%,
-    #484848 50%,
-    #404040 65%,
-    #353535 75%,
-    #2a2a2a 82%,
-    #202020 90%,
-    #151515 95%,
-    #0a0a0a 98%,
-    rgba(0, 0, 0, 0.6) 100%
+    rgba(0, 0, 0, 0.4) 0%,
+    #383838 4%,
+    #454545 12%,
+    #505050 20%,
+    #303030 50%,
+    #252525 80%,
+    #1a1a1a 88%,
+    #101010 96%,
+    rgba(0, 0, 0, 0.4) 100%
   );
   box-shadow:
-    inset 4px 0 8px rgba(255, 255, 255, 0.2),
-    inset -4px 0 8px rgba(0, 0, 0, 0.5),
-    inset 0 2px 0 rgba(255, 255, 255, 0.15),
-    inset 0 -2px 0 rgba(0, 0, 0, 0.5),
-    inset 35px 0 20px -20px rgba(0, 0, 0, 0.3),
-    inset -35px 0 20px -20px rgba(0, 0, 0, 0.3),
-    0 0 15px rgba(0, 0, 0, 0.4);
+    inset 2px 0 4px rgba(255, 255, 255, 0.15),
+    inset -2px 0 4px rgba(0, 0, 0, 0.4),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.4),
+    0 0 10px rgba(0, 0, 0, 0.3);
 }
 
 /* Book Spine Text/Decoration - Gold foil effect */
@@ -1337,87 +1254,47 @@
   }
 }
 
-/* Shine effect for glossy hardcover */
-@keyframes bookShine {
-  0%, 100% {
-    transform: translateX(-100%);
-  }
-  50% {
-    transform: translateX(100%);
-  }
-}
-
 .stacked-book-0 .book-cover {
   animation: bookGlow 3s ease-in-out infinite;
 }
 
-/* Book Pages - Thick white page stack visible on right edge - CAROUSEL SPECIFIC */
-.stacked-book .book-pages {
+/* Book Pages (side edges) - Right Side */
+.book-pages {
   position: absolute;
-  right: 0;
-  top: 0;
-  width: 50px;
-  height: 100%;
-  background: 
-    repeating-linear-gradient(
-      to bottom,
-      #ffffff 0px,
-      #ffffff 2px,
-      #e8e8e8 2px,
-      #e8e8e8 2.5px
-    ),
-    linear-gradient(
-      to right,
-      #d0d0d0 0%,
-      #e0e0e0 5%,
-      #f0f0f0 15%,
-      #f8f8f8 30%,
-      #ffffff 50%,
-      #f8f8f8 70%,
-      #f0f0f0 85%,
-      #e0e0e0 95%,
-      #d0d0d0 100%
-    );
-  transform-origin: left center;
-  transform: rotateY(90deg) translateZ(25px);
+  right: -2px;
+  top: 4px;
+  width: 54px;
+  height: calc(100% - 8px);
+  background: linear-gradient(
+    90deg,
+    rgba(0, 0, 0, 0.05) 0%,
+    #f8f8f8 3%,
+    #ffffff 10%,
+    #fafafa 90%,
+    #f0f0f0 97%,
+    rgba(0, 0, 0, 0.08) 100%
+  );
+  transform-origin: right center;
+  transform: rotateY(90deg) translateX(27px);
+  border-radius: 0 2px 2px 0;
   box-shadow:
-    inset -4px 0 12px rgba(0, 0, 0, 0.2),
-    inset 4px 0 12px rgba(0, 0, 0, 0.15),
-    -3px 0 10px rgba(0, 0, 0, 0.25);
+    inset -1px 0 3px rgba(0, 0, 0, 0.1),
+    inset 1px 0 1px rgba(255, 255, 255, 0.8);
 }
 
-.dark .stacked-book .book-pages {
-  background: 
-    repeating-linear-gradient(
-      90deg,
-      #2a2a2a 0px,
-      #323232 0.4px,
-      #282828 0.8px,
-      #353535 1.2px,
-      #2d2d2d 1.6px,
-      #2a2a2a 2px
-    ),
-    linear-gradient(
-      90deg,
-      rgba(0, 0, 0, 0.35) 0%,
-      #242424 2%,
-      #2a2a2a 4%,
-      #303030 8%,
-      #383838 15%,
-      #353535 50%,
-      #323232 85%,
-      #2a2a2a 92%,
-      #222222 96%,
-      #1a1a1a 98%,
-      rgba(0, 0, 0, 0.4) 100%
-    );
+.dark .book-pages {
+  background: linear-gradient(
+    90deg,
+    rgba(0, 0, 0, 0.2) 0%,
+    #2a2a2a 3%,
+    #333333 10%,
+    #303030 90%,
+    #282828 97%,
+    rgba(0, 0, 0, 0.3) 100%
+  );
   box-shadow:
-    inset -3px 0 6px rgba(0, 0, 0, 0.4),
-    inset 2px 0 3px rgba(255, 255, 255, 0.15),
-    inset -5px 0 10px rgba(0, 0, 0, 0.25),
-    inset 0 1px 1px rgba(0, 0, 0, 0.2),
-    inset 0 -1px 1px rgba(0, 0, 0, 0.2),
-    0 0 4px rgba(0, 0, 0, 0.3);
+    inset -1px 0 3px rgba(0, 0, 0, 0.3),
+    inset 1px 0 1px rgba(255, 255, 255, 0.1);
 }
 
 /* Page Lines Effect */
@@ -1607,27 +1484,31 @@
 
 /* Front book (position 0) - most prominent with visible spine */
 .stacked-book-0 {
-  transform: translateZ(50px) scale(1.1);
+  transform: translateZ(50px) rotateY(-35deg) rotateX(8deg) scale(1.1);
   filter: 
-    drop-shadow(15px 25px 35px rgba(0, 0, 0, 0.35))
-    drop-shadow(8px 12px 20px rgba(0, 0, 0, 0.25));
+    drop-shadow(0 40px 80px rgba(0, 0, 0, 0.6))
+    drop-shadow(0 20px 40px rgba(0, 0, 0, 0.4))
+    drop-shadow(0 10px 20px rgba(0, 0, 0, 0.3))
+    drop-shadow(2px 2px 4px rgba(0, 0, 0, 0.2));
 }
 
 .stacked-book-0:hover {
-  transform: translateZ(70px) scale(1.15);
+  transform: translateZ(70px) rotateY(-30deg) rotateX(5deg) scale(1.15);
   filter: 
-    drop-shadow(20px 30px 45px rgba(0, 0, 0, 0.4))
-    drop-shadow(10px 15px 25px rgba(0, 0, 0, 0.3));
+    drop-shadow(0 50px 100px rgba(0, 0, 0, 0.7))
+    drop-shadow(0 25px 50px rgba(0, 0, 0, 0.45))
+    drop-shadow(0 12px 24px rgba(0, 0, 0, 0.35))
+    drop-shadow(3px 3px 6px rgba(0, 0, 0, 0.25));
 }
 
-/* Front book uses the base .book-3d transform (rotateY(25deg)) for 3D effect */
+/* Make the 3D book effects more pronounced for front book */
 .stacked-book-0 .book-3d {
-  /* No additional transform - using base rotateY(25deg) from .book-3d */
+  transform: rotateY(10deg);
   transition: transform 0.4s ease;
 }
 
 .stacked-book-0:hover .book-3d {
-  transform: rotateY(28deg) translateY(-5px);
+  transform: rotateY(5deg) translateY(-5px);
 }
 
 /* Second book in stack - more rotation for spine visibility */
