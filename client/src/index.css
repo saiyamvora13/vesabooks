@@ -1072,14 +1072,14 @@
   width: 280px;
   height: 380px;
   transform-style: preserve-3d;
-  transform: rotateY(-30deg) rotateX(5deg);
+  transform: rotateY(30deg) rotateX(5deg);
   transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
   filter: drop-shadow(10px 15px 30px rgba(0, 0, 0, 0.25))
           drop-shadow(5px 8px 15px rgba(0, 0, 0, 0.15));
 }
 
 .book-3d-container:hover .book-3d {
-  transform: rotateY(-25deg) rotateX(3deg) translateY(-10px);
+  transform: rotateY(35deg) rotateX(3deg) translateY(-10px);
   filter: drop-shadow(15px 20px 40px rgba(0, 0, 0, 0.3))
           drop-shadow(8px 12px 20px rgba(0, 0, 0, 0.2));
 }
@@ -1210,33 +1210,24 @@
     0 0 0 1px rgba(0, 0, 0, 0.2);
 }
 
-/* Book Spine - 3D perpendicular surface on left */
+/* Book Spine - 3D perpendicular surface on RIGHT showing colored binding */
 .book-spine {
   position: absolute;
-  left: -25px;
+  right: 0;
   top: 0;
-  width: 50px;
+  width: 8px;
   height: 100%;
   background: linear-gradient(
-    to right,
-    rgba(0, 0, 0, 0.4) 0%,
-    #707070 5%,
-    #909090 15%,
-    #a8a8a8 25%,
-    #c0c0c0 40%,
-    #d0d0d0 50%,
-    #c0c0c0 60%,
-    #a8a8a8 75%,
-    #909090 85%,
-    #707070 95%,
-    rgba(0, 0, 0, 0.4) 100%
+    to bottom,
+    #f59e0b 0%,
+    #f97316 50%,
+    #f59e0b 100%
   );
-  transform-origin: right center;
-  transform: rotateY(90deg);
+  transform-origin: left center;
+  transform: rotateY(-90deg) translateZ(42px);
   box-shadow:
-    inset 2px 0 6px rgba(0, 0, 0, 0.4),
-    inset -2px 0 6px rgba(0, 0, 0, 0.4),
-    inset 0 0 20px rgba(0, 0, 0, 0.2);
+    inset 2px 0 4px rgba(0, 0, 0, 0.3),
+    inset -2px 0 4px rgba(0, 0, 0, 0.2);
 }
 
 .dark .book-spine {
@@ -1357,41 +1348,37 @@
   animation: bookGlow 3s ease-in-out infinite;
 }
 
-/* Book Pages - 3D perpendicular surface on right */
+/* Book Pages - 3D perpendicular surface on RIGHT showing page thickness */
 .book-pages {
   position: absolute;
-  right: -25px;
+  right: 0;
   top: 0;
   width: 50px;
   height: 100%;
   background: 
     repeating-linear-gradient(
       to bottom,
-      transparent,
-      transparent 2px,
-      rgba(0, 0, 0, 0.05) 2px,
-      rgba(0, 0, 0, 0.05) 3px
+      #fafafa,
+      #fafafa 1.5px,
+      rgba(0, 0, 0, 0.08) 1.5px,
+      rgba(0, 0, 0, 0.08) 2px
     ),
     linear-gradient(
-      to left,
-      rgba(0, 0, 0, 0.12) 0%,
-      #c8c8c8 5%,
-      #d8d8d8 15%,
-      #e5e5e5 25%,
-      #f0f0f0 40%,
-      #f8f8f8 50%,
-      #f0f0f0 60%,
-      #e5e5e5 75%,
-      #d8d8d8 85%,
-      #c8c8c8 95%,
-      rgba(0, 0, 0, 0.12) 100%
+      to right,
+      #e8e8e8 0%,
+      #f0f0f0 10%,
+      #f8f8f8 30%,
+      #ffffff 50%,
+      #f8f8f8 70%,
+      #f0f0f0 90%,
+      #e8e8e8 100%
     );
   transform-origin: left center;
-  transform: rotateY(-90deg);
+  transform: rotateY(-90deg) translateZ(0px);
   box-shadow:
-    inset -2px 0 6px rgba(0, 0, 0, 0.2),
-    inset 2px 0 6px rgba(0, 0, 0, 0.2),
-    inset 0 0 15px rgba(0, 0, 0, 0.1);
+    inset -3px 0 10px rgba(0, 0, 0, 0.15),
+    inset 3px 0 10px rgba(0, 0, 0, 0.1),
+    -2px 0 8px rgba(0, 0, 0, 0.2);
 }
 
 .dark .book-pages {
