@@ -98,6 +98,8 @@ function formatStatus(status: string): string {
       return 'Partially Refunded';
     case 'cancelled':
       return 'Cancelled';
+    case 'failed':
+      return 'Failed';
     case 'creating':
       return 'Processing';
     case 'pending':
