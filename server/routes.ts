@@ -5030,6 +5030,86 @@ Sitemap: ${baseUrl}/sitemap.xml`;
         console.log(`[Prodigi Webhook] ✅ Updated print order ${printOrder.id}`);
       }
 
+      // EMAIL #3: Send shipping notification when tracking info becomes available
+      if (updates.trackingNumber && updates.trackingUrl && shipments.length > 0) {
+        console.log(`[Prodigi Webhook] 📦 Tracking info available, checking if shipping emails need to be sent`);
+        
+        const { sendShippingNotification } = await import("./services/resend-email");
+        
+        for (const printOrder of printOrders) {
+          try {
+            // Only send if we didn't have tracking info before (avoid duplicate emails)
+            if (!printOrder.trackingNumber) {
+              // Get purchase details
+              const purchaseResults = await db.select().from(purchases).where(eq(purchases.id, printOrder.purchaseId));
+              const purchase = purchaseResults[0];
+              
+              if (!purchase) {
+                console.error(`[Prodigi Webhook] Purchase ${printOrder.purchaseId} not found for shipping email`);
+                continue;
+              }
+              
+              // Get user details
+              if (!purchase.userId) {
+                console.error(`[Prodigi Webhook] No userId for purchase ${printOrder.purchaseId}`);
+                continue;
+              }
+              
+              const user = await storage.getUser(purchase.userId);
+              if (!user || !user.email) {
+                console.error(`[Prodigi Webhook] User ${purchase.userId} not found or has no email`);
+                continue;
+              }
+              
+              // Get storybook details
+              const storybook = await storage.getStorybook(purchase.storybookId);
+              if (!storybook) {
+                console.error(`[Prodigi Webhook] Storybook ${purchase.storybookId} not found for shipping email`);
+                continue;
+              }
+              
+              // Extract recipient details from webhookData
+              const prodigiOrderData = typeof printOrder.webhookData === 'string' 
+                ? JSON.parse(printOrder.webhookData) 
+                : printOrder.webhookData;
+              const recipient = prodigiOrderData?.recipient || {};
+              
+              // Get base URL for cover image
+              const baseUrl = process.env.REPLIT_DOMAINS 
+                ? `https://${process.env.REPLIT_DOMAINS.split(',')[0]}`
+                : 'http://localhost:5000';
+              const coverUrl = storybook.coverImageUrl || `${baseUrl}/api/storybooks/${storybook.id}/preview`;
+              
+              // Use recipient email from Prodigi order, fallback to user email
+              const recipientEmail = recipient.email || user.email;
+              const recipientName = recipient.name || user.firstName || user.email?.split('@')[0] || 'Customer';
+              
+              // Send shipping notification
+              const firstShipment = shipments[0];
+              await sendShippingNotification({
+                recipientEmail,
+                recipientName,
+                storybookTitle: storybook.title,
+                storybookCoverUrl: coverUrl,
+                orderId: purchase.orderReference || printOrder.prodigiOrderId || 'N/A',
+                trackingNumber: updates.trackingNumber,
+                trackingUrl: updates.trackingUrl,
+                carrier: updates.carrier || 'Carrier',
+                carrierService: updates.carrierService || 'Standard Shipping',
+                estimatedDelivery: updates.estimatedDelivery || new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // Default to 7 days from now
+              });
+              
+              console.log(`[Prodigi Webhook] ✅ Shipping notification sent to ${recipientEmail} for order ${printOrder.id}`);
+            } else {
+              console.log(`[Prodigi Webhook] ⏭️  Tracking already existed for order ${printOrder.id}, skipping shipping email`);
+            }
+          } catch (emailError) {
+            console.error(`[Prodigi Webhook] Failed to send shipping email for order ${printOrder.id}:`, emailError);
+            // Don't fail the webhook if email fails
+          }
+        }
+      }
+
       // Update purchase status when order is completed or cancelled
       // Note: Normalize the status for comparison (Prodigi uses PascalCase)
       const normalizedStage = status?.stage ? prodigiService.normalizeOrderStatus(status.stage) : null;
