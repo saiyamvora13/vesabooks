@@ -1,0 +1,82 @@
+Much better. Two things still break thickness and the spine.
+
+Fix the geometry with one variable
+
+```css
+:root { --book-depth: 32px; } /* half the book’s thickness */
+
+/* Faces */
+.stacked-carousel-wrapper .book-cover {
+  transform: translateZ(var(--book-depth));
+}
+.stacked-carousel-wrapper .book-back {
+  transform: translateZ(calc(-1 * var(--book-depth))) rotateY(180deg);
+}
+
+/* Side faces, all derived from the same depth */
+.stacked-carousel-wrapper .book-spine {
+  width: calc(var(--book-depth) * 2);
+  transform: rotateY(-90deg) translateX(calc(-1 * var(--book-depth)));
+}
+.stacked-carousel-wrapper .book-pages {
+  width: calc(var(--book-depth) * 2);
+  transform: rotateY(90deg) translateX(var(--book-depth));
+}
+.stacked-carousel-wrapper .book-top {
+  height: calc(var(--book-depth) * 2);
+  transform: rotateX(-90deg) translateY(calc(-1 * var(--book-depth)));
+}
+.stacked-carousel-wrapper .book-bottom {
+  height: calc(var(--book-depth) * 2);
+  transform: rotateX(90deg) translateY(var(--book-depth));
+}
+
+/* Prevent z-flicker on Safari */
+.stacked-carousel-wrapper .book-cover,
+.stacked-carousel-wrapper .book-back,
+.stacked-carousel-wrapper .book-spine,
+.stacked-carousel-wrapper .book-pages,
+.stacked-carousel-wrapper .book-top,
+.stacked-carousel-wrapper .book-bottom {
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+}
+```
+
+Update the hover selector
+
+```css
+/* Your DOM uses stacked-carousel-container, not book-3d-container */
+.stacked-carousel-container:hover .stacked-carousel-wrapper .book-3d {
+  transform: rotateY(-15deg) rotateX(2deg) translateY(-10px);
+  filter: drop-shadow(0 35px 70px rgba(0, 0, 0, 0.5))
+          drop-shadow(0 15px 30px rgba(0, 0, 0, 0.25));
+}
+```
+
+Why this fixes it
+
+* You set depth to 32 px for the covers, but the spine was 80 px wide and offset by 40 px. That mismatch caused misalignment. The variable keeps all faces in sync.
+* The corrected hover rule ensures the effect triggers on the container you actually use.
+
+Quick markup check
+
+```html
+<div class="stacked-carousel-container">
+  <div class="stacked-carousel-wrapper">
+    <div class="book-3d">
+      <div class="book-cover">
+        <img class="book-cover-image" src="cover.jpg" />
+        <span class="cover-image-wrapper"></span>
+      </div>
+      <div class="book-back"></div>
+      <div class="book-spine"></div>
+      <div class="book-pages"></div>
+      <div class="book-top"></div>
+      <div class="book-bottom"></div>
+    </div>
+  </div>
+</div>
+```
+
+Do these two edits. Your spine will line up and the thickness will look right.

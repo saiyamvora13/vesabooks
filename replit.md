@@ -1,7 +1,7 @@
 # AI Storybook Builder
 
 ## Overview
-AI Storybook Builder is a web application for creating personalized, AI-illustrated children's storybooks. It enables users to generate 3-page storybooks with custom illustrations by providing a story prompt and optional images. The platform leverages Google Gemini AI for both story generation and image creation, aiming to offer an engaging and customizable experience for children's literature with market potential in personalized content.
+AI Storybook Builder is a web application designed for creating personalized, AI-illustrated children's storybooks. It allows users to generate 3-page storybooks with custom illustrations based on a story prompt and optional images. The platform utilizes Google Gemini AI for both story generation and image creation, aiming to provide an engaging and customizable experience in children's literature with significant market potential in personalized content.
 
 ## User Preferences
 Preferred communication style: Simple, everyday language.
@@ -9,79 +9,16 @@ Preferred communication style: Simple, everyday language.
 ## System Architecture
 
 ### UI/UX Decisions
-The application features a minimalist design with a soft white and purple color palette, supporting light/dark modes and a mobile-first approach. The storybook viewer provides a 3D flipbook experience on desktop and a single-page view with swipe gestures on mobile. User authentication supports traditional email/password and Replit Auth. A personal library manages created storybooks, and the homepage hero section dynamically showcases generated storybook covers. The flipbook viewer dynamically adapts container dimensions based on storybook orientation using binary detection: images with aspect ratio ≥ 1.0 are landscape, otherwise portrait.
-
-**Unified Orders Page**: The "My Orders" page consolidates both digital purchases and print orders into a single view with filter dropdown (All Orders/Digital Books/Print Orders). Digital purchase cards show download EPUB/PDF buttons, view book links, and upgrade to print options. Print order cards display tracking info, shipping details, and order status. The legacy /purchases route redirects to /orders for backward compatibility.
-
-**Accessibility & Contrast**: All UI components maintain proper color contrast in both light and dark modes. Dialog/Sheet close buttons explicitly use `text-gray-900 dark:text-gray-100` to ensure visibility on all backgrounds. Button variants (outline, ghost) include explicit `text-foreground` color classes to prevent white-on-white or invisible icon issues.
-
-**iOS Safari Stability**: The flipbook viewer uses static viewport height (`vh`) instead of dynamic viewport height (`dvh`) on mobile to prevent container resizing when Safari's address bar hides/shows during page navigation. The fullscreen button is conditionally hidden on iOS devices as the Fullscreen API is not supported by Safari. Image and text pages use consistent vertical centering to prevent alignment shifts during page transitions.
-
-**3D Book CSS Architecture**: The application uses two distinct book visualization widgets with scoped CSS to prevent naming conflicts. The 3D book carousel on the homepage uses selectors scoped under `.stacked-carousel-wrapper` (e.g., `.stacked-carousel-wrapper .book-cover`, `.stacked-carousel-wrapper .book-spine`) with enhanced dimensions (80px spine, 65px pages, realistic hardcover effects). The magical book widget for loading states (progress tracker) uses selectors scoped under `.magical-book-container` with smaller dimensions (8px spine, 40px cover, animated page turns with sparkles). This complete scoping architecture ensures both widgets coexist without CSS cascade conflicts. Duplicate `@keyframes slideUp` was resolved by renaming the mobile menu animation to `menuSlideUp`. Duplicate `.book-page` rules were resolved by scoping the magical book version. Future widget additions must maintain proper CSS namespacing to prevent conflicts.
+The application features a minimalist design with a soft white and purple color palette, supporting light/dark modes and a mobile-first approach. The storybook viewer offers a 3D flipbook experience on desktop and a single-page view with swipe gestures on mobile. User authentication includes email/password and Replit Auth. A personal library manages created storybooks, and the homepage dynamically showcases generated storybook covers. The flipbook viewer adapts dimensions based on storybook orientation (landscape or portrait). A unified "My Orders" page consolidates digital and print purchases with filtering options. Accessibility is ensured through proper color contrast in both light and dark modes, and explicit color classes for UI components to prevent visibility issues. The flipbook viewer uses static viewport height on iOS Safari to prevent resizing issues and hides the fullscreen button due to lack of Safari support. The 3D book CSS architecture uses scoped CSS to prevent conflicts between the homepage carousel (`.stacked-carousel-wrapper`) and loading state widget (`.magical-book-container`), with all 3D geometry derived from a single CSS variable.
 
 ### Technical Implementations
-The frontend is built with React 18, TypeScript, Vite, Wouter, TanStack Query, Shadcn/ui, Radix UI, and Tailwind CSS. The backend uses Node.js Express.js with TypeScript, Drizzle ORM for PostgreSQL, and a middleware-chain. Key features include an Admin Platform, email/password authentication with Passport.js, multilingual support (5 languages), a three-act story structure system, and a Progressive Visual Reference Chain for character consistency across illustrations. Image style consistency is maintained through user selection from 10 professional illustration styles.
-
-**Character Labeling System**: Users can now provide text descriptions for each uploaded reference image (e.g., "Mom - woman with curly hair", "Dad - tall man with glasses", "Child - 5-year-old girl"). The system passes these character descriptions through the entire generation pipeline (including batched generation for longer stories) to the AI prompt, helping Gemini AI correctly identify and maintain consistency for each character throughout the story. Implemented via FileUploadWithDescriptions component, backend characterDescriptions array processing, and enhanced AI system instructions.
-
-**AI-Generated Cover Text**: To prevent title/author text from appearing on interior pages, the system uses a two-phase cover generation: (1) Generate clean cover without text to use as reference for interior pages, (2) After all pages are complete, regenerate cover with explicit AI instruction to include title and author text. This ensures beautiful AI-generated typography on the cover while keeping interior illustrations text-free.
-
-The platform includes an e-commerce system with Stripe payments, EPUB e-book download, and print-ready PDF generation. Integration with Prodigi Print API enables physical hardcover book production with margin-based pricing, a 3-step checkout flow, and secure webhook integration. Other features include error handling with retry logic, persistent image storage in Replit Object Storage, sample story prompts, analytics, social sharing, user feedback, and individual page regeneration. Enhanced admin analytics are provided via a dashboard, and professional sound effects are integrated with an AudioManager. Security measures include bcryptjs, rate limiting, secure session storage, and Zod validation. An Admin Bootstrap System facilitates initial admin user creation. Anonymous story creation is protected by IP rate limiting, reCAPTCHA v3, and email-gated downloads. Production monitoring leverages Replit Analytics, and the application includes SEO and accessibility features.
-
-**Two-Email Print Order System**: Print orders trigger two sequential customer emails to enhance transparency throughout the fulfillment process. The first email ("Order Being Processed") is sent immediately after order submission with all order details, acknowledging receipt and informing customers that payment will be processed once Prodigi confirms the order. The second email ("Payment Processed - In Production") is sent via webhook after Prodigi accepts the order and payment is successfully charged, confirming that production has begun. Both emails are sent from orders@vesabooks.com and include complete order information (storybook title, cover image, book size, shipping address, estimated production time). Email failures are logged but do not block the checkout process.
-
-**Stripe Customer Management**: Each user has a linked Stripe customer ID stored in `stripeCustomerId` field. The `getOrCreateStripeCustomer()` helper function retrieves existing customer IDs or creates new Stripe customers on demand, enabling proper payment method reuse for direct purchases from the library. Payment methods are attached to customers before creating PaymentIntents with `off_session: true`, ensuring compliance with Stripe's requirements for saved payment method usage.
-
-**Refund System**: Comprehensive refund handling with automatic webhook processing for Stripe refunds. The system tracks full and partial refunds through database fields (refundAmount, refundedAt, refundReason, stripeRefundId) and purchase statuses ('refunded', 'partially_refunded'). Webhook handlers (`charge.refunded`, `refund.created`) calculate proportional refunds for batch orders, implement idempotency protection to prevent duplicate processing, and validate refund amounts against purchase prices. Email notifications are sent on first refund only. Frontend displays refund status with color-coded badges (orange for full, yellow for partial) and detailed refund information in both customer My Orders page and Admin Orders dashboard. Known limitations: print orders require manual Prodigi cancellation before Stripe refund, one email per purchase (subsequent partials not notified), and rounding in proportional refunds may differ by 1-2 cents. See REFUND_SYSTEM.md for complete documentation.
+The frontend is built with React 18, TypeScript, Vite, Wouter, TanStack Query, Shadcn/ui, Radix UI, and Tailwind CSS. The backend uses Node.js Express.js with TypeScript, Drizzle ORM for PostgreSQL, and a middleware-chain. Key features include an Admin Platform, email/password authentication via Passport.js, multilingual support (5 languages), a three-act story structure, and a Progressive Visual Reference Chain for character consistency across illustrations. Users can provide text descriptions for uploaded reference images to enhance character consistency in AI-generated illustrations. AI-generated cover text uses a two-phase generation process: first, a clean cover without text for interior page reference, then a regeneration with explicit title and author text. The platform includes an e-commerce system with Stripe payments, EPUB e-book download, print-ready PDF generation, and integration with the Prodigi Print API for physical hardcover book production, including a 3-step checkout and secure webhooks. Error handling with retry logic, persistent image storage in Replit Object Storage, sample story prompts, analytics, social sharing, user feedback, and individual page regeneration are also included. Enhanced admin analytics are provided via a dashboard, and professional sound effects are integrated with an AudioManager. Security measures include bcryptjs, rate limiting, secure session storage, Zod validation, and an Admin Bootstrap System. Anonymous story creation is protected by IP rate limiting, reCAPTCHA v3, and email-gated downloads. Production monitoring leverages Replit Analytics, and the application includes SEO and accessibility features. Print orders trigger two sequential customer emails ("Order Being Processed" and "Payment Processed - In Production"). Each user has a linked Stripe customer ID for payment method reuse. A comprehensive refund system handles full and partial refunds with automatic webhook processing, tracking details, and email notifications.
 
 ### Prodigi Print API Integration
-
-#### Print-Ready PDF Structure
-The system generates PDFs following Prodigi's hardcover photo book specifications exactly:
-
-**Our PDF Structure:**
-- Page 1: Front cover
-- Page 2+: Content pages (foreword if present, then image/text pairs, attribution page)
-- Last page: Back cover
-
-**Prodigi Automatically Adds (~6 pages):**
-- Inside front cover (blank)
-- Front binding sheet (2 blank pages)
-- Back binding sheet (2 blank pages)
-- Inside back cover (blank)
-
-**Key Requirements:**
-- 300 DPI resolution
-- 10mm safety margins on all pages
-- RGB color profile
-- Final book: 24-300 pages total (including Prodigi's automatic additions)
-- Our PDF: Minimum 18 pages (becomes 24 with Prodigi's 6 binding pages)
-- No blank pages in our PDF - Prodigi handles all binding pages
-
-**Attribution:** "Created on www.vesabooks.com" appears as a dedicated page with soft cream background before the back cover in all formats (PDF, EPUB, Flipbook).
-
-#### Order Status & Shipment Stages
-Prodigi API tracks orders through multiple stages:
-
-**Top-Level Status (`status.stage`)**:
-- `InProgress` - Order submitted and in fulfillment
-- `Complete` - All shipments have been sent
-- `Cancelled` - Order production cancelled
-
-**Detailed Process Stages (`status.details`)**:
-1. `downloadAssets` - Asset download from URLs
-2. `printReadyAssetsPrepared` - Files prepared for printing
-3. `allocateProductionLocation` - Print facility assigned
-4. `inProduction` - Actively being produced
-5. `shipping` - Items shipped
-
-Each stage can have: `NotStarted`, `InProgress`, `Complete`, or `Error`.
-
-#### Webhook Batch Handling
-The webhook handler supports batch orders (multiple storybooks in one Prodigi order) using `getPrintOrdersByProdigiId()` to update ALL print order records sharing the same Prodigi order ID. This ensures that when multiple items are combined into a single Prodigi order, all database records are updated together when the webhook fires, preventing individual items from getting stuck at old statuses.
+The system generates print-ready PDFs following Prodigi's hardcover photo book specifications (300 DPI, 10mm safety margins, RGB color profile, 24-300 total pages including Prodigi's additions, minimum 18 pages in our PDF). An attribution page ("Created on www.vesabooks.com") is included before the back cover. Prodigi API order status is tracked through top-level stages (`InProgress`, `Complete`, `Cancelled`) and detailed process stages (`downloadAssets`, `printReadyAssetsPrepared`, `allocateProductionLocation`, `inProduction`, `shipping`). The webhook handler supports batch orders, updating all print order records sharing the same Prodigi order ID to ensure consistent status updates for multiple items.
 
 ### System Design Choices
-Data is stored in PostgreSQL via Drizzle ORM, with file uploads using Replit Object Storage. The frontend utilizes React 18, TypeScript, Vite, Wouter, TanStack Query, Shadcn/ui, Radix UI, and Tailwind CSS. The backend employs Node.js, Express.js, TypeScript, and Drizzle ORM. Express routes follow strict ordering to prevent incorrect parameter matching.
+Data is stored in PostgreSQL via Drizzle ORM, with file uploads using Replit Object Storage. The frontend uses React 18, TypeScript, Vite, Wouter, TanStack Query, Shadcn/ui, Radix UI, and Tailwind CSS. The backend employs Node.js, Express.js, TypeScript, and Drizzle ORM. Express routes follow strict ordering. Performance optimizations include centralized image optimization, combined API calls for purchase checks (reducing network requests by 50% for storybook views and significantly improving library page load), query caching for pricing data, batch fetching for storybooks, combining multiple print books into a single Prodigi order, and lazy loading/code splitting.
 
 ## External Dependencies
 
@@ -122,18 +59,3 @@ Data is stored in PostgreSQL via Drizzle ORM, with file uploads using Replit Obj
 - **react-i18next**: React integration for i18next.
 - **i18next**: Core internationalization library.
 - **i18next-browser-languagedetector**: Automatic language detection.
-
-### Testing & Quality Assurance
-- **Vitest**: Unit and integration testing framework.
-- **@testing-library/react**: React component testing.
-- **Supertest**: HTTP integration testing.
-
-### Performance Optimizations
-- **Image Optimization**: Centralized utility with preset-aware sizing.
-- **Combined Purchase Check**: Storybook view page uses `/api/purchases/check-combined` endpoint to check both digital and print ownership in a single API call, reducing network requests by 50% per page view.
-- **Query Caching**: Pricing data cached with 5-minute staleTime since prices rarely change, reducing unnecessary database queries.
-- **Batch Purchase Checking**: Library page uses `/api/purchases/check-batch` endpoint to check ownership for all storybooks in 2 API calls (digital + print) instead of 50+ individual requests, significantly improving page load performance.
-- **Batch Storybook Fetching**: Purchases page uses `/api/storybooks/batch` POST endpoint to fetch storybook details for all purchases in chunked batches (max 100 IDs per request), eliminating N+1 query problems. Previously made 50+ individual storybook requests; now makes 1-2 batch requests regardless of purchase count. Automatically chunks requests for users with >100 unique storybooks to stay within server limits while maintaining parallel fetching for optimal performance.
-- **Batch Prodigi Orders**: When ordering multiple print books, the system combines all items into a single Prodigi order instead of creating separate orders for each book, reducing shipping costs and order management complexity.
-- **Lazy Loading**: `loading="lazy"` for images and `React.lazy()` for code splitting.
-- **Code Splitting**: Route-based code splitting.
