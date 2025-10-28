@@ -132,6 +132,7 @@ const apiRateLimiter = rateLimit({
   message: 'Too many requests from this IP, please try again later',
   standardHeaders: true,
   legacyHeaders: false,
+  validate: { trustProxy: false }, // Acknowledge trust proxy warning for Replit
   handler: (req, res) => {
     logger.warn('API rate limit exceeded', {
       ip: req.ip,
@@ -149,6 +150,7 @@ const authRateLimiter = rateLimit({
   message: 'Too many authentication attempts, please try again later',
   standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
   legacyHeaders: false, // Disable the `X-RateLimit-*` headers
+  validate: { trustProxy: false }, // Acknowledge trust proxy warning for Replit
   handler: (req, res) => {
     logger.warn('Authentication rate limit exceeded', {
       ip: req.ip,
@@ -166,6 +168,7 @@ const storyCreationRateLimiter = rateLimit({
   message: 'Too many story creation attempts, please try again later',
   standardHeaders: true,
   legacyHeaders: false,
+  validate: { trustProxy: false }, // Acknowledge trust proxy warning for Replit
   handler: (req, res) => {
     logger.warn('Story creation rate limit exceeded', {
       ip: req.ip,
@@ -181,6 +184,7 @@ const passwordResetRateLimiter = rateLimit({
   message: 'Too many password reset attempts, please try again later',
   standardHeaders: true,
   legacyHeaders: false,
+  validate: { trustProxy: false }, // Acknowledge trust proxy warning for Replit
   handler: (req, res) => {
     const timestamp = new Date().toISOString();
     const ip = req.ip || req.socket.remoteAddress || 'unknown';

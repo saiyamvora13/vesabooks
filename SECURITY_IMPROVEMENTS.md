@@ -78,28 +78,28 @@ Referrer-Policy: strict-origin-when-cross-origin
 Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=()
 ```
 
-## 🚦 **Rate Limiting Configuration**
+## 🚦 **Rate Limiting Configuration** (Balanced for UX)
 
 | Endpoint Type | Limit | Window | Purpose |
 |---------------|-------|--------|---------|
-| General API | 100 requests | 15 minutes | Prevent API abuse |
-| Authentication | 5 requests | 15 minutes | Prevent brute force |
-| Story Creation | 10 requests | 1 hour | Prevent spam |
-| Password Reset | 3 requests | 1 hour | Prevent abuse |
+| General API | 300 requests | 15 minutes | Prevent API abuse while allowing image-heavy pages |
+| Authentication | 10 requests | 15 minutes | Prevent brute force while allowing typos |
+| Story Creation | 20 requests | 1 hour | Prevent spam while supporting engaged users |
+| Password Reset | 5 requests | 1 hour | Prevent abuse while handling issues |
 
 ## 📁 **File Upload Security**
 
-- **Max File Size**: 5MB (reduced from 10MB)
-- **Max Files**: 3 (reduced from 5)
+- **Max File Size**: 10MB (optimal for high-quality reference images)
+- **Max Files**: 5 (supports character consistency with multiple references)
 - **Allowed Types**: JPEG, PNG, WebP
 - **Validation**: MIME type + file extension matching
 - **Security**: Prevents file type spoofing
 
-## 🔐 **Session Security**
+## 🔐 **Session Security** (Balanced for Payment Flows)
 
-- **TTL**: 24 hours (reduced from 7 days)
+- **TTL**: 7 days (better UX with rolling refresh)
 - **Cookie Name**: Custom 'sessionId' (not default)
-- **SameSite**: Strict (prevents CSRF)
+- **SameSite**: Lax (allows Stripe redirects and external links while preventing CSRF)
 - **Rolling**: Sessions reset on activity
 - **Domain**: Restricted in production
 
