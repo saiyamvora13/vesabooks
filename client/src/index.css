@@ -1084,28 +1084,117 @@
           drop-shadow(0 15px 30px rgba(0, 0, 0, 0.25));
 }
 
-/* Book Cover (front) */
+/* Book Cover (front) - Enhanced with realistic texture and depth */
 .book-cover {
   position: absolute;
   width: 100%;
   height: 100%;
-  background: linear-gradient(135deg, #f5f5f5 0%, #e0e0e0 100%);
+  background: 
+    radial-gradient(
+      ellipse at 30% 20%,
+      rgba(255, 255, 255, 0.3) 0%,
+      transparent 50%
+    ),
+    linear-gradient(
+      135deg,
+      #f8f8f8 0%,
+      #f5f5f5 20%,
+      #efefef 40%,
+      #e8e8e8 60%,
+      #e0e0e0 80%,
+      #d8d8d8 100%
+    );
   border-radius: 2px 12px 12px 2px;
   overflow: hidden;
   transform: translateZ(25px);
   box-shadow: 
-    inset 3px 0 10px rgba(0, 0, 0, 0.1),
-    inset -1px 0 2px rgba(255, 255, 255, 0.5),
+    inset 3px 0 10px rgba(0, 0, 0, 0.15),
+    inset -1px 0 3px rgba(255, 255, 255, 0.6),
+    inset 0 2px 4px rgba(255, 255, 255, 0.4),
+    inset 0 -2px 4px rgba(0, 0, 0, 0.1),
+    0 5px 15px rgba(0, 0, 0, 0.25),
+    0 10px 25px rgba(0, 0, 0, 0.2),
     0 0 0 1px rgba(0, 0, 0, 0.1);
   backface-visibility: hidden;
 }
 
+/* Glossy hardcover overlay effect */
+.book-cover::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(
+    105deg,
+    transparent 40%,
+    rgba(255, 255, 255, 0.2) 45%,
+    rgba(255, 255, 255, 0.4) 48%,
+    rgba(255, 255, 255, 0.5) 50%,
+    rgba(255, 255, 255, 0.4) 52%,
+    rgba(255, 255, 255, 0.2) 55%,
+    transparent 60%,
+    transparent 100%
+  );
+  transform: translateX(-100%);
+  animation: bookShine 8s ease-in-out infinite;
+  pointer-events: none;
+  border-radius: inherit;
+}
+
+/* Hardcover texture overlay */
+.book-cover::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: 
+    repeating-linear-gradient(
+      90deg,
+      transparent,
+      transparent 2px,
+      rgba(0, 0, 0, 0.03) 2px,
+      rgba(0, 0, 0, 0.03) 4px
+    ),
+    repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(0, 0, 0, 0.03) 2px,
+      rgba(0, 0, 0, 0.03) 4px
+    );
+  opacity: 0.5;
+  pointer-events: none;
+  border-radius: inherit;
+}
+
 .dark .book-cover {
-  background: linear-gradient(135deg, #2a2a2a 0%, #1a1a1a 100%);
+  background: 
+    radial-gradient(
+      ellipse at 30% 20%,
+      rgba(255, 255, 255, 0.1) 0%,
+      transparent 50%
+    ),
+    linear-gradient(
+      135deg,
+      #353535 0%,
+      #2e2e2e 20%,
+      #282828 40%,
+      #222222 60%,
+      #1c1c1c 80%,
+      #161616 100%
+    );
   box-shadow: 
-    inset 3px 0 10px rgba(0, 0, 0, 0.3),
-    inset -1px 0 2px rgba(255, 255, 255, 0.1),
-    0 0 0 1px rgba(0, 0, 0, 0.2);
+    inset 3px 0 10px rgba(0, 0, 0, 0.4),
+    inset -1px 0 3px rgba(255, 255, 255, 0.15),
+    inset 0 2px 4px rgba(255, 255, 255, 0.1),
+    inset 0 -2px 4px rgba(0, 0, 0, 0.3),
+    0 5px 15px rgba(0, 0, 0, 0.4),
+    0 10px 25px rgba(0, 0, 0, 0.35),
+    0 0 0 1px rgba(0, 0, 0, 0.3);
 }
 
 /* Book Back Cover */
@@ -1129,7 +1218,7 @@
     0 0 0 1px rgba(0, 0, 0, 0.2);
 }
 
-/* Book Spine - Enhanced and More Visible */
+/* Book Spine - Enhanced and More Visible with Realistic Binding */
 .book-spine {
   position: absolute;
   left: -10px;
@@ -1137,46 +1226,62 @@
   height: 100%;
   background: linear-gradient(
     90deg,
-    rgba(0, 0, 0, 0.25) 0%,
-    #d0d0d0 4%,
-    #e5e5e5 12%,
-    #f0f0f0 20%,
-    #c8c8c8 50%,
-    #b0b0b0 80%,
-    #a0a0a0 88%,
-    #909090 96%,
-    rgba(0, 0, 0, 0.25) 100%
+    rgba(0, 0, 0, 0.45) 0%,
+    #b8b8b8 2%,
+    #d0d0d0 5%,
+    #e5e5e5 10%,
+    #f2f2f2 18%,
+    #f8f8f8 25%,
+    #f0f0f0 35%,
+    #e8e8e8 50%,
+    #e0e0e0 65%,
+    #d8d8d8 75%,
+    #c8c8c8 82%,
+    #b0b0b0 90%,
+    #989898 95%,
+    #808080 98%,
+    rgba(0, 0, 0, 0.35) 100%
   );
   transform-origin: left center;
   transform: rotateY(-90deg) translateX(-35px);
   border-radius: 3px;
   box-shadow:
-    inset 2px 0 4px rgba(255, 255, 255, 0.5),
-    inset -2px 0 4px rgba(0, 0, 0, 0.2),
-    inset 0 1px 0 rgba(255, 255, 255, 0.4),
-    inset 0 -1px 0 rgba(0, 0, 0, 0.3),
-    0 0 10px rgba(0, 0, 0, 0.2);
+    inset 4px 0 8px rgba(255, 255, 255, 0.6),
+    inset -4px 0 8px rgba(0, 0, 0, 0.3),
+    inset 0 2px 0 rgba(255, 255, 255, 0.5),
+    inset 0 -2px 0 rgba(0, 0, 0, 0.4),
+    inset 35px 0 20px -20px rgba(0, 0, 0, 0.2),
+    inset -35px 0 20px -20px rgba(0, 0, 0, 0.2),
+    0 0 15px rgba(0, 0, 0, 0.3);
 }
 
 .dark .book-spine {
   background: linear-gradient(
     90deg,
-    rgba(0, 0, 0, 0.4) 0%,
-    #383838 4%,
-    #454545 12%,
-    #505050 20%,
-    #303030 50%,
-    #252525 80%,
-    #1a1a1a 88%,
-    #101010 96%,
-    rgba(0, 0, 0, 0.4) 100%
+    rgba(0, 0, 0, 0.6) 0%,
+    #282828 2%,
+    #383838 5%,
+    #454545 10%,
+    #505050 18%,
+    #585858 25%,
+    #505050 35%,
+    #484848 50%,
+    #404040 65%,
+    #353535 75%,
+    #2a2a2a 82%,
+    #202020 90%,
+    #151515 95%,
+    #0a0a0a 98%,
+    rgba(0, 0, 0, 0.6) 100%
   );
   box-shadow:
-    inset 2px 0 4px rgba(255, 255, 255, 0.15),
-    inset -2px 0 4px rgba(0, 0, 0, 0.4),
-    inset 0 1px 0 rgba(255, 255, 255, 0.1),
-    inset 0 -1px 0 rgba(0, 0, 0, 0.4),
-    0 0 10px rgba(0, 0, 0, 0.3);
+    inset 4px 0 8px rgba(255, 255, 255, 0.2),
+    inset -4px 0 8px rgba(0, 0, 0, 0.5),
+    inset 0 2px 0 rgba(255, 255, 255, 0.15),
+    inset 0 -2px 0 rgba(0, 0, 0, 0.5),
+    inset 35px 0 20px -20px rgba(0, 0, 0, 0.3),
+    inset -35px 0 20px -20px rgba(0, 0, 0, 0.3),
+    0 0 15px rgba(0, 0, 0, 0.4);
 }
 
 /* Book Spine Text/Decoration - Gold foil effect */
@@ -1254,47 +1359,95 @@
   }
 }
 
+/* Shine effect for glossy hardcover */
+@keyframes bookShine {
+  0%, 100% {
+    transform: translateX(-100%);
+  }
+  50% {
+    transform: translateX(100%);
+  }
+}
+
 .stacked-book-0 .book-cover {
   animation: bookGlow 3s ease-in-out infinite;
 }
 
-/* Book Pages (side edges) - Right Side */
+/* Book Pages (side edges) - Right Side - Enhanced realistic pages */
 .book-pages {
   position: absolute;
   right: -2px;
   top: 4px;
   width: 54px;
   height: calc(100% - 8px);
-  background: linear-gradient(
-    90deg,
-    rgba(0, 0, 0, 0.05) 0%,
-    #f8f8f8 3%,
-    #ffffff 10%,
-    #fafafa 90%,
-    #f0f0f0 97%,
-    rgba(0, 0, 0, 0.08) 100%
-  );
+  background: 
+    repeating-linear-gradient(
+      90deg,
+      #f9f9f9 0px,
+      #fefefe 0.4px,
+      #f5f5f5 0.8px,
+      #ffffff 1.2px,
+      #f8f8f8 1.6px,
+      #f9f9f9 2px
+    ),
+    linear-gradient(
+      90deg,
+      rgba(0, 0, 0, 0.12) 0%,
+      #f0f0f0 2%,
+      #f8f8f8 4%,
+      #fcfcfc 8%,
+      #ffffff 15%,
+      #fefefe 50%,
+      #fcfcfc 85%,
+      #f4f4f4 92%,
+      #e8e8e8 96%,
+      #d8d8d8 98%,
+      rgba(0, 0, 0, 0.18) 100%
+    );
   transform-origin: right center;
   transform: rotateY(90deg) translateX(27px);
   border-radius: 0 2px 2px 0;
   box-shadow:
-    inset -1px 0 3px rgba(0, 0, 0, 0.1),
-    inset 1px 0 1px rgba(255, 255, 255, 0.8);
+    inset -3px 0 6px rgba(0, 0, 0, 0.15),
+    inset 2px 0 3px rgba(255, 255, 255, 0.95),
+    inset -5px 0 10px rgba(0, 0, 0, 0.08),
+    inset 0 1px 1px rgba(0, 0, 0, 0.05),
+    inset 0 -1px 1px rgba(0, 0, 0, 0.05),
+    0 0 4px rgba(0, 0, 0, 0.1);
 }
 
 .dark .book-pages {
-  background: linear-gradient(
-    90deg,
-    rgba(0, 0, 0, 0.2) 0%,
-    #2a2a2a 3%,
-    #333333 10%,
-    #303030 90%,
-    #282828 97%,
-    rgba(0, 0, 0, 0.3) 100%
-  );
+  background: 
+    repeating-linear-gradient(
+      90deg,
+      #2a2a2a 0px,
+      #323232 0.4px,
+      #282828 0.8px,
+      #353535 1.2px,
+      #2d2d2d 1.6px,
+      #2a2a2a 2px
+    ),
+    linear-gradient(
+      90deg,
+      rgba(0, 0, 0, 0.35) 0%,
+      #242424 2%,
+      #2a2a2a 4%,
+      #303030 8%,
+      #383838 15%,
+      #353535 50%,
+      #323232 85%,
+      #2a2a2a 92%,
+      #222222 96%,
+      #1a1a1a 98%,
+      rgba(0, 0, 0, 0.4) 100%
+    );
   box-shadow:
-    inset -1px 0 3px rgba(0, 0, 0, 0.3),
-    inset 1px 0 1px rgba(255, 255, 255, 0.1);
+    inset -3px 0 6px rgba(0, 0, 0, 0.4),
+    inset 2px 0 3px rgba(255, 255, 255, 0.15),
+    inset -5px 0 10px rgba(0, 0, 0, 0.25),
+    inset 0 1px 1px rgba(0, 0, 0, 0.2),
+    inset 0 -1px 1px rgba(0, 0, 0, 0.2),
+    0 0 4px rgba(0, 0, 0, 0.3);
 }
 
 /* Page Lines Effect */
