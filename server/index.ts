@@ -4,11 +4,50 @@ import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import { bootstrapAdminUser } from "./services/adminBootstrap";
 import { checkAndCancelStuckOrders } from "./services/stuck-orders";
+import { logger } from "./utils/logger";
+import { env } from "./config/env";
 
 const app = express();
 
 // Trust proxy for correct IP addresses and HTTPS protocol detection behind Replit proxy
 app.set('trust proxy', true);
+
+// Security headers middleware
+app.use((req, res, next) => {
+  // Prevent clickjacking
+  res.setHeader('X-Frame-Options', 'DENY');
+  
+  // Prevent MIME type sniffing
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  
+  // Enable XSS protection
+  res.setHeader('X-XSS-Protection', '1; mode=block');
+  
+  // Strict Transport Security (only in production with HTTPS)
+  if (process.env.NODE_ENV === 'production') {
+    res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+  }
+  
+  // Content Security Policy
+  res.setHeader('Content-Security-Policy', 
+    "default-src 'self'; " +
+    "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.google.com https://www.gstatic.com; " +
+    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; " +
+    "font-src 'self' https://fonts.gstatic.com; " +
+    "img-src 'self' data: https:; " +
+    "connect-src 'self' https://api.stripe.com https://www.google.com;"
+  );
+  
+  // Referrer Policy
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  
+  // Permissions Policy
+  res.setHeader('Permissions-Policy', 
+    'camera=(), microphone=(), geolocation=(), payment=()'
+  );
+  
+  next();
+});
 
 declare module 'http' {
   interface IncomingMessage {
@@ -84,12 +123,31 @@ app.use((req, res, next) => {
   
   log('[Stuck Orders] Hourly checker initialized - will run every 60 minutes');
 
-  app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
+  app.use((err: any, req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;
-    const message = err.message || "Internal Server Error";
+    
+    // Log the full error for debugging (server-side only)
+    logger.error('Request error occurred', {
+      message: err.message,
+      stack: err.stack,
+      status,
+      url: req.url,
+      method: req.method,
+      userAgent: req.get('User-Agent'),
+      ip: req.ip
+    });
 
+    // Only send safe error message to client
+    let message = "Internal Server Error";
+    
+    if (status < 500) {
+      // For client errors (4xx), it's safe to send the message
+      message = err.message || "Bad Request";
+    }
+    
     res.status(status).json({ message });
-    throw err;
+    
+    // Don't re-throw the error to prevent stack trace exposure
   });
 
   // importantly only setup vite in development and after
@@ -105,7 +163,7 @@ app.use((req, res, next) => {
   // Other ports are firewalled. Default to 5000 if not specified.
   // this serves both the API and the client.
   // It is the only port that is not firewalled.
-  const port = parseInt(process.env.PORT || '5000', 10);
+  const port = parseInt(env.PORT, 10);
   server.listen({
     port,
     host: "0.0.0.0",

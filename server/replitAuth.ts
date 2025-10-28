@@ -50,7 +50,7 @@ function getSessionSecret(): string {
 }
 
 export function getSession() {
-  const sessionTtl = 7 * 24 * 60 * 60 * 1000; // 1 week
+  const sessionTtl = 24 * 60 * 60 * 1000; // Reduced to 24 hours
   const pgStore = connectPg(session);
   const sessionStore = new pgStore({
     conString: process.env.DATABASE_URL,
@@ -58,17 +58,21 @@ export function getSession() {
     ttl: sessionTtl,
     tableName: "sessions",
   });
+  
   return session({
     secret: getSessionSecret(),
     store: sessionStore,
     resave: false,
     saveUninitialized: false,
+    name: 'sessionId', // Don't use default 'connect.sid'
     cookie: {
       httpOnly: true,
-      secure: 'auto', // Auto-detect HTTPS in production, works with Replit's proxy chain
-      sameSite: 'lax',
+      secure: process.env.NODE_ENV === 'production', // Only HTTPS in production
+      sameSite: 'strict', // Changed from 'lax' to 'strict'
       maxAge: sessionTtl,
+      domain: process.env.NODE_ENV === 'production' ? process.env.COOKIE_DOMAIN : undefined,
     },
+    rolling: true, // Reset expiration on activity
   });
 }
 

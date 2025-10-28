@@ -28,6 +28,7 @@ import { generateOrderReference } from "./utils/orderReference";
 import { db } from "./db";
 import { eq } from "drizzle-orm";
 import { sendPrintOrderProcessing, sendPrintOrderProcessingEmailHelper, sendPrintOrderFailedEmail } from "./services/resend-email";
+import { logger } from "./utils/logger";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', {
   apiVersion: "2025-09-30.clover",
@@ -51,7 +52,7 @@ async function getOrCreateStripeCustomer(user: User): Promise<string> {
   // Save the Stripe customer ID to the user record
   await storage.updateUserStripeCustomerId(user.id, customer.id);
 
-  console.log(`[Stripe] Created new customer ${customer.id} for user ${user.id}`);
+  logger.info(`Created new Stripe customer ${customer.id} for user ${user.id}`);
   
   return customer.id;
 }
@@ -85,7 +86,7 @@ async function generateAndUploadPrintPDF(params: {
 }): Promise<{ storagePath: string; fullUrl: string }> {
   const { storybook, purchaseId, bookSize, spineText, spineTextColor, spineBackgroundColor } = params;
   
-  console.log(`[PDF Helper] Generating PDF for purchase ${purchaseId}, book size: ${bookSize}`);
+  logger.info(`Generating PDF for purchase ${purchaseId}, book size: ${bookSize}`);
   
   // Initialize object storage
   const objectStorage = new ObjectStorageService();
@@ -113,7 +114,7 @@ async function generateAndUploadPrintPDF(params: {
   // Clean up temporary file
   fs.unlinkSync(tempPdfPath);
   
-  console.log(`[PDF Helper] PDF uploaded to ${storagePath}`);
+  logger.info(`PDF uploaded to ${storagePath}`);
   
   // Build full URL for Prodigi
   const baseUrl = process.env.REPLIT_DOMAINS 
@@ -124,6 +125,23 @@ async function generateAndUploadPrintPDF(params: {
   return { storagePath, fullUrl };
 }
 
+// General API rate limiter
+const apiRateLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // Limit each IP to 100 requests per windowMs
+  message: 'Too many requests from this IP, please try again later',
+  standardHeaders: true,
+  legacyHeaders: false,
+  handler: (req, res) => {
+    logger.warn('API rate limit exceeded', {
+      ip: req.ip,
+      endpoint: req.path,
+      userAgent: req.get('User-Agent')
+    });
+    res.status(429).json({ message: 'Too many requests, please try again later' });
+  },
+});
+
 // Rate limiting configurations for authentication endpoints
 const authRateLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
@@ -132,12 +150,28 @@ const authRateLimiter = rateLimit({
   standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
   legacyHeaders: false, // Disable the `X-RateLimit-*` headers
   handler: (req, res) => {
-    const timestamp = new Date().toISOString();
-    const ip = req.ip || req.socket.remoteAddress || 'unknown';
-    const endpoint = req.path;
-    const userAgent = req.get('user-agent') || 'unknown';
-    console.log(`[RATE LIMIT EXCEEDED] ${timestamp} | Endpoint: ${endpoint} | IP: ${ip} | User-Agent: ${userAgent} | Limit: 5 requests/15min`);
+    logger.warn('Authentication rate limit exceeded', {
+      ip: req.ip,
+      endpoint: req.path,
+      userAgent: req.get('User-Agent')
+    });
     res.status(429).json({ message: 'Too many authentication attempts, please try again later' });
+  },
+});
+
+// Story creation rate limiter (more restrictive)
+const storyCreationRateLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 hour
+  max: 10, // Limit each IP to 10 story creations per hour
+  message: 'Too many story creation attempts, please try again later',
+  standardHeaders: true,
+  legacyHeaders: false,
+  handler: (req, res) => {
+    logger.warn('Story creation rate limit exceeded', {
+      ip: req.ip,
+      userAgent: req.get('User-Agent')
+    });
+    res.status(429).json({ message: 'Too many story creation attempts, please try again later' });
   },
 });
 
@@ -167,21 +201,90 @@ const PRICES = {
 const upload = multer({
   dest: "uploads/",
   limits: {
-    fileSize: 10 * 1024 * 1024, // 10MB
-    files: 5,
+    fileSize: 5 * 1024 * 1024, // Reduced to 5MB
+    files: 3, // Reduced to 3 files
   },
   fileFilter: (req: Request, file: Express.Multer.File, cb: multer.FileFilterCallback) => {
-    if (file.mimetype === "image/jpeg" || file.mimetype === "image/png") {
-      cb(null, true);
-    } else {
-      cb(new Error("Only JPEG and PNG files are allowed"));
+    // Check MIME type
+    const allowedMimes = ['image/jpeg', 'image/png', 'image/webp'];
+    if (!allowedMimes.includes(file.mimetype)) {
+      return cb(new Error("Only JPEG, PNG, and WebP files are allowed"));
     }
+    
+    // Check file extension
+    const allowedExtensions = ['.jpg', '.jpeg', '.png', '.webp'];
+    const fileExtension = path.extname(file.originalname).toLowerCase();
+    if (!allowedExtensions.includes(fileExtension)) {
+      return cb(new Error("Invalid file extension"));
+    }
+    
+    // Additional security: check if MIME type matches extension
+    const mimeToExt: { [key: string]: string[] } = {
+      'image/jpeg': ['.jpg', '.jpeg'],
+      'image/png': ['.png'],
+      'image/webp': ['.webp']
+    };
+    
+    if (!mimeToExt[file.mimetype]?.includes(fileExtension)) {
+      return cb(new Error("File type mismatch"));
+    }
+    
+    cb(null, true);
   },
 });
+
+// Input validation middleware
+const validateStorybookInput = (req: Request, res: Response, next: NextFunction) => {
+  const { prompt, author, age, illustrationStyle } = req.body;
+  
+  // Validate prompt
+  if (!prompt || typeof prompt !== 'string' || prompt.trim().length < 10) {
+    return res.status(400).json({ 
+      message: 'Prompt must be at least 10 characters long' 
+    });
+  }
+  
+  if (prompt.length > 1000) {
+    return res.status(400).json({ 
+      message: 'Prompt must be less than 1000 characters' 
+    });
+  }
+  
+  // Validate author (optional)
+  if (author && (typeof author !== 'string' || author.length > 100)) {
+    return res.status(400).json({ 
+      message: 'Author name must be less than 100 characters' 
+    });
+  }
+  
+  // Validate age (optional)
+  if (age && !['3-5', '6-8', '9-12'].includes(age)) {
+    return res.status(400).json({ 
+      message: 'Age must be one of: 3-5, 6-8, 9-12' 
+    });
+  }
+  
+  // Validate illustration style (optional)
+  if (illustrationStyle && (typeof illustrationStyle !== 'string' || illustrationStyle.length > 200)) {
+    return res.status(400).json({ 
+      message: 'Illustration style must be less than 200 characters' 
+    });
+  }
+  
+  // Sanitize inputs
+  req.body.prompt = prompt.trim();
+  req.body.author = author?.trim() || '';
+  req.body.illustrationStyle = illustrationStyle?.trim() || '';
+  
+  next();
+};
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Replit Auth: Setup authentication middleware
   await setupAuth(app);
+
+  // Apply general API rate limiting to all API routes
+  app.use('/api', apiRateLimiter);
 
   // Sitemap.xml for SEO
   app.get('/sitemap.xml', (req, res) => {
@@ -1702,7 +1805,7 @@ Sitemap: ${baseUrl}/sitemap.xml`;
   app.post('/api/admin/check-stuck-orders', isAdmin, async (req, res) => {
     try {
       const { checkAndCancelStuckOrders } = await import('./services/stuck-orders');
-      console.log('[Admin] Manually triggering stuck order check...');
+      logger.info('Manually triggering stuck order check...');
       const result = await checkAndCancelStuckOrders();
       res.json(result);
     } catch (error) {
@@ -1849,7 +1952,7 @@ Sitemap: ${baseUrl}/sitemap.xml`;
         return res.status(400).json({ message: 'Order reference is required' });
       }
 
-      console.log(`[Admin] Manual sync requested for order: ${orderReference}`);
+      logger.info(`Manual sync requested for order: ${orderReference}`);
       
       const result = await storage.syncPrintOrderFromProdigi(orderReference);
       
@@ -1862,7 +1965,7 @@ Sitemap: ${baseUrl}/sitemap.xml`;
         });
       }
       
-      console.log(`[Admin] Successfully synced ${result.updated} print orders for ${orderReference}`);
+      logger.info(`Successfully synced ${result.updated} print orders for ${orderReference}`);
       res.json({ 
         message: `Successfully synced ${result.updated} print orders`,
         updated: result.updated 
@@ -1877,7 +1980,7 @@ Sitemap: ${baseUrl}/sitemap.xml`;
   // POST /api/admin/fix-order-statuses - One-time migration to normalize all order statuses
   app.post('/api/admin/fix-order-statuses', isAdmin, async (req: any, res) => {
     try {
-      console.log(`[Admin] Starting one-time migration to normalize order statuses`);
+      logger.info('Starting one-time migration to normalize order statuses');
       
       // Get all print orders
       const allPrintOrders = await storage.getAllPrintOrders(10000); // Get up to 10k orders
@@ -1900,7 +2003,7 @@ Sitemap: ${baseUrl}/sitemap.xml`;
               status: normalizedStatus,
             });
             updatedCount++;
-            console.log(`[Admin] Normalized print order ${printOrder.id}: ${printOrder.status} → ${normalizedStatus}`);
+            logger.info(`Normalized print order ${printOrder.id}: ${printOrder.status} → ${normalizedStatus}`);
           } catch (error) {
             const errorMessage = error instanceof Error ? error.message : 'Unknown error';
             errors.push(`Failed to update print order ${printOrder.id}: ${errorMessage}`);
@@ -1965,7 +2068,9 @@ Sitemap: ${baseUrl}/sitemap.xml`;
 
   // Create storybook (supports both authenticated and anonymous users)
   app.post("/api/storybooks", 
-    upload.array("images", 5),
+    storyCreationRateLimiter, // Add story creation rate limiting
+    upload.array("images", 3), // Reduced from 5 to 3
+    validateStorybookInput, // Add input validation
     async (req: any, res, next) => {
       // If user is authenticated, skip IP rate limiting and reCAPTCHA
       if (req.user) {
