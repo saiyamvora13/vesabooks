@@ -14,6 +14,31 @@ import {
 // Cache font bytes to avoid blocking event loop with repeated readFileSync
 let cachedComicNeueFontBytes: ArrayBuffer | null = null;
 
+/**
+ * Sanitizes text to ensure compatibility with WinAnsi encoding used by PDF standard fonts
+ * Converts Unicode characters to ASCII equivalents to prevent PDF generation errors
+ */
+function sanitizeTextForPDF(text: string): string {
+  if (!text) return '';
+  
+  return text
+    // Curly quotes to straight quotes
+    .replace(/[\u201C\u201D]/g, '"')  // " and "
+    .replace(/[\u2018\u2019]/g, "'")  // ' and '
+    // Em dash and en dash to regular dash
+    .replace(/[\u2013\u2014]/g, '-')
+    // Ellipsis to three dots
+    .replace(/\u2026/g, '...')
+    // Non-breaking space to regular space
+    .replace(/\u00A0/g, ' ')
+    // Other common problematic characters
+    .replace(/\u2022/g, '*')  // Bullet point
+    .replace(/\u00AB/g, '<<') // Left guillemet
+    .replace(/\u00BB/g, '>>') // Right guillemet
+    // Remove any remaining non-ASCII characters (fallback)
+    .replace(/[^\x00-\x7F]/g, '');
+}
+
 // Page manifest types
 type PageType = 'frontCover' | 'image' | 'text' | 'backCover' | 'foreword' | 'attribution';
 interface PageManifestEntry {
@@ -191,9 +216,11 @@ export async function generatePrintReadyPDF(
     drawScaledImage(page, image, 0, 0, PAGE_WIDTH, PAGE_HEIGHT);
   }
   
-  // Helper function to word wrap text
+  // Helper function to word wrap text (with sanitization for PDF compatibility)
   function wrapText(text: string, maxWidth: number, fontSize: number, textFont: any = font): string[] {
-    const words = text.split(' ');
+    // Sanitize text first to ensure PDF compatibility
+    const sanitizedText = sanitizeTextForPDF(text);
+    const words = sanitizedText.split(' ');
     const lines: string[] = [];
     let currentLine = '';
     
@@ -243,7 +270,7 @@ export async function generatePrintReadyPDF(
             });
             
             const titleFontSize = 28;
-            const titleText = storybook.title;
+            const titleText = sanitizeTextForPDF(storybook.title);
             const titleWidth = boldFont.widthOfTextAtSize(titleText, titleFontSize);
             const maxTitleWidth = PAGE_WIDTH - 2 * SAFETY_MARGIN_POINTS;
             
