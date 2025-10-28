@@ -1306,7 +1306,7 @@
   animation: bookGlow 3s ease-in-out infinite;
 }
 
-/* Book Pages (side edges) - Right Side - Enhanced with golden tone */
+/* Book Pages (side edges) - Right Side - VERY visible golden hardcover edge */
 .stacked-carousel-wrapper .book-pages {
   position: absolute;
   right: 0;
@@ -1315,28 +1315,29 @@
   height: calc(100% - 6px);
   background: linear-gradient(
     90deg,
-    rgba(0, 0, 0, 0.25) 0%,
-    #d4a574 3%,
-    #e8c896 8%,
-    #f5e6d3 15%,
-    #fef9f0 25%,
-    #fffef8 40%,
-    #fff8e8 60%,
-    #f5e6d3 80%,
-    #e8c896 90%,
-    #d4a574 95%,
-    rgba(0, 0, 0, 0.2) 100%
+    rgba(0, 0, 0, 0.4) 0%,
+    #c49250 4%,
+    #d9a967 10%,
+    #f0d399 20%,
+    #fef5da 35%,
+    #fffef5 50%,
+    #fef5da 65%,
+    #f0d399 80%,
+    #d9a967 90%,
+    #c49250 96%,
+    rgba(0, 0, 0, 0.35) 100%
   );
   transform-origin: right center;
   transform: rotateY(90deg) translateX(var(--book-depth));
   border-radius: 0 4px 4px 0;
   box-shadow:
-    inset -3px 0 6px rgba(0, 0, 0, 0.2),
-    inset 3px 0 4px rgba(255, 255, 255, 0.9),
-    0 0 15px rgba(0, 0, 0, 0.15);
+    inset -4px 0 8px rgba(0, 0, 0, 0.3),
+    inset 4px 0 6px rgba(255, 255, 255, 0.7),
+    2px 0 20px rgba(212, 165, 116, 0.5),
+    0 0 20px rgba(0, 0, 0, 0.2);
   backface-visibility: hidden;
   -webkit-backface-visibility: hidden;
-  z-index: 1;
+  z-index: 10;
 }
 
 .dark .stacked-carousel-wrapper .book-pages {
@@ -1622,14 +1623,25 @@
     drop-shadow(3px 3px 6px rgba(0, 0, 0, 0.25));
 }
 
-/* Make the 3D book effects more pronounced for front book - negative rotation shows spine */
+/* Animated 3D book - rotates to show thickness clearly */
+@keyframes bookRotate3D {
+  0%, 100% {
+    transform: perspective(1500px) rotateY(-35deg) rotateX(8deg);
+  }
+  50% {
+    transform: perspective(1500px) rotateY(-25deg) rotateX(5deg);
+  }
+}
+
 .stacked-book-0 .book-3d {
-  transform: perspective(1500px) rotateY(-25deg) rotateX(5deg);
+  transform: perspective(1500px) rotateY(-30deg) rotateX(6deg);
+  animation: bookRotate3D 4s ease-in-out infinite;
   transition: transform 0.4s ease;
 }
 
 .stacked-book-0:hover .book-3d {
-  transform: perspective(1500px) rotateY(-20deg) rotateX(3deg) translateY(-5px);
+  animation-play-state: paused;
+  transform: perspective(1500px) rotateY(-25deg) rotateX(5deg) translateY(-5px) scale(1.02);
 }
 
 /* Second book in stack - more rotation for spine visibility */
