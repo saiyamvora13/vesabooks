@@ -1213,7 +1213,7 @@
 /* Book Spine - 3D perpendicular surface on left */
 .book-spine {
   position: absolute;
-  left: 0;
+  left: -25px;
   top: 0;
   width: 50px;
   height: 100%;
@@ -1231,7 +1231,7 @@
     #707070 95%,
     rgba(0, 0, 0, 0.4) 100%
   );
-  transform-origin: left center;
+  transform-origin: right center;
   transform: rotateY(90deg);
   box-shadow:
     inset 2px 0 6px rgba(0, 0, 0, 0.4),
@@ -1360,7 +1360,7 @@
 /* Book Pages - 3D perpendicular surface on right */
 .book-pages {
   position: absolute;
-  right: 0;
+  right: -25px;
   top: 0;
   width: 50px;
   height: 100%;
@@ -1386,7 +1386,7 @@
       #c8c8c8 95%,
       rgba(0, 0, 0, 0.12) 100%
     );
-  transform-origin: right center;
+  transform-origin: left center;
   transform: rotateY(-90deg);
   box-shadow:
     inset -2px 0 6px rgba(0, 0, 0, 0.2),
