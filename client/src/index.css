@@ -30,7 +30,7 @@
   --font-mono: 'JetBrains Mono', monospace;
   
   /* 3D Book Geometry - Single source of truth for book depth */
-  --book-depth: 60px; /* Increased for dramatic thickness like hardcover books */
+  --book-depth: 32px;
 }
 
 .dark {
@@ -1070,32 +1070,19 @@
   padding: 2rem 1rem;
 }
 
-/* ===== 3D PIPELINE HARDENING ===== */
-/* Ensures 3D depth works across all browsers by propagating preserve-3d up the chain */
-.stacked-carousel-container,
-.stacked-carousel-wrapper,
-.stacked-book,
-.stacked-carousel-wrapper .book-3d {
-  transform-style: preserve-3d;
-  -webkit-transform-style: preserve-3d; /* iOS Safari */
-  perspective: 1500px; /* ensure a 3D context at each level */
-  overflow: visible;
-  isolation: isolate; /* avoids flattening from ancestor effects */
-}
-
-/* Apply perspective on the same element that rotates */
 .stacked-carousel-wrapper .book-3d {
   position: relative;
   width: 280px;
   height: 380px;
-  transform: perspective(1500px) rotateY(-25deg) rotateX(5deg);
+  transform-style: preserve-3d;
+  transform: rotateY(-25deg) rotateX(5deg);
   transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
   filter: drop-shadow(0 25px 50px rgba(0, 0, 0, 0.4))
           drop-shadow(0 10px 20px rgba(0, 0, 0, 0.2));
 }
 
 .stacked-carousel-container:hover .stacked-carousel-wrapper .book-3d {
-  transform: perspective(1500px) rotateY(-15deg) rotateX(2deg) translateY(-10px);
+  transform: rotateY(-15deg) rotateX(2deg) translateY(-10px);
   filter: drop-shadow(0 35px 70px rgba(0, 0, 0, 0.5))
           drop-shadow(0 15px 30px rgba(0, 0, 0, 0.25));
 }
@@ -1306,7 +1293,7 @@
   animation: bookGlow 3s ease-in-out infinite;
 }
 
-/* Book Pages (side edges) - Right Side - VERY visible golden hardcover edge */
+/* Book Pages (side edges) - Right Side */
 .stacked-carousel-wrapper .book-pages {
   position: absolute;
   right: 0;
@@ -1315,29 +1302,29 @@
   height: calc(100% - 6px);
   background: linear-gradient(
     90deg,
-    rgba(0, 0, 0, 0.4) 0%,
-    #c49250 4%,
-    #d9a967 10%,
-    #f0d399 20%,
-    #fef5da 35%,
-    #fffef5 50%,
-    #fef5da 65%,
-    #f0d399 80%,
-    #d9a967 90%,
-    #c49250 96%,
-    rgba(0, 0, 0, 0.35) 100%
+    rgba(0, 0, 0, 0.2) 0%,
+    #e5e5e5 2%,
+    #f2f2f2 5%,
+    #f8f8f8 8%,
+    #ffffff 15%,
+    #fefefe 40%,
+    #fafafa 60%,
+    #f5f5f5 80%,
+    #ececec 90%,
+    #e0e0e0 95%,
+    #d5d5d5 97%,
+    rgba(0, 0, 0, 0.18) 100%
   );
   transform-origin: right center;
   transform: rotateY(90deg) translateX(var(--book-depth));
   border-radius: 0 4px 4px 0;
   box-shadow:
-    inset -4px 0 8px rgba(0, 0, 0, 0.3),
-    inset 4px 0 6px rgba(255, 255, 255, 0.7),
-    2px 0 20px rgba(212, 165, 116, 0.5),
-    0 0 20px rgba(0, 0, 0, 0.2);
+    inset -2px 0 4px rgba(0, 0, 0, 0.15),
+    inset 2px 0 3px rgba(255, 255, 255, 0.9),
+    0 0 12px rgba(0, 0, 0, 0.12);
   backface-visibility: hidden;
   -webkit-backface-visibility: hidden;
-  z-index: 10;
+  z-index: 1;
 }
 
 .dark .stacked-carousel-wrapper .book-pages {
@@ -1623,32 +1610,14 @@
     drop-shadow(3px 3px 6px rgba(0, 0, 0, 0.25));
 }
 
-/* Real hardcover book rotation - shows all angles with smooth continuous motion */
-@keyframes bookRotate3D {
-  0% {
-    transform: perspective(1500px) rotateY(-45deg) rotateX(10deg) rotateZ(2deg);
-  }
-  25% {
-    transform: perspective(1500px) rotateY(-30deg) rotateX(5deg) rotateZ(0deg);
-  }
-  50% {
-    transform: perspective(1500px) rotateY(-15deg) rotateX(0deg) rotateZ(-2deg);
-  }
-  75% {
-    transform: perspective(1500px) rotateY(-30deg) rotateX(5deg) rotateZ(0deg);
-  }
-  100% {
-    transform: perspective(1500px) rotateY(-45deg) rotateX(10deg) rotateZ(2deg);
-  }
-}
-
+/* Make the 3D book effects more pronounced for front book */
 .stacked-book-0 .book-3d {
-  animation: bookRotate3D 8s ease-in-out infinite;
+  transform: rotateY(10deg);
+  transition: transform 0.4s ease;
 }
 
 .stacked-book-0:hover .book-3d {
-  animation-play-state: paused;
-  transform: perspective(1500px) rotateY(-30deg) rotateX(5deg) translateY(-5px) scale(1.02);
+  transform: rotateY(5deg) translateY(-5px);
 }
 
 /* Second book in stack - more rotation for spine visibility */
