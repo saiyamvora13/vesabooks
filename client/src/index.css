@@ -1085,8 +1085,8 @@
           drop-shadow(8px 12px 20px rgba(0, 0, 0, 0.2));
 }
 
-/* Book Cover (front) - Main face of book */
-.book-cover {
+/* Book Cover (front) - Main face of book - CAROUSEL SPECIFIC */
+.stacked-book .book-cover {
   position: absolute;
   left: 0;
   top: 0;
@@ -1164,7 +1164,7 @@
   border-radius: inherit;
 }
 
-.dark .book-cover {
+.dark .stacked-book .book-cover {
   background: 
     radial-gradient(
       ellipse at 30% 20%,
@@ -1211,8 +1211,8 @@
     0 0 0 1px rgba(0, 0, 0, 0.2);
 }
 
-/* Book Spine - Orange binding visible on right edge */
-.book-spine {
+/* Book Spine - Orange binding visible on right edge - CAROUSEL SPECIFIC */
+.stacked-book .book-spine {
   position: absolute;
   right: 0;
   top: 0;
@@ -1233,7 +1233,7 @@
     inset -2px 0 4px rgba(0, 0, 0, 0.2);
 }
 
-.dark .book-spine {
+.dark .stacked-book .book-spine {
   background: linear-gradient(
     90deg,
     rgba(0, 0, 0, 0.6) 0%,
@@ -1351,8 +1351,8 @@
   animation: bookGlow 3s ease-in-out infinite;
 }
 
-/* Book Pages - Thick white page stack visible on right edge */
-.book-pages {
+/* Book Pages - Thick white page stack visible on right edge - CAROUSEL SPECIFIC */
+.stacked-book .book-pages {
   position: absolute;
   right: 0;
   top: 0;
@@ -1386,7 +1386,7 @@
     -3px 0 10px rgba(0, 0, 0, 0.25);
 }
 
-.dark .book-pages {
+.dark .stacked-book .book-pages {
   background: 
     repeating-linear-gradient(
       90deg,
