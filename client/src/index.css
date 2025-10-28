@@ -1622,14 +1622,14 @@
     drop-shadow(3px 3px 6px rgba(0, 0, 0, 0.25));
 }
 
-/* Make the 3D book effects more pronounced for front book */
+/* Make the 3D book effects more pronounced for front book - negative rotation shows spine */
 .stacked-book-0 .book-3d {
-  transform: rotateY(10deg);
+  transform: perspective(1500px) rotateY(-25deg) rotateX(5deg);
   transition: transform 0.4s ease;
 }
 
 .stacked-book-0:hover .book-3d {
-  transform: rotateY(5deg) translateY(-5px);
+  transform: perspective(1500px) rotateY(-20deg) rotateX(3deg) translateY(-5px);
 }
 
 /* Second book in stack - more rotation for spine visibility */
