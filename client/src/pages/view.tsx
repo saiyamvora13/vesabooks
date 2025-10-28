@@ -881,7 +881,7 @@ export default function View() {
         directItem={{
           storybookId: storybook?.id || '',
           productType: checkoutType,
-          bookSize: 'a4-portrait',
+          bookSize: storybook?.orientation === 'landscape' ? 'a4-landscape' : 'a4-portrait',
         }}
         hasPrintItems={checkoutType === 'print'}
         amount={pricing ? (checkoutType === 'digital' ? parseInt(pricing.digital_price) : parseInt(pricing.print_price)) : 0}

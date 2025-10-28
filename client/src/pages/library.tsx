@@ -42,7 +42,7 @@ const stripePromise = stripePublicKey ? loadStripe(stripePublicKey) : null;
 
 // Form schema for book options
 const bookOptionsSchema = z.object({
-  bookSize: z.string().default('a5-portrait'),
+  bookSize: z.string().default('a4-portrait'),
   shippingMethod: z.enum(['Budget', 'Standard', 'Express', 'Overnight']).default('Standard'),
   destinationCountryCode: z.string().default('US'),
 });
@@ -900,7 +900,8 @@ function DownloadCustomizationDialog({ open, onOpenChange, storybook }: Download
   const { t } = useTranslation();
   const { toast } = useToast();
   const bookSizes = getBookSizesByOrientation(storybook.orientation || 'portrait');
-  const defaultBookSize = bookSizes.length > 0 ? bookSizes[0].id : 'a5-portrait';
+  // Default to A4 for both portrait and landscape
+  const defaultBookSize = storybook.orientation === 'landscape' ? 'a4-landscape' : 'a4-portrait';
   
   const form = useForm<BookOptionsFormValues>({
     resolver: zodResolver(bookOptionsSchema),
@@ -1146,7 +1147,7 @@ function StorybookPurchaseButtons({
             className="w-full h-11 text-base font-semibold gradient-bg hover:opacity-90 !text-[hsl(258,90%,20%)] shadow-md hover:shadow-lg transition-all"
             onClick={() => addToCartMutation.mutate({ 
               productType: 'print',
-              bookSize: 'a4-portrait'
+              bookSize: storybook.orientation === 'landscape' ? 'a4-landscape' : 'a4-portrait'
             })}
             disabled={addToCartMutation.isPending}
             data-testid={`button-add-to-cart-${storybook.id}`}
