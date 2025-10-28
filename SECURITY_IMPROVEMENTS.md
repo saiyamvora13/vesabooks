@@ -13,9 +13,9 @@
 - **Added**: Safe error messages for clients (no sensitive data exposure)
 - **Location**: `server/index.ts:87-113`
 
-### ✅ **3. File Upload Security**
-- **Reduced**: File size limit from 10MB to 5MB
-- **Reduced**: Max files from 5 to 3
+### ✅ **3. File Upload Security** (Balanced for Quality)
+- **Maintained**: File size limit at 10MB for high-quality reference images
+- **Maintained**: Max files at 5 for character consistency
 - **Added**: File extension validation
 - **Added**: MIME type vs extension matching
 - **Added**: Support for WebP format
@@ -43,21 +43,22 @@
 - **Replaced**: All console.log statements with proper logging
 - **Location**: `server/utils/logger.ts`
 
-### ✅ **7. Comprehensive Rate Limiting**
-- **Added**: General API rate limiter (100 requests/15min)
-- **Added**: Authentication rate limiter (5 requests/15min)
-- **Added**: Story creation rate limiter (10 requests/hour)
-- **Added**: Password reset rate limiter (3 requests/hour)
+### ✅ **7. Comprehensive Rate Limiting** (Balanced for UX)
+- **Added**: General API rate limiter (300 requests/15min - balanced for image-heavy pages)
+- **Added**: Authentication rate limiter (10 requests/15min - allows typos)
+- **Added**: Story creation rate limiter (20 requests/hour - supports engaged users)
+- **Added**: Password reset rate limiter (5 requests/hour - handles issues)
 - **Applied**: Rate limiting to all API routes
-- **Location**: `server/routes.ts:128-176, 286-287`
+- **Added**: Trust proxy validation suppression for Replit environment
+- **Location**: `server/routes.ts:128-199, 286-287`
 
-### ✅ **8. Session Security Improvements**
-- **Reduced**: Session TTL from 7 days to 24 hours
+### ✅ **8. Session Security Improvements** (Balanced for Payment Flows)
+- **Maintained**: Session TTL at 7 days with rolling refresh for better UX
 - **Changed**: Cookie name from default to 'sessionId'
-- **Changed**: SameSite from 'lax' to 'strict'
+- **Maintained**: SameSite 'lax' for Stripe redirects and external links
 - **Added**: Rolling sessions (reset expiration on activity)
 - **Added**: Domain restriction for production
-- **Location**: `server/replitAuth.ts:52-77`
+- **Location**: `server/replitAuth.ts:52-79`
 
 ### ✅ **9. Environment Variable Validation**
 - **Created**: Comprehensive environment validation schema
