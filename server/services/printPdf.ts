@@ -22,6 +22,9 @@ function sanitizeTextForPDF(text: string): string {
   if (!text) return '';
   
   return text
+    // Normalize line breaks first (before other replacements)
+    .replace(/\r\n/g, '\n')           // Windows line breaks → Unix
+    .replace(/\r/g, '\n')             // Mac line breaks → Unix
     // Curly quotes to straight quotes
     .replace(/[\u201C\u201D]/g, '"')  // " and "
     .replace(/[\u2018\u2019]/g, "'")  // ' and '
