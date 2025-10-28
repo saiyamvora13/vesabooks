@@ -223,23 +223,36 @@ export async function generatePrintReadyPDF(
   function wrapText(text: string, maxWidth: number, fontSize: number, textFont: any = font): string[] {
     // Sanitize text first to ensure PDF compatibility
     const sanitizedText = sanitizeTextForPDF(text);
-    const words = sanitizedText.split(' ');
-    const lines: string[] = [];
-    let currentLine = '';
     
-    for (const word of words) {
-      const testLine = currentLine + (currentLine ? ' ' : '') + word;
-      const testWidth = textFont.widthOfTextAtSize(testLine, fontSize);
-      
-      if (testWidth > maxWidth && currentLine) {
-        lines.push(currentLine);
-        currentLine = word;
-      } else {
-        currentLine = testLine;
+    // Split by newlines first to preserve user's line breaks
+    const paragraphs = sanitizedText.split('\n');
+    const lines: string[] = [];
+    
+    // Process each paragraph separately
+    for (const paragraph of paragraphs) {
+      if (!paragraph.trim()) {
+        // Empty line - add blank line
+        lines.push('');
+        continue;
       }
-    }
-    if (currentLine) {
-      lines.push(currentLine);
+      
+      const words = paragraph.split(' ');
+      let currentLine = '';
+      
+      for (const word of words) {
+        const testLine = currentLine + (currentLine ? ' ' : '') + word;
+        const testWidth = textFont.widthOfTextAtSize(testLine, fontSize);
+        
+        if (testWidth > maxWidth && currentLine) {
+          lines.push(currentLine);
+          currentLine = word;
+        } else {
+          currentLine = testLine;
+        }
+      }
+      if (currentLine) {
+        lines.push(currentLine);
+      }
     }
     
     return lines;

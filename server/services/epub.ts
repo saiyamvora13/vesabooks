@@ -42,9 +42,11 @@ export async function generateEpub(storybook: Storybook): Promise<Buffer> {
   });
 
   if (storybook.foreword) {
+    // Convert newlines to <br> tags for proper line break rendering in EPUB
+    const forewordHtml = escapeHtml(storybook.foreword).replace(/\n/g, '<br>');
     content.push({
       content: `<div class="page-foreword">
-  <p>${escapeHtml(storybook.foreword)}</p>
+  <p>${forewordHtml}</p>
 </div>`,
       excludeFromToc: true,
     });

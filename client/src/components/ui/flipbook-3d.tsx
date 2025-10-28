@@ -286,7 +286,8 @@ const ForewordPage = ({ foreword, isMobile = false }: { foreword: string; isMobi
         style={{ 
           fontFamily: '"Times New Roman", Times, Georgia, serif',
           fontSize: isMobile ? '16px' : undefined,
-          lineHeight: isMobile ? '1.8' : undefined
+          lineHeight: isMobile ? '1.8' : undefined,
+          whiteSpace: 'pre-wrap'
         }}
       >
         {foreword}
