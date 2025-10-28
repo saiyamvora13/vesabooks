@@ -1067,7 +1067,7 @@
   padding: 2rem 1rem;
 }
 
-.book-3d {
+.stacked-carousel-wrapper .book-3d {
   position: relative;
   width: 280px;
   height: 380px;
@@ -1078,14 +1078,14 @@
           drop-shadow(0 10px 20px rgba(0, 0, 0, 0.2));
 }
 
-.book-3d-container:hover .book-3d {
+.book-3d-container:hover .stacked-carousel-wrapper .book-3d {
   transform: rotateY(-15deg) rotateX(2deg) translateY(-10px);
   filter: drop-shadow(0 35px 70px rgba(0, 0, 0, 0.5))
           drop-shadow(0 15px 30px rgba(0, 0, 0, 0.25));
 }
 
 /* Book Cover (front) */
-.book-cover {
+.stacked-carousel-wrapper .book-cover {
   position: absolute;
   width: 100%;
   height: 100%;
@@ -1103,7 +1103,7 @@
 }
 
 /* Book Cover Crease - where spine meets front cover */
-.book-cover::before {
+.stacked-carousel-wrapper .book-cover::before {
   content: '';
   position: absolute;
   left: 0;
@@ -1122,7 +1122,7 @@
   border-radius: 3px 0 0 3px;
 }
 
-.dark .book-cover {
+.dark .stacked-carousel-wrapper .book-cover {
   background: linear-gradient(135deg, #2a2a2a 0%, #1a1a1a 100%);
   box-shadow: 
     inset 3px 0 10px rgba(0, 0, 0, 0.3),
@@ -1131,7 +1131,7 @@
 }
 
 /* Book Back Cover */
-.book-back {
+.stacked-carousel-wrapper .book-back {
   position: absolute;
   width: 100%;
   height: 100%;
@@ -1146,7 +1146,7 @@
   z-index: 0;
 }
 
-.dark .book-back {
+.dark .stacked-carousel-wrapper .book-back {
   background: linear-gradient(135deg, #242424 0%, #151515 100%);
   box-shadow: 
     inset -3px 0 10px rgba(0, 0, 0, 0.3),
@@ -1154,7 +1154,7 @@
 }
 
 /* Book Spine - Enhanced and More Visible */
-.book-spine {
+.stacked-carousel-wrapper .book-spine {
   position: absolute;
   left: 0;
   width: 80px;
@@ -1186,7 +1186,7 @@
   z-index: 1;
 }
 
-.dark .book-spine {
+.dark .stacked-carousel-wrapper .book-spine {
   background: linear-gradient(
     90deg,
     rgba(0, 0, 0, 0.4) 0%,
@@ -1208,7 +1208,7 @@
 }
 
 /* Book Spine Text/Decoration - Gold foil effect */
-.book-spine::after {
+.stacked-carousel-wrapper .book-spine::after {
   content: '';
   position: absolute;
   top: 10%;
@@ -1230,7 +1230,7 @@
   box-shadow: 0 0 10px rgba(255, 215, 0, 0.3);
 }
 
-.dark .book-spine::after {
+.dark .stacked-carousel-wrapper .book-spine::after {
   background: linear-gradient(
     180deg,
     transparent 0%,
@@ -1254,7 +1254,7 @@
   }
 }
 
-.book-spine::before {
+.stacked-carousel-wrapper .book-spine::before {
   content: '';
   position: absolute;
   top: 0;
@@ -1282,12 +1282,12 @@
   }
 }
 
-.stacked-book-0 .book-cover {
+.stacked-carousel-wrapper .stacked-book-0 .book-cover {
   animation: bookGlow 3s ease-in-out infinite;
 }
 
 /* Book Pages (side edges) - Right Side */
-.book-pages {
+.stacked-carousel-wrapper .book-pages {
   position: absolute;
   right: 0;
   top: 3px;
@@ -1318,7 +1318,7 @@
   z-index: 1;
 }
 
-.dark .book-pages {
+.dark .stacked-carousel-wrapper .book-pages {
   background: linear-gradient(
     90deg,
     rgba(0, 0, 0, 0.2) 0%,
@@ -1334,7 +1334,7 @@
 }
 
 /* Page Lines Effect */
-.book-pages::before {
+.stacked-carousel-wrapper .book-pages::before {
   content: '';
   position: absolute;
   left: 0;
@@ -1352,7 +1352,7 @@
 }
 
 /* Bottom Page Shadow */
-.book-pages::after {
+.stacked-carousel-wrapper .book-pages::after {
   content: '';
   position: absolute;
   bottom: -2px;
@@ -1364,7 +1364,7 @@
 }
 
 /* Book Pages - Top Edge */
-.book-top {
+.stacked-carousel-wrapper .book-top {
   position: absolute;
   top: 0;
   left: 3px;
@@ -1393,7 +1393,7 @@
   z-index: 2;
 }
 
-.dark .book-top {
+.dark .stacked-carousel-wrapper .book-top {
   background: linear-gradient(
     180deg,
     rgba(0, 0, 0, 0.2) 0%,
@@ -1405,7 +1405,7 @@
 }
 
 /* Book Pages - Bottom Edge */
-.book-bottom {
+.stacked-carousel-wrapper .book-bottom {
   position: absolute;
   bottom: 0;
   left: 3px;
@@ -1434,7 +1434,7 @@
   z-index: 2;
 }
 
-.dark .book-bottom {
+.dark .stacked-carousel-wrapper .book-bottom {
   background: linear-gradient(
     180deg,
     rgba(0, 0, 0, 0.3) 0%,
@@ -1446,7 +1446,7 @@
 }
 
 /* Book Cover Image */
-.book-cover-image {
+.stacked-carousel-wrapper .book-cover-image {
   width: 100%;
   height: 100%;
   object-fit: cover;
@@ -1456,7 +1456,7 @@
 }
 
 /* Cover Gloss Effect */
-.cover-image-wrapper {
+.stacked-carousel-wrapper .cover-image-wrapper {
   position: absolute;
   top: 0;
   left: 0;
@@ -1468,7 +1468,7 @@
 }
 
 /* Hardcover texture overlay */
-.cover-image-wrapper::before {
+.stacked-carousel-wrapper .cover-image-wrapper::before {
   content: '';
   position: absolute;
   top: 0;
@@ -1497,7 +1497,7 @@
 }
 
 /* Enhanced glossy shine effect */
-.cover-image-wrapper::after {
+.stacked-carousel-wrapper .cover-image-wrapper::after {
   content: '';
   position: absolute;
   top: -50%;
@@ -1526,7 +1526,7 @@
 
 /* Responsive adjustments for 3D books */
 @media (max-width: 640px) {
-  .book-3d {
+  .stacked-carousel-wrapper .book-3d {
     width: 220px;
     height: 300px;
   }

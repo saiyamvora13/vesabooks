@@ -1,0 +1,77 @@
+Yes. You have naming collisions that override each other.
+
+Main conflicts
+
+* `.book-cover` appears twice, once for the “magical book” widget and again for the 3D carousel. The later rule sets width 100 percent and translateZ, which breaks the left and right half-cover setup from the earlier widget.
+* `.book-spine` appears twice with different geometry. One expects a thin 8 px strip, the other expects a wide rotated spine. The last one wins in the cascade.
+* `.book-page` appears in utilities and again later, so you get mixed properties.
+* `@keyframes slideUp` is defined twice. The second definition overwrites the first.
+
+Result
+
+* The 3D box faces fight with the animated book faces, so thickness and spine alignment look wrong.
+
+Fix it fast
+
+1. Scope both widgets, or rename one set. Easiest is scoping.
+
+Add these overrides at the end of your CSS and remove any global `.book-cover`, `.book-spine`, `.book-page` rules that are not scoped.
+
+```css
+/* One variable for consistent thickness */
+:root { --book-thickness: 24px; }
+
+/* Scope the MAGICAL book widget */
+.magical-book-container .book { transform-style: preserve-3d; }
+.magical-book-container .book-cover { width: 40px; height: 100%; }
+.magical-book-container .book-cover-left { left: 0; transform-origin: left; }
+.magical-book-container .book-cover-right { right: 0; }
+.magical-book-container .book-spine { width: 8px; height: 100%; left: 0; transform: translateX(-4px); }
+.magical-book-container .book-page { width: 38px; height: 96%; left: 4px; }
+
+/* Scope the 3D CAROUSEL book */
+.stacked-carousel-wrapper .book-3d { transform-style: preserve-3d; }
+.stacked-carousel-wrapper .book-cover {
+  width: 100%;
+  height: 100%;
+  transform: translateZ(var(--book-thickness));
+  backface-visibility: hidden;
+}
+.stacked-carousel-wrapper .book-back {
+  width: 100%;
+  height: 100%;
+  transform: translateZ(calc(-1 * var(--book-thickness))) rotateY(180deg);
+  backface-visibility: hidden;
+}
+.stacked-carousel-wrapper .book-spine {
+  width: calc(var(--book-thickness) * 2);
+  height: 100%;
+  transform-origin: left center;
+  transform: rotateY(-90deg) translateX(calc(-1 * var(--book-thickness)));
+  z-index: 2;
+}
+.stacked-carousel-wrapper .book-pages {
+  right: -2px;
+  top: 4px;
+  width: calc(var(--book-thickness) * 2);
+  height: calc(100% - 8px);
+  transform-origin: right center;
+  transform: rotateY(90deg) translateX(var(--book-thickness));
+}
+```
+
+2. Deduplicate keyframes.
+
+* Keep one `@keyframes slideUp`. Delete the other or rename one, for example `slideUpMenu`.
+
+3. Sanity checks
+
+* Parent with perspective exists. You have it on `.stacked-carousel-container`. Good.
+* The immediate 3D parent has `transform-style: preserve-3d`. Ensure it is on `.book-3d`. Done in overrides.
+* Use one thickness variable everywhere, so faces and spine line up.
+
+If you prefer renaming instead of scoping
+
+* Rename the carousel classes to `book3d-cover`, `book3d-spine`, `book3d-pages`, and update the HTML. This avoids future collisions.
+
+Do this and your spine renders correctly and the book shows consistent thickness.
