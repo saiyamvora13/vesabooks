@@ -27,7 +27,7 @@ import { generateInvoicePDF } from "./services/invoicePdf";
 import { generateOrderReference } from "./utils/orderReference";
 import { db } from "./db";
 import { eq } from "drizzle-orm";
-import { sendPrintOrderProcessing, sendPrintOrderProcessingEmailHelper } from "./services/resend-email";
+import { sendPrintOrderProcessing, sendPrintOrderProcessingEmailHelper, sendPrintOrderFailedEmail } from "./services/resend-email";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', {
   apiVersion: "2025-09-30.clover",
@@ -4222,16 +4222,51 @@ Sitemap: ${baseUrl}/sitemap.xml`;
           } catch (error) {
             console.error(`[Prodigi Two-Phase] Failed to prepare item for purchase ${printPurchase.id}:`, error);
             
+            const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+            
+            // Update purchase status to 'failed'
+            try {
+              await storage.updatePurchaseStatus(printPurchase.id, 'failed');
+              console.log(`[Prodigi Two-Phase] ❌ Marked purchase ${printPurchase.id} as 'failed'`);
+            } catch (updateError) {
+              console.error(`[Prodigi Two-Phase] Failed to update purchase status:`, updateError);
+            }
+            
             // Create print_orders record with error status
             try {
               await storage.createPrintOrder({
                 purchaseId: printPurchase.id,
                 stripePaymentMethodId, // Save payment method for potential retry
                 status: 'failed',
-                errorMessage: error instanceof Error ? error.message : 'Unknown error',
+                errorMessage,
               });
             } catch (dbError) {
               console.error(`[Prodigi Two-Phase] Failed to create print order record:`, dbError);
+            }
+            
+            // Send failure notification email to user
+            try {
+              const storybook = await storage.getStorybook(printPurchase.storybookId);
+              const user = await storage.getUser(userId);
+              
+              if (storybook && user && shippingAddress) {
+                const recipientEmail = shippingAddress.email || user.email;
+                const recipientName = shippingAddress.name || user.firstName || user.email?.split('@')[0] || 'Customer';
+                
+                if (recipientEmail) {
+                  await sendPrintOrderFailedEmail({
+                    recipientEmail,
+                    recipientName,
+                    storybookTitle: storybook.title,
+                    orderId: orderReference,
+                    errorReason: 'We encountered a technical issue while preparing your book for printing. This typically happens with special characters in the text.',
+                  });
+                  console.log(`[Prodigi Two-Phase] ✉️ Failure notification email sent to ${recipientEmail}`);
+                }
+              }
+            } catch (emailError) {
+              console.error(`[Prodigi Two-Phase] Failed to send failure notification email:`, emailError);
+              // Don't throw - email failure shouldn't break the flow
             }
           }
         }

@@ -664,6 +664,122 @@ export async function sendPrintOrderProcessingEmailHelper(params: {
   console.log(`[Email Helper] Order processing email sent to ${recipientEmail} for purchase ${purchase.id}`);
 }
 
+/**
+ * Sends an email notification when a print order fails
+ * @param params - Email parameters
+ * @returns Promise<void>
+ */
+export async function sendPrintOrderFailedEmail(params: {
+  recipientEmail: string;
+  recipientName: string;
+  storybookTitle: string;
+  orderId: string;
+  errorReason: string;
+}): Promise<void> {
+  const { client, fromEmail } = await getUncachableResendClient();
+  
+  const {
+    recipientEmail,
+    recipientName,
+    storybookTitle,
+    orderId,
+    errorReason,
+  } = params;
+  
+  const htmlBody = `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    </head>
+    <body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f3f4f6;">
+      <table role="presentation" style="width: 100%; border-collapse: collapse;">
+        <tr>
+          <td align="center" style="padding: 40px 20px;">
+            <table role="presentation" style="max-width: 600px; width: 100%; background-color: #ffffff; border-radius: 12px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); overflow: hidden;">
+              
+              <!-- Header with error icon -->
+              <tr>
+                <td style="background: linear-gradient(135deg, #dc2626 0%, #991b1b 100%); padding: 40px 30px; text-align: center;">
+                  <div style="background-color: rgba(255, 255, 255, 0.2); width: 80px; height: 80px; border-radius: 50%; margin: 0 auto 20px; display: flex; align-items: center; justify-content: center;">
+                    <span style="font-size: 48px; color: #ffffff;">⚠️</span>
+                  </div>
+                  <h1 style="margin: 0; font-size: 28px; font-weight: 600; color: #ffffff;">Order Processing Failed</h1>
+                  <p style="margin: 10px 0 0; font-size: 16px; color: rgba(255, 255, 255, 0.9);">Order ${orderId}</p>
+                </td>
+              </tr>
+              
+              <!-- Main content -->
+              <tr>
+                <td style="padding: 40px 30px;">
+                  <p style="margin: 0 0 20px; font-size: 16px; line-height: 1.6; color: #374151;">
+                    Hi ${recipientName},
+                  </p>
+                  
+                  <p style="margin: 0 0 20px; font-size: 16px; line-height: 1.6; color: #374151;">
+                    Unfortunately, we encountered an issue while processing your print order for <strong>"${storybookTitle}"</strong>.
+                  </p>
+                  
+                  <div style="background-color: #fef2f2; border-left: 4px solid #dc2626; padding: 15px 20px; margin: 25px 0; border-radius: 4px;">
+                    <p style="margin: 0; font-size: 14px; color: #991b1b; font-weight: 600;">Error Details:</p>
+                    <p style="margin: 8px 0 0; font-size: 14px; color: #7f1d1d; line-height: 1.5;">${errorReason}</p>
+                  </div>
+                  
+                  <p style="margin: 0 0 20px; font-size: 16px; line-height: 1.6; color: #374151;">
+                    <strong>What happens next?</strong>
+                  </p>
+                  
+                  <ul style="margin: 0 0 25px; padding-left: 25px; font-size: 16px; line-height: 1.8; color: #374151;">
+                    <li>Your payment method was <strong>not charged</strong></li>
+                    <li>The order has been marked as failed in our system</li>
+                    <li>You can try placing the order again from your library</li>
+                  </ul>
+                  
+                  <p style="margin: 0 0 25px; font-size: 16px; line-height: 1.6; color: #374151;">
+                    If you continue to experience issues or have questions, please contact our support team at <a href="mailto:support@vesabooks.com" style="color: #7c3aed; text-decoration: none;">support@vesabooks.com</a> and reference order ${orderId}.
+                  </p>
+                  
+                  <p style="margin: 0; font-size: 16px; line-height: 1.6; color: #374151;">
+                    We apologize for the inconvenience.
+                  </p>
+                  
+                  <p style="margin: 20px 0 0; font-size: 16px; line-height: 1.6; color: #374151;">
+                    Best regards,<br>
+                    <strong>The Vesa Books Team</strong>
+                  </p>
+                </td>
+              </tr>
+              
+              <!-- Footer -->
+              <tr>
+                <td style="background-color: #f9fafb; padding: 30px; text-align: center; border-top: 1px solid #e5e7eb;">
+                  <p style="margin: 0 0 10px; font-size: 14px; color: #6b7280;">
+                    Questions? Email us at <a href="mailto:support@vesabooks.com" style="color: #7c3aed; text-decoration: none;">support@vesabooks.com</a>
+                  </p>
+                  <p style="margin: 0; font-size: 12px; color: #9ca3af;">
+                    © ${new Date().getFullYear()} Vesa Books. All rights reserved.
+                  </p>
+                </td>
+              </tr>
+              
+            </table>
+          </td>
+        </tr>
+      </table>
+    </body>
+    </html>
+  `;
+
+  await client.emails.send({
+    from: 'orders@vesabooks.com',
+    replyTo: 'support@vesabooks.com',
+    to: recipientEmail,
+    subject: `Order Failed - ${storybookTitle} (${orderId})`,
+    html: htmlBody,
+  });
+}
+
 export async function sendShippingNotification(params: {
   recipientEmail: string;
   recipientName: string;
