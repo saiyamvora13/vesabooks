@@ -125,10 +125,10 @@ async function generateAndUploadPrintPDF(params: {
   return { storagePath, fullUrl };
 }
 
-// General API rate limiter
+// General API rate limiter - balanced for image loading and navigation
 const apiRateLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // Limit each IP to 100 requests per windowMs
+  max: 300, // Increased to 300 for better UX with image-heavy pages
   message: 'Too many requests from this IP, please try again later',
   standardHeaders: true,
   legacyHeaders: false,
@@ -145,7 +145,7 @@ const apiRateLimiter = rateLimit({
 // Rate limiting configurations for authentication endpoints
 const authRateLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 5, // Limit each IP to 5 requests per windowMs
+  max: 10, // Increased to 10 to allow for typos
   message: 'Too many authentication attempts, please try again later',
   standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
   legacyHeaders: false, // Disable the `X-RateLimit-*` headers
@@ -159,10 +159,10 @@ const authRateLimiter = rateLimit({
   },
 });
 
-// Story creation rate limiter (more restrictive)
+// Story creation rate limiter - balanced for engaged users
 const storyCreationRateLimiter = rateLimit({
   windowMs: 60 * 60 * 1000, // 1 hour
-  max: 10, // Limit each IP to 10 story creations per hour
+  max: 20, // Increased to 20 for users who want to create multiple stories
   message: 'Too many story creation attempts, please try again later',
   standardHeaders: true,
   legacyHeaders: false,
@@ -177,7 +177,7 @@ const storyCreationRateLimiter = rateLimit({
 
 const passwordResetRateLimiter = rateLimit({
   windowMs: 60 * 60 * 1000, // 1 hour
-  max: 3, // Limit each IP to 3 password reset requests per hour
+  max: 5, // Increased to 5 in case of issues
   message: 'Too many password reset attempts, please try again later',
   standardHeaders: true,
   legacyHeaders: false,
@@ -186,7 +186,7 @@ const passwordResetRateLimiter = rateLimit({
     const ip = req.ip || req.socket.remoteAddress || 'unknown';
     const endpoint = req.path;
     const userAgent = req.get('user-agent') || 'unknown';
-    console.log(`[RATE LIMIT EXCEEDED] ${timestamp} | Endpoint: ${endpoint} | IP: ${ip} | User-Agent: ${userAgent} | Limit: 3 requests/1hour`);
+    console.log(`[RATE LIMIT EXCEEDED] ${timestamp} | Endpoint: ${endpoint} | IP: ${ip} | User-Agent: ${userAgent} | Limit: 5 requests/1hour`);
     res.status(429).json({ message: 'Too many password reset attempts, please try again later' });
   },
 });
@@ -201,8 +201,8 @@ const PRICES = {
 const upload = multer({
   dest: "uploads/",
   limits: {
-    fileSize: 5 * 1024 * 1024, // Reduced to 5MB
-    files: 3, // Reduced to 3 files
+    fileSize: 10 * 1024 * 1024, // 10MB for high-quality reference images
+    files: 5, // 5 files for character consistency
   },
   fileFilter: (req: Request, file: Express.Multer.File, cb: multer.FileFilterCallback) => {
     // Check MIME type
