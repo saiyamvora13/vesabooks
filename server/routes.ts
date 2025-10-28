@@ -4477,7 +4477,7 @@ Sitemap: ${baseUrl}/sitemap.xml`;
       // Keep print items in cart for future purchase
       const cartItemIdsToRemove = itemsToProcess.map((item: any) => item.cartItemId);
       for (const cartItemId of cartItemIdsToRemove) {
-        await storage.removeFromCart(userId, cartItemId);
+        await storage.removeFromCart(cartItemId, userId);
       }
       
       console.log('[Cart Finalize] Removed', cartItemIdsToRemove.length, 'items from cart');
